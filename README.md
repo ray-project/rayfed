@@ -1,2 +1,3 @@
-# MCE-Engine
-Multiple controllers execution engine based on Ray DAG.
+# RayFed
+A multiple parties involved execution engine on the top of Ray.  
+Alias in MPEE

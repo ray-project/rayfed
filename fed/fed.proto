@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option cc_generic_services = true;
+
+service GrpcService {
+    rpc SendData (SendDataRequest) returns (SendDataResponse) {}
+}
+
+message SendDataRequest {
+    string data = 1;   
+    string upstream_seq_id = 2;
+    string downstream_seq_id = 3;
+};
+
+message SendDataResponse {
+    string result = 1;
+};
