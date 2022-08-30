@@ -45,7 +45,7 @@ def build_example_dag(party_name: str) -> FedDAG:
             self.__data = data
 
         def f(self):
-            return "f"
+            return f"f({ray.util.get_node_ip_address()})"
 
         def g(self, obj):
             return obj + "g"
@@ -141,8 +141,8 @@ def test_inejct_barriers_bob():
     final_node = nodes_to_drive[0]
     agg_fn_args = final_node.get_args()
     assert len(agg_fn_args) == 2
-    assert agg_fn_args[0].get_func_name() in ["get_data", "h"]
-    assert agg_fn_args[1].get_func_name() in ["get_data", "h"]
+    assert agg_fn_args[0].get_func_name() in ["recv_op", "h"]
+    assert agg_fn_args[1].get_func_name() in ["recv_op", "h"]
 
     ray.shutdown()
 

@@ -22,17 +22,22 @@ from fed import fed_pb2_grpc, fed_pb2
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
+
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
-    def __init__(self):
-        pass
+    def __init__(self, event, all_data):
+        self._event = event
+        self._all_data = all_data
     
     def SendData(self, request, context):
         print(f"Received a grpc data {request.data} from {request.upstream_seq_id} to {request.downstream_seq_id}")
+        self._all_data[request.downstream_seq_id] = request.data
+        self._event.set()
+        print(f"=======Event set for {request.downstream_seq_id}")
         return fed_pb2.SendDataResponse(result="OK")
 
-def _run_grpc_server():
+def _run_grpc_server(event, all_data):
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    fed_pb2_grpc.add_GrpcServiceServicer_to_server(SendDataService(), server)
+    fed_pb2_grpc.add_GrpcServiceServicer_to_server(SendDataService(event, all_data), server)
     server.add_insecure_port('[::]:50052')
     server.start()
     print("start service...")
@@ -47,7 +52,7 @@ def send_data_grpc(data, upstream_seq_id, downstream_seq_id):
     client = fed_pb2_grpc.GrpcServiceStub(channel=conn)
     request = fed_pb2.SendDataRequest(data=data, upstream_seq_id=upstream_seq_id, downstream_seq_id=downstream_seq_id)
     response = client.SendData(request)
-    print("received:",response.result)
+    print("received response:",response.result)
     return response.result
 
 
@@ -72,8 +77,8 @@ def send_op(data, upstream_seq_id, downstream_seq_id):
     # if yes, we should send data, otherwise we should
     # send `ray.get(data)`
     print(f"Sending data{data} to seq_id {downstream_seq_id} from {upstream_seq_id}")
-    # response = send_data_grpc(data, upstream_seq_id, downstream_seq_id)
-    # print(f"Sent. response is {response}")
+    response = send_data_grpc(data, upstream_seq_id, downstream_seq_id)
+    print(f"Sent. response is {response}")
     return True # True indicates it's sent successfully.
 
 
@@ -82,13 +87,33 @@ class RecverProxyActor:
     def __init__(self, listening_addr: str):
         self._listening_addr = listening_addr
 
-    async def run_grpc_server(self):
-        _run_grpc_server()
+        # Workaround the threading coordinations
+
+        # All events for grpc waitting usage.
+        import threading
+        self._event = threading.Event()
+        self._event.set()     # 设定Flag = True
+        self._all_data = {}
+
+    def is_ready(self):
+        return True
+
+    def run_grpc_server(self):
+        _run_grpc_server(self._event, self._all_data)
 
     def get_data(self, upstream_seq_id, curr_seq_id):
         print(f"Getting data for {curr_seq_id} from {upstream_seq_id}")
-        return "xxxx"
+        self._event.clear()
+        self._event.wait()
+        print(f"=======Waited for {curr_seq_id}, data is {self._all_data[curr_seq_id]}")
+        return self._all_data[curr_seq_id]
 
+
+@ray.remote
+def recv_op(party_name, upstream_seq_id, curr_seq_id):
+    recever_proxy = ray.get_actor(f"RecverProxyActor-{party_name}")
+    data = recever_proxy.get_data.remote(upstream_seq_id, curr_seq_id)
+    return ray.get(data)
 
 class FedDAGNode(RayDAGNode):
     def __init__(self, ray_dag_node: RayDAGNode):
@@ -176,6 +201,13 @@ class FedDAG(RayDAGNode):
         # which we need drive.
         self._nodes_need_to_drive = []
 
+        # Create RecevrProxyActor
+        # Not that this is now a threaded actor.
+        self._recver_proxy_actor = RecverProxyActor.options(name=f"RecverProxyActor-{self._party_name}", max_concurrency=1000).remote("xxxxx:yyy")
+        self._recver_proxy_actor.run_grpc_server.remote()
+        assert ray.get(self._recver_proxy_actor.is_ready.remote()) is True
+        print("======== RecverProxy was created successfully.")
+
     def get_all_node_info(self):
         return self._all_node_info
 
@@ -220,12 +252,12 @@ class FedDAG(RayDAGNode):
 
     def _inject_barriers(self) -> None:
         # Create a RecverProxy for this party.
-        assert self._recver_proxy_actor_node is None, "Barriers had been injected."
-        self._recver_proxy_actor_node = RecverProxyActor.bind(listening_addr="127.0.0.1:11122")
-        run_grpc_node = self._recver_proxy_actor_node.run_grpc_server.bind()
+        # assert self._recver_proxy_actor_node is None, "Barriers had been injected."
+        # self._recver_proxy_actor_node = RecverProxyActor.bind(listening_addr="127.0.0.1:11122")
+        # run_grpc_node = self._recver_proxy_actor_node.run_grpc_server.bind()
         # This increse 2 Proxy process there. We should fix it by use a remote actor or use the
         # same node.
-        run_grpc_node.execute()
+        # run_grpc_node.execute()
 
         assert self._injected_send_ops is None
         assert self._injectted_recv_ops is None
@@ -244,8 +276,8 @@ class FedDAG(RayDAGNode):
                         found_upstream_arg_nodes.append(arg)
                 for arg_node in found_upstream_arg_nodes:
                     curr_node._bound_args = remove_from_tuple_helper(curr_node._bound_args, arg_node)
-                    recv_op = self._recver_proxy_actor_node.get_data.bind(self._upstream_indexes[uuid], uuid)
-                    curr_node._bound_args = append_to_tuple_helper(curr_node._bound_args, FedDAGNode(recv_op))
+                    recv_op_node = recv_op.bind(self._party_name, self._upstream_indexes[uuid], uuid)
+                    curr_node._bound_args = append_to_tuple_helper(curr_node._bound_args, FedDAGNode(recv_op_node))
 
             if uuid in self._downstream_indexes:
                 # Add a `send_op` to the downstream. No need to remove
