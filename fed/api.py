@@ -1,6 +1,7 @@
 from hashlib import new
 import logging
 from logging.config import listen
+
 from typing import Any, Dict, List, Union, overload
 from ray.dag.function_node import FunctionNode
 from ray.dag.dag_node import DAGNode
@@ -29,10 +30,12 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         self._all_data = all_data
     
     def SendData(self, request, context):
-        print(f"Received a grpc data {request.data} from {request.upstream_seq_id} to {request.downstream_seq_id}")
-        self._all_data[request.downstream_seq_id] = request.data
+        upstream_seq_id = int(request.upstream_seq_id)
+        downstream_seq_id = int(request.downstream_seq_id)
+        print(f"Received a grpc data {request.data} from {upstream_seq_id} to {downstream_seq_id}")
+        self._all_data[downstream_seq_id] = request.data
         self._event.set()
-        print(f"=======Event set for {request.downstream_seq_id}")
+        print(f"=======Event set for {upstream_seq_id}")
         return fed_pb2.SendDataResponse(result="OK")
 
 def _run_grpc_server(event, all_data):
@@ -50,7 +53,7 @@ def _run_grpc_server(event, all_data):
 def send_data_grpc(data, upstream_seq_id, downstream_seq_id):
     conn=grpc.insecure_channel('172.17.0.2:50052')
     client = fed_pb2_grpc.GrpcServiceStub(channel=conn)
-    request = fed_pb2.SendDataRequest(data=data, upstream_seq_id=upstream_seq_id, downstream_seq_id=downstream_seq_id)
+    request = fed_pb2.SendDataRequest(data=data, upstream_seq_id=str(upstream_seq_id), downstream_seq_id=str(downstream_seq_id))
     response = client.SendData(request)
     print("received response:",response.result)
     return response.result
@@ -76,7 +79,7 @@ def send_op(data, upstream_seq_id, downstream_seq_id):
     # Not sure if here has a implicitly data fetching,
     # if yes, we should send data, otherwise we should
     # send `ray.get(data)`
-    print(f"Sending data{data} to seq_id {downstream_seq_id} from {upstream_seq_id}")
+    print(f"Sending data {data} to seq_id {downstream_seq_id} from {upstream_seq_id}")
     response = send_data_grpc(data, upstream_seq_id, downstream_seq_id)
     print(f"Sent. response is {response}")
     return True # True indicates it's sent successfully.
@@ -208,6 +211,11 @@ class FedDAG(RayDAGNode):
         assert ray.get(self._recver_proxy_actor.is_ready.remote()) is True
         print("======== RecverProxy was created successfully.")
 
+    def get_seq_id_by_uuid(self, uuid):
+        seq_id, _ = self._all_node_info[uuid]
+        assert seq_id is not None
+        return seq_id
+
     def get_all_node_info(self):
         return self._all_node_info
 
@@ -276,14 +284,18 @@ class FedDAG(RayDAGNode):
                         found_upstream_arg_nodes.append(arg)
                 for arg_node in found_upstream_arg_nodes:
                     curr_node._bound_args = remove_from_tuple_helper(curr_node._bound_args, arg_node)
-                    recv_op_node = recv_op.bind(self._party_name, self._upstream_indexes[uuid], uuid)
+                    upstream_seq_id = self.get_seq_id_by_uuid(self._upstream_indexes[uuid])
+                    downstream_seq_id = self.get_seq_id_by_uuid(uuid)
+                    recv_op_node = recv_op.bind(self._party_name, upstream_seq_id, downstream_seq_id)
                     curr_node._bound_args = append_to_tuple_helper(curr_node._bound_args, FedDAGNode(recv_op_node))
 
             if uuid in self._downstream_indexes:
                 # Add a `send_op` to the downstream. No need to remove
                 # any downstream node.
                 # TODO(qwang): 要记录下来send_op是一个final node, 他是需要触发执行的
-                send_op_node = send_op.bind(curr_node._ray_dag_node, curr_node._get_uuid(), uuid)
+                upstream_seq_id = self.get_seq_id_by_uuid(uuid)
+                downstream_seq_id = self.get_seq_id_by_uuid(self._downstream_indexes[uuid])
+                send_op_node = send_op.bind(curr_node._ray_dag_node, upstream_seq_id, downstream_seq_id)
                 self._injected_send_ops.append(FedDAGNode(send_op_node))
 
 

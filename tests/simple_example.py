@@ -14,7 +14,7 @@ class MyActor:
         self.__data = data
 
     def f(self):
-        return "f"
+        return f"f({ray.util.get_node_ip_address()})"
 
     def g(self, obj):
         return obj + "g"
