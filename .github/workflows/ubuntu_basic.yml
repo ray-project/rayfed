@@ -1,0 +1,38 @@
+name: ubuntu-basic
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-unit-tests:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    container: docker.io/library/ubuntu:latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install bazel
+      run:  |
+            apt-get update
+            apt-get install -yq wget gcc g++ python3.9 zlib1g-dev zip libuv1.dev
+            apt-get install -yq pip
+
+    - name: Install dependencies
+      run:  |
+            python3 -m pip install virtualenv
+            python3 -m virtualenv -p python3 py3
+            . py3/bin/activate
+            which python
+            pip install pytest torch
+            pip install ray==2.0.0
+
+    - name: Build and test
+      run: |
+           . py3/bin/activate
+           python3 setup.py install
+           cd tests && python3 -m pytest -v *
+
