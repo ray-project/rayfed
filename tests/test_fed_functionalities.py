@@ -6,6 +6,7 @@ from typing import Any, TypeVar
 
 from fed.api import build_fed_dag
 
+import fed
 import ray
 
 
@@ -39,7 +40,7 @@ def _get_seq_ids_from_uuids_in_dict(fed_dag: FedDAG, uuids: list):
 
 def build_example_dag(party_name: str) -> FedDAG:
     """A helper that build an example FED DAG for the following tests."""
-    @ray.remote
+    @fed.remote
     class MyActor:
         def __init__(self, data):
             self.__data = data
@@ -53,62 +54,56 @@ def build_example_dag(party_name: str) -> FedDAG:
         def h(self, obj):
             return obj + "h"
 
-    @ray.remote
+    @fed.remote
     def agg_fn(obj1, obj2):
         return f"agg-{obj1}-{obj2}"
 
     ds1, ds2 = [123, 789]
-    actor_alice = MyActor.options(resources={"RES_ALICE": 1}).bind(ds1)
-    actor_bob = MyActor.options(resources={"RES_BOB": 1}).bind(ds2)
+    actor_alice = MyActor.party("ALICE").bind(ds1)
+    actor_bob = MyActor.party("BOB").bind(ds2)
 
     # TODO(qwang): We should remove these resources specifications.
-    obj_alice_f = actor_alice.f.options(resources={"RES_ALICE": 1}).bind()
-    obj_bob_f = actor_bob.f.options(resources={"RES_BOB": 1}).bind()
+    obj_alice_f = actor_alice.f.bind()
+    obj_bob_f = actor_bob.f.bind()
 
-    obj_alice_g = actor_alice.g.options(resources={"RES_ALICE": 1}).bind(obj_alice_f)
-    obj_bob_h = actor_bob.h.options(resources={"RES_BOB": 1}).bind(obj_bob_f)
+    obj_alice_g = actor_alice.g.bind(obj_alice_f)
+    obj_bob_h = actor_bob.h.bind(obj_bob_f)
 
-    obj_agg_fn = agg_fn.options(resources={"RES_BOB": 1}).bind(obj_alice_g, obj_bob_h)
+    obj_agg_fn = agg_fn.party("BOB").bind(obj_alice_g, obj_bob_h)
     fed_dag = build_fed_dag(obj_agg_fn, party_name)
     return fed_dag
 
 def test_build_dag():
-    ray.init(resources={
-        "RES_ALICE": 100,
-        "RES_BOB": 100
-    })
+    ray.init()
 
     fed_dag = build_example_dag(party_name="ALICE")
-    assert fed_dag.get_curr_seq_count() == 7
-
+    assert fed_dag.get_curr_seq_count() == 9
     all_node_info = fed_dag.get_all_node_info()
     assert len(all_node_info) == 7
     ray.shutdown()
 
 def test_extract_local_dag():
-    ray.init(resources={
-        "RES_ALICE": 100,
-        "RES_BOB": 100
-    })
+    ray.init()
 
     # test alice party
     fed_dag = build_example_dag(party_name="ALICE")
     local_dag_uuids: list = fed_dag.get_local_dag_uuids()
+    print(f"=======local_dag_uuids={local_dag_uuids}")
     alice_seq_ids = _get_seq_ids_from_uuids(fed_dag, local_dag_uuids)
     assert len(alice_seq_ids) == 3
-    assert 0 in alice_seq_ids
-    assert 1 in alice_seq_ids 
-    assert 2 in alice_seq_ids
+    assert 1 in alice_seq_ids
+    assert 2 in alice_seq_ids 
+    assert 4 in alice_seq_ids
 
     # test bob party
     fed_dag = build_example_dag(party_name="BOB")
     local_dag_uuids: list = fed_dag.get_local_dag_uuids()
     alice_seq_ids = _get_seq_ids_from_uuids(fed_dag, local_dag_uuids)
     assert len(alice_seq_ids) == 4
-    assert 3 in alice_seq_ids
-    assert 4 in alice_seq_ids 
-    assert 5 in alice_seq_ids
+    assert 0 in alice_seq_ids
+    assert 5 in alice_seq_ids 
     assert 6 in alice_seq_ids
+    assert 8 in alice_seq_ids
     ray.shutdown()
 
 def test_build_indexes():
@@ -122,8 +117,8 @@ def test_build_indexes():
 
     up_seq_ids = _get_seq_ids_from_uuids_in_dict(fed_dag, upstream_index_uuids)
     down_seq_ids = _get_seq_ids_from_uuids_in_dict(fed_dag, downstream_index_uuids)
-    assert {6: 2} == up_seq_ids
-    assert {2 : 6} == down_seq_ids
+    assert {0: 1} == up_seq_ids
+    assert {1 : 0} == down_seq_ids
     ray.shutdown()
 
 def test_inejct_barriers_bob():
@@ -141,8 +136,10 @@ def test_inejct_barriers_bob():
     final_node = nodes_to_drive[0]
     agg_fn_args = final_node.get_args()
     assert len(agg_fn_args) == 2
-    assert agg_fn_args[0].get_func_name() in ["recv_op", "h"]
-    assert agg_fn_args[1].get_func_name() in ["recv_op", "h"]
+
+    print(f"agg_fn_args={agg_fn_args}")
+    assert agg_fn_args[0].get_func_or_method_name() in ["recv_op", "h"]
+    assert agg_fn_args[1].get_func_or_method_name() in ["recv_op", "h"]
 
     ray.shutdown()
 
@@ -156,7 +153,7 @@ def test_inejct_barriers_alice():
     nodes_to_drive = fed_dag.get_nodes_to_drive()
     assert len(nodes_to_drive) == 1
     send_op_node = nodes_to_drive[0]
-    send_op_node.get_func_name() == "send_op"
+    send_op_node.get_func_or_method_name() == "send_op"
     args_0 = send_op_node.get_args()
     assert len(args_0) == 3
     assert args_0[0]._method_name == "g"

@@ -13,6 +13,8 @@ from ray.dag.constants import (
 )
 from ray.dag.vis_utils import plot
 
+from fed.api import remote
+
 __all__ = [
     "ClassNode",
     "ClassMethodNode",
@@ -25,4 +27,5 @@ __all__ = [
     "PREV_CLASS_METHOD_CALL_KEY",
     "DAGNODE_TYPE_KEY",
     "plot",
+    "remote",
 ]

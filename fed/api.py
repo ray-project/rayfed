@@ -1,3 +1,4 @@
+import functools
 from hashlib import new
 import logging
 from logging.config import listen
@@ -7,10 +8,14 @@ from ray.dag.function_node import FunctionNode
 from ray.dag.dag_node import DAGNode
 from ray.dag.base import DAGNodeBase
 import ray
-
+from ray._private.inspect_util import is_cython
+from ray.dag.class_node import ClassNode, _UnboundClassMethodNode, ClassMethodNode
 from fed._private import api as _private_api
 from fed import utils as fed_utils
 from ray.dag.py_obj_scanner import _PyObjScanner
+from ray.dag import PARENT_CLASS_NODE_KEY, PREV_CLASS_METHOD_CALL_KEY
+
+
 logger = logging.getLogger(__file__)
 
 from ray.dag import DAGNode as RayDAGNode
@@ -20,9 +25,15 @@ import time
 from concurrent import futures
 import grpc
 from fed import fed_pb2_grpc, fed_pb2
+import inspect
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
+
+def _is_fed_dag_node(node):
+    # A helper that returns thether the argument is type of FedDAGNode.
+    return (isinstance(node, FedDAGClassNode) or isinstance(node, FedDAGClassMethodNode)
+     or isinstance(node, FedDAGFunctionNode))
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
     def __init__(self, event, all_data):
@@ -58,12 +69,6 @@ def send_data_grpc(data, upstream_seq_id, downstream_seq_id):
     print("received response:",response.result)
     return response.result
 
-
-def is_node_in_party(node: DAGNode, party_name: str):
-    assert node is not None
-    assert party_name is not None
-    return f"RES_{party_name}" in node.get_options()["resources"]
-
 def remove_from_tuple_helper(tp, item):
     li = list(tp)
     li.remove(item)
@@ -74,7 +79,7 @@ def append_to_tuple_helper(tp, item):
     li.append(item)
     return tuple(li)
 
-@ray.remote
+
 def send_op(data, upstream_seq_id, downstream_seq_id):
     # Not sure if here has a implicitly data fetching,
     # if yes, we should send data, otherwise we should
@@ -112,73 +117,84 @@ class RecverProxyActor:
         return self._all_data[curr_seq_id]
 
 
-@ray.remote
 def recv_op(party_name, upstream_seq_id, curr_seq_id):
     recever_proxy = ray.get_actor(f"RecverProxyActor-{party_name}")
     data = recever_proxy.get_data.remote(upstream_seq_id, curr_seq_id)
     return ray.get(data)
 
-class FedDAGNode(RayDAGNode):
-    def __init__(self, ray_dag_node: RayDAGNode):
-        assert isinstance(ray_dag_node, RayDAGNode)
-        self._ray_dag_node: RayDAGNode = ray_dag_node
-        super().__init__(
-            ray_dag_node._bound_args,
-            ray_dag_node._bound_kwargs,
-            ray_dag_node._bound_options,
-            ray_dag_node._bound_other_args_to_resolve)
 
-    def _get_uuid(self) -> str:
-        return self._ray_dag_node.get_stable_uuid()
+class FedDAGFunctionNode(FunctionNode):
+    def __init__(self, func_body, func_args, func_kwargs, party: str):
+        self._func_body = func_body
+        self._party = party
+        super().__init__(func_body, func_args, func_kwargs, None)
 
-    def __str__(self) -> str:
-        return self._ray_dag_node.__str__()
+    def get_func_or_method_name(self):
+        return self._func_body.__name__
 
-    def get_options(self) -> dict:
-        return self._ray_dag_node.get_options()
+    def get_party(self):
+        return self._party
 
-    def get_other_args_to_resolve(self):
-        return self._ray_dag_node.get_other_args_to_resolve()
+class FedDAGClassNode(ClassNode):
+    def __init__(self, cls, party, cls_args, cls_kwargs):
+        self._party = party
+        self._cls = cls
+        super().__init__(cls, cls_args, cls_kwargs, {}) # TODO(qwang): Pass options instead of None.
 
-    def get_kwargs(self):
-        return self._ray_dag_node.get_kwargs()
+    def __getattr__(self, method_name: str):
+        # User trying to call .bind() without a bind class method
+        if method_name == "bind" and "bind" not in dir(self._body):
+            raise AttributeError(f".bind() cannot be used again on {type(self)} ")
+        # Raise an error if the method is invalid.
+        getattr(self._body, method_name)
+        call_node = _UnboundFedMethodNode(self, method_name, self._party)
+        return call_node
 
-    # def get_args(self):
-    #     return self._ray_dag_node.get_args()
+    def get_func_or_method_name(self):
+        return self._cls.__name__
 
-    def get_func_name(self):
-        # TODO(qwang): Refine to `get_func_name()`
-        if isinstance(self._ray_dag_node, FunctionNode):
-            return self._ray_dag_node._body.__name__
-        return self._ray_dag_node._method_name
-    
-    def _execute_impl(self, *args, **kwargs) -> Union[ray.ObjectRef, ray.actor.ActorHandle]:
-        """Execute this node, assuming args have been transformed already."""
-        # print(f"=======Submitting {self.get_func_name()}")
-        return self._ray_dag_node._execute_impl(args, kwargs)
+    def get_party(self) -> str:
+        return self._party
 
-    def execute(self, *args, **kwargs) -> Union[ray.ObjectRef, ray.actor.ActorHandle]:
-        """Execute this DAG using the Ray default executor."""
-        return self.apply_recursive(lambda node: node._execute_impl(*args, **kwargs))
+class _UnboundFedMethodNode(_UnboundClassMethodNode):
+    # rename class_node instead of actor.
+    def __init__(self, actor, method_name, party: str):
+        self._party = party
+        super().__init__(actor, method_name)
 
-    def _copy_impl(
-        self,
-        new_args: List[Any],
-        new_kwargs: Dict[str, Any],
-        new_options: Dict[str, Any],
-        new_other_args_to_resolve: Dict[str, Any],
-    ) -> "DAGNode":
-        return FedDAGNode(self._ray_dag_node._copy(
-            new_args=new_args,
-            new_kwargs=new_kwargs,
-            new_options=new_options,
-            new_other_args_to_resolve=new_other_args_to_resolve))
 
-class FedDAG(RayDAGNode):
-    def __init__(self, final_ray_node: RayDAGNode, party_name: str=None):
+    def bind(self, *args, **kwargs):
+        other_args_to_resolve = {
+            PARENT_CLASS_NODE_KEY: self._actor,
+            PREV_CLASS_METHOD_CALL_KEY: self._actor._last_call,
+        }
+
+        node = FedDAGClassMethodNode(
+            self._party,
+            self._method_name,
+            args,
+            kwargs,
+            self._options,
+            other_args_to_resolve=other_args_to_resolve,
+        )
+        self._actor._last_call = node
+        return node
+
+class FedDAGClassMethodNode(ClassMethodNode):
+    def __init__(self, party, method_name, method_args, method_kwargs, options, other_args_to_resolve=None):
+        self._party = party
+        self._method_name = method_name
+        super().__init__(method_name, method_args, options, method_kwargs, other_args_to_resolve=other_args_to_resolve)
+
+    def get_func_or_method_name(self):
+        return self._method_name
+
+    def get_party(self):
+        return self._party
+class FedDAG:
+    def __init__(self, final_fed_dag_node, party_name: str=None):
         self._all_sub_dags = []
-        self._final_ray_node = final_ray_node
-        self._final_fed_node = None
+        self._final_fed_dag_node = final_fed_dag_node
         self._all_node_info = {}
         self._seq_count = 0
         self._local_dag_uuids = None
@@ -226,37 +242,39 @@ class FedDAG(RayDAGNode):
         assert self._local_dag_uuids is not None, "Local DAG should be extracted first."
         return self._local_dag_uuids
 
-    def __generate_all_node_info(self)-> FedDAGNode:
+    def __generate_all_node_info(self, fed_node):
         """This help method is used to generate the indexes from
         node uuid to the node entry and node seq id.
         """
-        def __fill_index_dict(node: RayDAGNode):
-            assert isinstance(node, RayDAGNode)
-            fed_node = FedDAGNode(node)
-            self._all_node_info[node.get_stable_uuid()] = (self._seq_count, fed_node)
-            self._seq_count += 1
-            return fed_node
+        if not _is_fed_dag_node(fed_node):
+            return
 
-        final_fed_node: FedDAGNode = self._final_ray_node.apply_recursive(__fill_index_dict)
-        return final_fed_node
+        self._all_node_info[fed_node.get_stable_uuid()] = (self._seq_count, fed_node)
+        self._seq_count += 1
+
+        child_nodes: list = fed_node._get_all_child_nodes()
+        for child_node in child_nodes:
+            if (isinstance(child_node, FedDAGFunctionNode) or isinstance(child_node, FedDAGClassNode)
+                or isinstance(child_node, FedDAGClassMethodNode)):
+                self.__generate_all_node_info(child_node)
+
+
 
     def _build(self):
         """ An internal API to build all the info of this dag.
         """
-        self._final_fed_node = self.__generate_all_node_info()
-        self._final_ray_node = None # We should use _final_fed_node._ray_dag_node instead
+        self.__generate_all_node_info(self._final_fed_dag_node)
 
     def _extract_local_dag(self) -> None:
         assert self._local_dag_uuids is None, "This shouldn't be called twice."
 
         self._local_dag_uuids = []
         for uuid in self._all_node_info:
-           _, node = self._all_node_info[uuid]
-           options = node.get_options()
-           assert options is not None
-           resources = options["resources"]
-           if f"RES_{self._party_name}" in resources:
-            self._local_dag_uuids.append(uuid)
+            _, node = self._all_node_info[uuid]
+            options = node.get_options()
+            assert options is not None
+            if self._party_name == node.get_party():
+                self._local_dag_uuids.append(uuid)
 
     def _inject_barriers(self) -> None:
         # Create a RecverProxy for this party.
@@ -279,15 +297,15 @@ class FedDAG(RayDAGNode):
                 # TODO(qwang): 我们暂时只处理args里的依赖，先不处理其他的.
                 found_upstream_arg_nodes = []
                 for arg in curr_node._bound_args:
-                    if isinstance(arg, FedDAGNode) and arg._get_uuid() == self._upstream_indexes[uuid]:
+                    if _is_fed_dag_node(arg) and arg.get_stable_uuid() == self._upstream_indexes[uuid]:
                         # Found the upstream node, let us remove it.
                         found_upstream_arg_nodes.append(arg)
                 for arg_node in found_upstream_arg_nodes:
                     curr_node._bound_args = remove_from_tuple_helper(curr_node._bound_args, arg_node)
                     upstream_seq_id = self.get_seq_id_by_uuid(self._upstream_indexes[uuid])
                     downstream_seq_id = self.get_seq_id_by_uuid(uuid)
-                    recv_op_node = recv_op.bind(self._party_name, upstream_seq_id, downstream_seq_id)
-                    curr_node._bound_args = append_to_tuple_helper(curr_node._bound_args, FedDAGNode(recv_op_node))
+                    recv_op_node = remote(recv_op).bind(self._party_name, upstream_seq_id, downstream_seq_id)
+                    curr_node._bound_args = append_to_tuple_helper(curr_node._bound_args, recv_op_node)
 
             if uuid in self._downstream_indexes:
                 # Add a `send_op` to the downstream. No need to remove
@@ -295,8 +313,8 @@ class FedDAG(RayDAGNode):
                 # TODO(qwang): 要记录下来send_op是一个final node, 他是需要触发执行的
                 upstream_seq_id = self.get_seq_id_by_uuid(uuid)
                 downstream_seq_id = self.get_seq_id_by_uuid(self._downstream_indexes[uuid])
-                send_op_node = send_op.bind(curr_node._ray_dag_node, upstream_seq_id, downstream_seq_id)
-                self._injected_send_ops.append(FedDAGNode(send_op_node))
+                send_op_node = remote(send_op).bind(curr_node, upstream_seq_id, downstream_seq_id)
+                self._injected_send_ops.append(send_op_node)
 
 
     def _build_indexes(self) -> tuple:
@@ -307,30 +325,28 @@ class FedDAG(RayDAGNode):
 
         for uuid in self._all_node_info:
             _, this_node = self._all_node_info[uuid]
-            this_node_party_res = fed_utils._get_party_resource(this_node.get_options())
-            scanner = _PyObjScanner(FedDAGNode)
+            party_of_this_node = this_node.get_party()
+         
+            all_dependencies = this_node._get_all_child_nodes()
+            for dependency in all_dependencies:
+                if not _is_fed_dag_node(dependency):
+                    continue
 
-            for dependency in scanner.find_nodes(
-                [
-                    this_node._bound_args,
-                    this_node._ray_dag_node._bound_kwargs,
-                    this_node._ray_dag_node._bound_other_args_to_resolve,
-                ]
-            ):
-                dependency_party_res = fed_utils._get_party_resource(dependency.get_options())
-                if this_node_party_res == dependency_party_res:
+                # Code path of fed node(one of FedClassNode, FedClassMethodNode and FedFunctionNode)
+                party_of_dependency = dependency.get_party()
+                if party_of_this_node == party_of_dependency:
                     # No need to do any thing for the case that this 2 nodes are in the
                     # same party.
                     continue
                 # Code path for this 2 nodes are in different parties, so build the indexes.
-                self._upstream_indexes[this_node._get_uuid()] = dependency._get_uuid()
-                self._downstream_indexes[dependency._get_uuid()] = this_node._get_uuid()
+                self._upstream_indexes[this_node.get_stable_uuid()] = dependency.get_stable_uuid()
+                self._downstream_indexes[dependency.get_stable_uuid()] = this_node.get_stable_uuid()
         return self._upstream_indexes, self._downstream_indexes
 
     def _compute_nodes_need_to_drive(self):
         self._nodes_need_to_drive = self._nodes_need_to_drive + self._injected_send_ops
-        if is_node_in_party(self._final_fed_node, self._party_name):
-            self._nodes_need_to_drive.append(self._final_fed_node)
+        if self._final_fed_dag_node.get_party() == self._party_name:
+            self._nodes_need_to_drive.append(self._final_fed_dag_node)
 
     def get_nodes_to_drive(self):
         return self._nodes_need_to_drive
@@ -351,12 +367,59 @@ class FedDAG(RayDAGNode):
         print(ray.get(object_refs))
 
 
-def build_fed_dag(ray_dag: RayDAGNode, party_name: str) -> FedDAG:
-    assert ray_dag is not None
-    fed_dag_handle = FedDAG(ray_dag, party_name)
+def build_fed_dag(fed_dag_node, party_name: str) -> FedDAG:
+    assert fed_dag_node is not None
+    fed_dag_handle = FedDAG(fed_dag_node, party_name)
     fed_dag_handle._build()
     fed_dag_handle._extract_local_dag()
     fed_dag_handle._build_indexes()
     fed_dag_handle._inject_barriers()
     fed_dag_handle._compute_nodes_need_to_drive()
     return fed_dag_handle
+
+
+class FedRemoteFunction:
+    def __init__(self, func_or_class) -> None:
+        self._party = None
+        self._func_body = func_or_class
+    
+    def party(self, party: str):
+        self._party = party
+        return self
+
+    def bind(self, *args, **kwargs):
+        return FedDAGFunctionNode(self._func_body, args, kwargs, self._party)
+
+class FedRemoteClass:
+    def __init__(self, func_or_class) -> None:
+        self._party_name = None
+        self._cls = func_or_class
+    
+    def party(self, party: str):
+        self._party = party
+        return self
+
+    def bind(self, *args, **kwargs):
+        return FedDAGClassNode(self._cls, self._party, args, kwargs)
+
+# This is the decorator `@fed.remote`
+def remote(*args, **kwargs):
+    
+    def _make_fed_remote(function_or_class, options=None):
+        if inspect.isfunction(function_or_class) or is_cython(function_or_class):
+            return FedRemoteFunction(function_or_class)
+
+        if inspect.isclass(function_or_class):
+            return FedRemoteClass(function_or_class)
+
+        raise TypeError(
+            "The @ray.remote decorator must be applied to either a function or a class."
+        )
+
+    if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
+        # This is the case where the decorator is just @fed.remote.
+        return _make_fed_remote(args[0])
+    assert (
+        len(args) == 0 and len(kwargs) > 0
+    ), "Remote args error."
+    return functools.partial(_make_fed_remote, options=kwargs)
