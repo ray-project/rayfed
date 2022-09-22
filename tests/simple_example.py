@@ -1,13 +1,10 @@
-from threading import local
-from fed.api import FedDAG
-from ray.dag.input_node import InputNode
-from typing import Any, TypeVar
+import multiprocessing
 
-from fed.api import build_fed_dag
 import fed
-
 import ray
-import click
+from fed.api import FedDAG, set_cluster, set_party
+from fed.barriers import start_recv_proxy
+
 
 @fed.remote
 class MyActor:
@@ -23,24 +20,25 @@ class MyActor:
     def h(self, obj):
         return obj + "h"
 
+
 @fed.remote
 def agg_fn(obj1, obj2):
     return f"agg-{obj1}-{obj2}"
 
 
-@click.command()
-@click.option(
-    "--party-name",
-    required=True,
-    type=str,
-)
-def main(party_name: str) -> FedDAG:
-    ray.init()
-    print(f"=============party name is {party_name}")
+cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
+
+
+def run(party):
+    set_cluster(cluster=cluster)
+    set_party(party)
+    start_recv_proxy(cluster[party], party)
+
+    print(f"=============party name is {party}")
 
     ds1, ds2 = [123, 789]
-    actor_alice = MyActor.party("ALICE").bind(ds1)
-    actor_bob = MyActor.party("BOB").bind(ds2)
+    actor_alice = MyActor.party("alice").bind(ds1)
+    actor_bob = MyActor.party("bob").bind(ds2)
 
     obj_alice_f = actor_alice.f.bind()
     obj_bob_f = actor_bob.f.bind()
@@ -48,11 +46,20 @@ def main(party_name: str) -> FedDAG:
     obj_alice_g = actor_alice.g.bind(obj_alice_f)
     obj_bob_h = actor_bob.h.bind(obj_bob_f)
 
-    obj_agg_fn = agg_fn.party("BOB").bind(obj_alice_g, obj_bob_h)
+    obj_agg_fn = agg_fn.party("bob").bind(obj_alice_g, obj_bob_h)
     print(f"==========type is {type(obj_agg_fn)}")
-    fed_dag = build_fed_dag(obj_agg_fn, party_name)
-    fed_dag.execute()
+    obj_agg_fn.exec()
+
     ray.shutdown()
+
+
+def main() -> FedDAG:
+    p_alice = multiprocessing.Process(target=run, args=('alice',))
+    p_bob = multiprocessing.Process(target=run, args=('bob',))
+    p_alice.start()
+    p_bob.start()
+    p_alice.join()
+    p_bob.join()
 
 
 if __name__ == "__main__":

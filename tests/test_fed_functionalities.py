@@ -1,6 +1,6 @@
 from threading import local
 import pytest
-from fed.api import FedDAG
+from fed.api import FedDAG, set_cluster, set_party
 from ray.dag.input_node import InputNode
 from typing import Any, TypeVar
 
@@ -34,7 +34,7 @@ def _get_seq_ids_from_uuids_in_dict(fed_dag: FedDAG, uuids: list):
     all_node_info = fed_dag.get_all_node_info()
     for key_uuid in uuids:
         key_seq_id, _ = all_node_info[key_uuid]
-        value_seq_id, _ = all_node_info[uuids[key_uuid]]
+        value_seq_id, _ = all_node_info[uuids[key_uuid][1]]
         seq_ids[key_seq_id] = value_seq_id
     return seq_ids
 
@@ -73,9 +73,12 @@ def build_example_dag(party_name: str) -> FedDAG:
     fed_dag = build_fed_dag(obj_agg_fn, party_name)
     return fed_dag
 
+
+CLUSTER = {'ALICE': '127.0.0.1:13000', 'BOB': '127.0.0.1:130001'}
+set_cluster(CLUSTER)
+
 def test_build_dag():
     ray.init()
-
     fed_dag = build_example_dag(party_name="ALICE")
     assert fed_dag.get_curr_seq_count() == 9
     all_node_info = fed_dag.get_all_node_info()
@@ -155,8 +158,8 @@ def test_inejct_barriers_alice():
     send_op_node = nodes_to_drive[0]
     send_op_node.get_func_or_method_name() == "send_op"
     args_0 = send_op_node.get_args()
-    assert len(args_0) == 3
-    assert args_0[0]._method_name == "g"
+    assert len(args_0) == 4
+    assert args_0[1]._method_name == "g"
     ray.shutdown()
 
 if __name__ == "__main__":
