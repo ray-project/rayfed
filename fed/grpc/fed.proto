@@ -7,7 +7,7 @@ service GrpcService {
 }
 
 message SendDataRequest {
-    string data = 1;   
+    bytes data = 1;
     string upstream_seq_id = 2;
     string downstream_seq_id = 3;
 };

@@ -27,7 +27,7 @@ jobs:
             python3 -m virtualenv -p python3 py3
             . py3/bin/activate
             which python
-            pip install pytest torch
+            pip install pytest torch cloudpickle
             pip install ray==2.0.0
 
     - name: Build and test

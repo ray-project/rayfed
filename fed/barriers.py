@@ -1,6 +1,7 @@
 import time
 from concurrent import futures
 
+import cloudpickle
 import grpc
 import ray
 
@@ -18,7 +19,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = int(request.upstream_seq_id)
         downstream_seq_id = int(request.downstream_seq_id)
         print(
-            f"Received a grpc data {request.data} from {upstream_seq_id} to {downstream_seq_id}"
+            f"Received a grpc data from {upstream_seq_id} to {downstream_seq_id}"
         )
         self._all_data[downstream_seq_id] = request.data
         self._event.set()
@@ -45,7 +46,7 @@ def send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id):
     conn = grpc.insecure_channel(dest)
     client = fed_pb2_grpc.GrpcServiceStub(channel=conn)
     request = fed_pb2.SendDataRequest(
-        data=data,
+        data=cloudpickle.dumps(data),
         upstream_seq_id=str(upstream_seq_id),
         downstream_seq_id=str(downstream_seq_id),
     )
@@ -58,7 +59,7 @@ def send_op(dest, data, upstream_seq_id, downstream_seq_id):
     # Not sure if here has a implicitly data fetching,
     # if yes, we should send data, otherwise we should
     # send `ray.get(data)`
-    print(f"Sending data {data} to seq_id {downstream_seq_id} from {upstream_seq_id}")
+    print(f"Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}")
     response = send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id)
     print(f"Sent. response is {response}")
     return True  # True indicates it's sent successfully.
@@ -92,8 +93,9 @@ class RecverProxyActor:
         print(f"Getting data for {curr_seq_id} from {upstream_seq_id}")
         self._event.clear()
         self._event.wait()
-        print(f"=======Waited for {curr_seq_id}, data is {self._all_data[curr_seq_id]}")
-        return self._all_data[curr_seq_id]
+        print(f"=======Waited for {curr_seq_id}")
+        data = self._all_data[curr_seq_id]
+        return cloudpickle.loads(data)
 
 
 def recv_op(party: str, upstream_seq_id, curr_seq_id):
