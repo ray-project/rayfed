@@ -13,7 +13,7 @@ from ray.dag.constants import (
 )
 from ray.dag.vis_utils import plot
 
-from fed.api import remote
+from fed.api import remote, get
 
 __all__ = [
     "ClassNode",

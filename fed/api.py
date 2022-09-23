@@ -1,7 +1,7 @@
 import functools
 import inspect
 import logging
-from typing import Dict
+from typing import Dict, List
 
 import ray
 from ray._private.inspect_util import is_cython
@@ -9,6 +9,7 @@ from ray.dag import PARENT_CLASS_NODE_KEY, PREV_CLASS_METHOD_CALL_KEY
 from ray.dag.class_node import ClassMethodNode, ClassNode, _UnboundClassMethodNode
 from ray.dag.function_node import FunctionNode
 
+from fed.fed_object import FedObject
 from .barriers import send_op, recv_op
 
 logger = logging.getLogger(__file__)
@@ -67,7 +68,7 @@ def _append_to_tuple_helper(tp, item):
 
 def executable(cls):
     def make_exec():
-        def exec(self, party: str = None):
+        def exec(self, party: str = None) -> FedObject:
             if not party:
                 party = get_party()
             assert party, 'Must given a party name.'
@@ -369,8 +370,7 @@ class FedDAG:
         object_refs = []
         for node in self._nodes_need_to_drive:
             object_refs.append(node.execute())
-        print(f"Getting objects {object_refs}")
-        print(ray.get(object_refs))
+        return FedObject(object_refs)
 
 
 def build_fed_dag(fed_dag_node, party: str) -> FedDAG:
@@ -428,3 +428,6 @@ def remote(*args, **kwargs):
         return _make_fed_remote(args[0])
     assert len(args) == 0 and len(kwargs) > 0, "Remote args error."
     return functools.partial(_make_fed_remote, options=kwargs)
+
+def get(fed_object: FedObject):
+    return ray.get(fed_object.get_ray_object_refs())

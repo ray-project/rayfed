@@ -34,7 +34,7 @@ def run(party):
     set_party(party)
     start_recv_proxy(cluster[party], party)
 
-    print(f"=============party name is {party}")
+    print(f"Running the script in party {party}")
 
     ds1, ds2 = [123, 789]
     actor_alice = MyActor.party("alice").bind(ds1)
@@ -47,8 +47,9 @@ def run(party):
     obj_bob_h = actor_bob.h.bind(obj_bob_f)
 
     obj_agg_fn = agg_fn.party("bob").bind(obj_alice_g, obj_bob_h)
-    print(f"==========type is {type(obj_agg_fn)}")
-    obj_agg_fn.exec()
+    obj = obj_agg_fn.exec()
+    result = fed.get(obj)
+    print(f"The result in party {party} is :{result}")
 
     ray.shutdown()
 
