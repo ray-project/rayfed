@@ -273,8 +273,8 @@ class FedDAG:
         for uuid in self._local_dag_uuids:
             _, curr_node = self._all_node_info[uuid]
             if uuid in self._upstream_indexes:
-                # 将这个node的该上游去掉, 替换为RecverProxy.get_data
-                # TODO(qwang): 我们暂时只处理args里的依赖，先不处理其他的.
+                # Remove the upstream node of current node, use `RecverProxy.get_data` instead.
+                # TODO(qwang): We currently only handle node dependencies in `args`.
                 found_upstream_arg_nodes = []
                 for arg in curr_node._bound_args:
                     if (
@@ -301,7 +301,7 @@ class FedDAG:
             if uuid in self._downstream_indexes:
                 # Add a `send_op` to the downstream. No need to remove
                 # any downstream node.
-                # TODO(qwang): 要记录下来send_op是一个final node, 他是需要触发执行的
+                # TODO(qwang): `send_op` is a final_node as well, so that we need to trige to drive it.
                 upstream_seq_id = self.get_seq_id_by_uuid(uuid)
                 downstream_seq_id = self.get_seq_id_by_uuid(
                     self._downstream_indexes[uuid][1]
