@@ -12,15 +12,16 @@ _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
-    def __init__(self, all_events, all_data):
+    def __init__(self, all_events, all_data, party):
         self._events = all_events
         self._all_data = all_data
+        self._party = party
 
     async def SendData(self, request, context):
         upstream_seq_id = int(request.upstream_seq_id)
         downstream_seq_id = int(request.downstream_seq_id)
         print(
-            f"Received a grpc data from {upstream_seq_id} to {downstream_seq_id}"
+            f"=====[{self._party}] Received a grpc data from {upstream_seq_id} to {downstream_seq_id}"
         )
         self._all_data[downstream_seq_id] = request.data
         if upstream_seq_id not in self._events:
@@ -28,13 +29,13 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
             self._events[upstream_seq_id] = event
         event = self._events[upstream_seq_id]
         event.set()
-        print(f"=======Event set for {upstream_seq_id}")
+        print(f"=======[{self._party}] Event set for {upstream_seq_id}")
         return fed_pb2.SendDataResponse(result="OK")
 
 
-async def _run_grpc_server(port, event, all_data):
+async def _run_grpc_server(port, event, all_data, party):
     server = grpc.aio.server()
-    fed_pb2_grpc.add_GrpcServiceServicer_to_server(SendDataService(event, all_data), server)
+    fed_pb2_grpc.add_GrpcServiceServicer_to_server(SendDataService(event, all_data, party), server)
     server.add_insecure_port(f'[::]:{port}')
     await server.start()
     print("start service...")
@@ -55,11 +56,11 @@ async def send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id):
         return response.result
 
 
-def send_op(dest, data, upstream_seq_id, downstream_seq_id):
+def send_op(party, dest, data, upstream_seq_id, downstream_seq_id):
     # Not sure if here has a implicitly data fetching,
     # if yes, we should send data, otherwise we should
     # send `ray.get(data)`
-    print(f"Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}")
+    print(f"====[{party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}")
     response = asyncio.get_event_loop().run_until_complete(send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id))
     print(f"Sent. response is {response}")
     return True  # True indicates it's sent successfully.
@@ -67,8 +68,9 @@ def send_op(dest, data, upstream_seq_id, downstream_seq_id):
 
 @ray.remote
 class RecverProxyActor:
-    async def __init__(self, listen_addr: str):
+    async def __init__(self, listen_addr: str, party: str):
         self._listen_addr = listen_addr
+        self._party = party
 
         # Workaround the threading coordinations
 
@@ -81,19 +83,20 @@ class RecverProxyActor:
             self._listen_addr[self._listen_addr.index(':') + 1 :],
             self._events,
             self._all_data,
+            self._party,
         )
 
     async def is_ready(self):
         return True
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
-        print(f"====Getting data for {curr_seq_id} from {upstream_seq_id}")
+        print(f"====[{self._party}] Getting data for {curr_seq_id} from {upstream_seq_id}")
         if upstream_seq_id not in self._events:
             self._events[upstream_seq_id] = asyncio.Event()
         
         curr_event = self._events[upstream_seq_id]
         await curr_event.wait()
-        print(f"=======Waited for {curr_seq_id}")
+        print(f"=======[{self._party}] Waited for {curr_seq_id}")
         data = self._all_data[curr_seq_id]
         return cloudpickle.loads(data)
 
@@ -110,7 +113,7 @@ def start_recv_proxy(listen_addr, party):
     # Not that this is now a threaded actor.
     recver_proxy_actor = RecverProxyActor.options(
         name=f"RecverProxyActor-{party}", max_concurrency=1000
-    ).remote(listen_addr)
+    ).remote(listen_addr, party)
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
     print("======== RecverProxy was created successfully.")
