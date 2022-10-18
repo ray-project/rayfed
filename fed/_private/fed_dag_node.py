@@ -96,7 +96,7 @@ class FedDAGClassMethodNode:
         # )
 
 
-    def remote1(self, *args, **kwargs) -> FedObject:
+    def remote(self, *args, **kwargs) -> FedObject:
         other_args_to_resolve = {
             PARENT_CLASS_NODE_KEY: self._fed_dag_cls_node,
             PREV_CLASS_METHOD_CALL_KEY: self._fed_dag_cls_node._last_call,

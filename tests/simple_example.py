@@ -43,16 +43,16 @@ def run(party):
     print(f"Running the script in party {party}")
 
     ds1, ds2 = [123, 789]
-    actor_alice = MyActor.party("alice").remote1(party, ds1)
-    actor_bob = MyActor.party("bob").remote1(party, ds2)
+    actor_alice = MyActor.party("alice").remote(party, ds1)
+    actor_bob = MyActor.party("bob").remote(party, ds2)
 
-    obj_alice_f = actor_alice.f.remote1()
-    obj_bob_f = actor_bob.f.remote1()
+    obj_alice_f = actor_alice.f.remote()
+    obj_bob_f = actor_bob.f.remote()
 
-    obj_alice_g = actor_alice.g.remote1(obj_alice_f)
-    obj_bob_h = actor_bob.h.remote1(obj_alice_f)
+    obj_alice_g = actor_alice.g.remote(obj_alice_f)
+    obj_bob_h = actor_bob.h.remote(obj_alice_f)
 
-    obj = agg_fn.party("bob").remote1(obj_alice_g, obj_bob_h)
+    obj = agg_fn.party("bob").remote(obj_alice_g, obj_bob_h)
     result = fed.get(obj)
     print(f"The result in party {party} is :{result}")
 

@@ -99,28 +99,28 @@ def run(party):
     n_classes = 3
 
 
-    actor_alice = MyActor.party("alice").remote1(learning_rate, input_shape, n_classes)
-    actor_bob = MyActor.party("bob").remote1(learning_rate, input_shape, n_classes)
+    actor_alice = MyActor.party("alice").remote(learning_rate, input_shape, n_classes)
+    actor_bob = MyActor.party("bob").remote(learning_rate, input_shape, n_classes)
     print(type(actor_alice), actor_alice.__dict__)
 
-    actor_alice.load_data.remote1(batch_size, epochs)
-    actor_bob.load_data.remote1(batch_size, epochs)
-    actor_alice.build_model.remote1()
-    actor_bob.build_model.remote1()
+    actor_alice.load_data.remote(batch_size, epochs)
+    actor_bob.load_data.remote(batch_size, epochs)
+    actor_alice.build_model.remote()
+    actor_bob.build_model.remote()
 
     num_batchs = int(150 / batch_size)
     for epoch in range(epochs):
         for step in range(num_batchs):
             print(f'Epoch {epoch} step {step}.')
-            actor_alice.train_step.remote1()
-            actor_bob.train_step.remote1()
+            actor_alice.train_step.remote()
+            actor_bob.train_step.remote()
 
-        w_a = actor_alice.get_weights.remote1(party)
-        w_b = actor_bob.get_weights.remote1(party)
-        w_mean = mean.party('alice').remote1(party, w_a, w_b)
+        w_a = actor_alice.get_weights.remote(party)
+        w_b = actor_bob.get_weights.remote(party)
+        w_mean = mean.party('alice').remote(party, w_a, w_b)
         result = fed.get(w_mean)
-        n_wa = actor_alice.set_weights.remote1(party, w_mean)
-        n_wb = actor_bob.set_weights.remote1(party, w_mean)
+        n_wa = actor_alice.set_weights.remote(party, w_mean)
+        n_wb = actor_bob.set_weights.remote(party, w_mean)
         print(f'Epoch {epoch} finished, mean is {result}')
         # print(f'[{party}] Epoch {epoch} finished, mean is ...')
 

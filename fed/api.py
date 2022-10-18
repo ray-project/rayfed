@@ -75,7 +75,7 @@ class FedRemoteFunction:
         self._options = options
         return self
 
-    def remote1(self, *args, **kwargs):
+    def remote(self, *args, **kwargs):
         # Generate a new fed task id for this call.
         fed_task_id = get_global_context().next_seq_id()
 
@@ -123,7 +123,7 @@ class FedRemoteClass:
         self._options = options
         return self
 
-    def remote1(self, *args, **kwargs):
+    def remote(self, *args, **kwargs):
         fed_class_task_id = get_global_context().next_seq_id()
         fed_class_node = FedDAGClassNode(
             fed_class_task_id,

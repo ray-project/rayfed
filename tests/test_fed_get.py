@@ -43,17 +43,17 @@ def run(party):
     start_recv_proxy(cluster[party], party)
 
     epochs = 3
-    alice_model = MyModel.party("alice").remote1("alice", 2)
-    bob_model = MyModel.party("bob").remote1("bob", 4)
+    alice_model = MyModel.party("alice").remote("alice", 2)
+    bob_model = MyModel.party("bob").remote("bob", 4)
 
     all_mean_weights = []
     for epoch in range(epochs):
-        w1 = alice_model.train.remote1()
-        w2 = bob_model.train.remote1()
-        new_weights = mean.party("alice").remote1(w1, w2)
+        w1 = alice_model.train.remote()
+        w2 = bob_model.train.remote()
+        new_weights = mean.party("alice").remote(w1, w2)
         result = fed.get(new_weights)
-        alice_model.set_weights.remote1(new_weights)
-        bob_model.set_weights.remote1(new_weights)
+        alice_model.set_weights.remote(new_weights)
+        bob_model.set_weights.remote(new_weights)
         all_mean_weights.append(result)
     assert all_mean_weights == [3, 6, 9]
 
