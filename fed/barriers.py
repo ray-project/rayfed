@@ -1,5 +1,6 @@
 import time
 from concurrent import futures
+from turtle import down
 
 import cloudpickle
 import grpc
@@ -10,6 +11,19 @@ from fed.grpc import fed_pb2, fed_pb2_grpc
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
+def key_exists_in_two_dim_dict(the_dict, key_a, key_b) -> bool:
+    if key_a not in the_dict:
+        return False
+    return key_b in the_dict[key_a]
+
+def add_two_dim_dict(the_dict, key_a, key_b, val):
+  if key_a in the_dict:
+    the_dict[key_a].update({key_b: val})
+  else:
+    the_dict.update({key_a:{key_b: val}})
+
+def get_from_two_dim_dict(the_dict, key_a, key_b):
+    return the_dict[key_a][key_b]
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
     def __init__(self, all_events, all_data, party):
@@ -23,11 +37,12 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         print(
             f"=====[{self._party}] Received a grpc data from {upstream_seq_id} to {downstream_seq_id}"
         )
-        self._all_data[downstream_seq_id] = request.data
-        if upstream_seq_id not in self._events:
+
+        add_two_dim_dict(self._all_data, upstream_seq_id, downstream_seq_id, request.data)
+        if not key_exists_in_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id):
             event = asyncio.Event()
-            self._events[upstream_seq_id] = event
-        event = self._events[upstream_seq_id]
+            add_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id, event)
+        event = get_from_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id)
         event.set()
         print(f"=======[{self._party}] Event set for {upstream_seq_id}")
         return fed_pb2.SendDataResponse(result="OK")
@@ -75,8 +90,8 @@ class RecverProxyActor:
         # Workaround the threading coordinations
 
         # All events for grpc waitting usage.
-        self._events = {} # map from upstream_seq_id -> event
-        self._all_data = {}
+        self._events = {} # map from (upstream_seq_id, downstream_seq_id) to event
+        self._all_data = {} # map from (upstream_seq_id, downstream_seq_id) to data 
 
     async def run_grpc_server(self):
         return await _run_grpc_server(
@@ -91,13 +106,12 @@ class RecverProxyActor:
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
         print(f"====[{self._party}] Getting data for {curr_seq_id} from {upstream_seq_id}")
-        if upstream_seq_id not in self._events:
-            self._events[upstream_seq_id] = asyncio.Event()
-        
-        curr_event = self._events[upstream_seq_id]
+        if not key_exists_in_two_dim_dict(self._events, upstream_seq_id, curr_seq_id):
+            add_two_dim_dict(self._events, upstream_seq_id, curr_seq_id, asyncio.Event())
+        curr_event = get_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         await curr_event.wait()
         print(f"=======[{self._party}] Waited for {curr_seq_id}")
-        data = self._all_data[curr_seq_id]
+        data = get_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
         return cloudpickle.loads(data)
 
 

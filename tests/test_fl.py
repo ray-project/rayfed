@@ -118,9 +118,11 @@ def run(party):
         w_a = actor_alice.get_weights.remote1(party)
         w_b = actor_bob.get_weights.remote1(party)
         w_mean = mean.party('alice').remote1(party, w_a, w_b)
+        result = fed.get(w_mean)
         n_wa = actor_alice.set_weights.remote1(party, w_mean)
         n_wb = actor_bob.set_weights.remote1(party, w_mean)
-        print(f'Epoch {epoch} finished.')
+        print(f'Epoch {epoch} finished, mean is {result}')
+        # print(f'[{party}] Epoch {epoch} finished, mean is ...')
 
     print(f"======= The final result in {party} is ...")
 

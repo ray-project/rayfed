@@ -1,7 +1,7 @@
 import functools
 import inspect
 import logging
-from typing import Dict, List
+from typing import Any, Dict, List
 from fed._private.global_context import get_global_context
 # from fed.fed_actor import FedActor
 
@@ -105,7 +105,6 @@ class FedRemoteFunction:
         return fed_object
 
     def _execute_impl(self, args, kwargs):
-        print(f"=========_execute_impl in normal task, func_body={self._func_body}")
         return ray.remote(self._func_body).options(**self._options).remote(
             *args, **kwargs)
 
@@ -130,7 +129,7 @@ class FedRemoteClass:
             fed_class_task_id,
             get_cluster(),
             self._cls, 
-            get_party(), 
+            get_party(),
             self._party, 
             self._options,
             args, 
@@ -157,8 +156,42 @@ def remote(*args, **kwargs):
     assert len(args) == 0 and len(kwargs) > 0, "Remote args error."
     return functools.partial(_make_fed_remote, options=kwargs)
 
-def get(fed_object: FedObject):
-    if fed_object.get_ray_object_ref() is None:
-        return None
+
+def get(fed_object: FedObject) -> Any:
+    """
+        Gets the real data of the given fed_object.
+
+        If the object is located in current party, return it immediately,
+        otherwise return it after receiving the real data from the located
+        party.
+    """
+
+    # A fake fed_task_id for a `fed.get()` operator. This is useful
+    # to help contruct the DAG within `fed.get`.
+    fake_fed_task_id = get_global_context().next_seq_id()
+    cluster = get_cluster()
+    current_party = get_party()
+    if fed_object.get_party() == current_party:
+        # The code path of the fed_object is in current party, so
+        # need to boardcast the data of the fed_object to other parties,
+        # and then return the real data of that.
+        ray_object_ref = fed_object.get_ray_object_ref()
+        assert ray_object_ref is not None
+        for party_name, party_addr in cluster.items():
+            if party_name == current_party:
+                continue
+            else:
+                send_op_ray_obj = ray.remote(send_op).remote(
+                                current_party,
+                                party_addr,
+                                ray_object_ref,
+                                fed_object.get_fed_task_id(),
+                                fake_fed_task_id)
+        return ray.get(ray_object_ref)
     else:
-        return ray.get(fed_object.get_ray_object_ref())
+        # This is the code path that the fed_object is not in current party.
+        # So we should insert a `recv_op` as a barrier to receive the real
+        # data from the location party of the fed_object.
+        recv_op_obj = ray.remote(recv_op).remote(
+                    current_party, fed_object.get_fed_task_id(), fake_fed_task_id)
+        return ray.get(recv_op_obj)

@@ -54,7 +54,7 @@ def run(party):
 
     obj = agg_fn.party("bob").remote1(obj_alice_g, obj_bob_h)
     result = fed.get(obj)
-    # print(f"The result in party {party} is :{result}")
+    print(f"The result in party {party} is :{result}")
 
     import time
     time.sleep(10000)
