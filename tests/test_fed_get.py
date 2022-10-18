@@ -1,7 +1,5 @@
 
 import multiprocessing
-from sqlite3 import paramstyle
-from tkinter import E
 
 import pytest
 import fed

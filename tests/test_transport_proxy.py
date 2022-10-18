@@ -15,14 +15,14 @@ def test_n_to_1_transport():
     SERVER_ADDRESS = "127.0.0.1:12344"
     recver_proxy_actor = RecverProxyActor.options(
         name=f"RecverProxyActor-TEST", max_concurrency=2000
-    ).remote(SERVER_ADDRESS)
+    ).remote(SERVER_ADDRESS, "test_party")
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
 
     sent_objs = []
     get_objs = []
     for i in range(NUM_DATA):
-        sent_obj = ray.remote(send_op).remote(SERVER_ADDRESS, f"data-{i}", i, i + 1)
+        sent_obj = ray.remote(send_op).remote("test_party", SERVER_ADDRESS, f"data-{i}", i, i + 1)
         sent_objs.append(sent_obj)
         get_obj = recver_proxy_actor.get_data.remote(i, i + 1)
         get_objs.append(get_obj)

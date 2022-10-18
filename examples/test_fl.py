@@ -126,9 +126,6 @@ def run(party):
 
     print(f"======= The final result in {party} is ...")
 
-    import time
-    time.sleep(100)
-
     ray.shutdown()
 
 
