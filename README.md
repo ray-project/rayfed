@@ -1,55 +1,40 @@
 # RayFed
-A multiple parties involved execution engine on the top of Ray.  
+A multiple parties joint, distributed execution engine on the top of Ray.
 
 ## How to use?
 ```python
-# Federated learning across 3 parties.
+# Federated learning across 2 parties on Ray.
 
-@ray.remote
-def length(x):
-    return len(x)
-
-@ray.fed
+@fed.remote
 class MyModel:
-    def fit(self, x):
-        pass
+    pass
 
-@ray.fed(party="CAROL")
+@fed.remote(party="ALICE)
 class Aggregator:
     pass
 
-x_alice = read_cvs.party("ALICE").bind("alice.csv")
-x_bob = read_csv.party("BOB").bind("bob.csv")
-actor_alice = MyModel.party("ALICE").bind(x_alice)
-actor_bob = MyModel.party("BOB").bind(x_bob)
-aggregator = Aggregator.bind()
+model_1 = MyModel.party("ALICE").remote()
+model_2 = MyModel.party("BOB").remote()
+aggregator = Aggregator.remote()
 
-n_alice = length.party("ALICE").bind(x_alice)
-n_bob = length.party("BOB").bind(x_bob)
+model_1.load_data.remote()
+model_2.load_data.remote()
 
-n_alice_ref = n_alice.execute()
-n_bob_ref = n_bob.execute()
+for epoch in range(num_epochs):
+    # 1. Train local model in the local parties.
+    for step in range(num_steps):
+        model1.train.remote()
+        model2.train.remote()
 
-na, nb = ray.get([n_alice_ref, n_bob_ref])
-step_per_epochs = min(na, nb) # batch_size
+    # 2. Aggregrate gradients and re-distribute it.
+    acc1, w1 = model1.get_weights.remote()
+    acc2, w2 = model2.get_weights.remote()
+    new_w = aggregator.mean.remote(w1, w2)
+    model1.update_weights.remote(new_w)
+    model2.update_weights.remote(new_w)
 
-
-for epoch in range(10):
-    for step in range(500):
-        # step1: Train in local parties.
-        g_step = epoch * step_per_epochs + step
-        metrics_alice, weight_alice = actor_alice.fit.bind(g_step, current_weight)
-        metrics_bob, weight_bob = actor_bob.fit.bind(g_step, current_weight)
-
-        # step 2: grads aggregrating.
-        current_weight = aggregator.average.bind(weight_alice, weight_bob)
-        actor_alice.update.bind(current_weight)
-        actor_bob.update.bind(current_weight)
-
-        # step 3: metrics aggregrating, early stop.
-        global_metrics = aggregator.metrics_average.bind(metrics_alice, metrics_bob)
-        g_metrics = ray.get(global_metrics.execute())
-        if g_metrics < 0.8:
-            break
-
+    # step3: Aggregrate metrics and early stop.
+    meant_acc = aggregator.mean.remote(acc1, acc2)
+    if fed.get(meant_acc) > 0.98:
+        break
 ```
