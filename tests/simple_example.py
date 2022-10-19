@@ -55,8 +55,6 @@ def run(party):
     result = fed.get(obj)
     print(f"The result in party {party} is :{result}")
 
-    import time
-    time.sleep(10000)
     ray.shutdown()
 
 

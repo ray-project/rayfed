@@ -1,8 +1,11 @@
 import functools
 import inspect
 import logging
+import queue
+import threading
 from typing import Any, Dict, List
 from fed._private.global_context import get_global_context
+
 # from fed.fed_actor import FedActor
 
 import ray
@@ -11,7 +14,11 @@ from ray.dag import PARENT_CLASS_NODE_KEY, PREV_CLASS_METHOD_CALL_KEY
 from ray.dag.class_node import ClassMethodNode, ClassNode, _UnboundClassMethodNode
 from ray.dag.function_node import FunctionNode
 
-from fed._private.fed_dag_node import (FedDAGClassNode, FedDAGClassMethodNode, _resolve_dependencies)
+from fed._private.fed_dag_node import (
+    FedDAGClassNode,
+    FedDAGClassMethodNode,
+    _resolve_dependencies,
+)
 from fed.fed_object import FedObject
 from .barriers import send_op, recv_op
 
@@ -49,6 +56,39 @@ def set_cluster(cluster: Dict):
     global _CLUSTER
     _CLUSTER = cluster
 
+
+_sent_obj_refs_q = queue.Queue()
+
+
+def _check_sent_objs():
+    global _sent_obj_refs_q
+    while True:
+        obj_ref = _sent_obj_refs_q.get()
+        if isinstance(obj_ref, ray.ObjectRef):
+            ray.get(obj_ref)
+            _sent_obj_refs_q.task_done()
+        else:
+            # A bool indicated exit.
+            assert isinstance(obj_ref, bool)
+            _sent_obj_refs_q.task_done()
+            break
+
+
+_check_send_thread = threading.Thread(target=_check_sent_objs)
+_check_send_thread_started = False
+
+
+def _monitor_thread():
+    main_thread = threading.main_thread()
+    main_thread.join()
+    global _sent_obj_refs_q
+    # Signal _check_send_thread to exit.
+    _sent_obj_refs_q.put(True)
+
+
+_monitor = threading.Thread(target=_monitor_thread)
+
+
 class FedDAGFunctionNode(FunctionNode):
     def __init__(self, func_body, func_args, func_kwargs, party: str):
         self._func_body = func_body
@@ -60,6 +100,7 @@ class FedDAGFunctionNode(FunctionNode):
 
     def get_party(self):
         return self._party
+
 
 class FedRemoteFunction:
     def __init__(self, func_or_class) -> None:
@@ -82,10 +123,14 @@ class FedRemoteFunction:
         ####################################
         # This might duplicate.
         fed_object = None
-        self._party = get_party() # TODO(qwang): Refine this.
-        print(f"======self._party={self._party}, node_party={self._node_party}, func={self._func_body}")
+        self._party = get_party()  # TODO(qwang): Refine this.
+        print(
+            f"======self._party={self._party}, node_party={self._node_party}, func={self._func_body}"
+        )
         if self._party == self._node_party:
-            resolved_dependencies = _resolve_dependencies(args, self._party, fed_task_id)
+            resolved_dependencies = _resolve_dependencies(
+                args, self._party, fed_task_id
+            )
             # TODO(qwang): Handle kwargs.
             ray_obj_ref = self._execute_impl(args=resolved_dependencies, kwargs=kwargs)
             fed_object = FedObject(self._node_party, fed_task_id, ray_obj_ref)
@@ -99,14 +144,16 @@ class FedRemoteFunction:
                         cluster[self._node_party],
                         arg.get_ray_object_ref(),
                         arg.get_fed_task_id(),
-                        fed_task_id)
+                        fed_task_id,
+                    )
             fed_object = FedObject(self._node_party, fed_task_id, None)
         ####################################
         return fed_object
 
     def _execute_impl(self, args, kwargs):
-        return ray.remote(self._func_body).options(**self._options).remote(
-            *args, **kwargs)
+        return (
+            ray.remote(self._func_body).options(**self._options).remote(*args, **kwargs)
+        )
 
 
 class FedRemoteClass:
@@ -128,14 +175,16 @@ class FedRemoteClass:
         fed_class_node = FedDAGClassNode(
             fed_class_task_id,
             get_cluster(),
-            self._cls, 
+            self._cls,
             get_party(),
-            self._party, 
+            self._party,
             self._options,
-            args, 
-            kwargs)
-        fed_class_node._execute_impl() # TODO(qwang): We shouldn't use Node.execute(), we should use `remote`.
+            args,
+            kwargs,
+        )
+        fed_class_node._execute_impl()  # TODO(qwang): We shouldn't use Node.execute(), we should use `remote`.
         return fed_class_node
+
 
 # This is the decorator `@fed.remote`
 def remote(*args, **kwargs):
@@ -159,13 +208,19 @@ def remote(*args, **kwargs):
 
 def get(fed_object: FedObject) -> Any:
     """
-        Gets the real data of the given fed_object.
+    Gets the real data of the given fed_object.
 
-        If the object is located in current party, return it immediately,
-        otherwise return it after receiving the real data from the located
-        party.
+    If the object is located in current party, return it immediately,
+    otherwise return it after receiving the real data from the located
+    party.
     """
 
+    global _check_send_thread_started
+    global _sent_obj_refs_q
+    if not _check_send_thread_started:
+        _check_send_thread.start()
+        _monitor.start()
+        _check_send_thread_started = True
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
@@ -182,16 +237,20 @@ def get(fed_object: FedObject) -> Any:
                 continue
             else:
                 send_op_ray_obj = ray.remote(send_op).remote(
-                                current_party,
-                                party_addr,
-                                ray_object_ref,
-                                fed_object.get_fed_task_id(),
-                                fake_fed_task_id)
+                    current_party,
+                    party_addr,
+                    ray_object_ref,
+                    fed_object.get_fed_task_id(),
+                    fake_fed_task_id,
+                )
+                _sent_obj_refs_q.put(send_op_ray_obj)
+
         return ray.get(ray_object_ref)
     else:
         # This is the code path that the fed_object is not in current party.
         # So we should insert a `recv_op` as a barrier to receive the real
         # data from the location party of the fed_object.
         recv_op_obj = ray.remote(recv_op).remote(
-                    current_party, fed_object.get_fed_task_id(), fake_fed_task_id)
+            current_party, fed_object.get_fed_task_id(), fake_fed_task_id
+        )
         return ray.get(recv_op_obj)
