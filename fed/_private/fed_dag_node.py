@@ -2,15 +2,15 @@
 from typing import Optional
 from fed._private.global_context import get_global_context
 import ray
-
+import jax
 from ray.dag import PARENT_CLASS_NODE_KEY, PREV_CLASS_METHOD_CALL_KEY
 from fed.fed_object import FedObject
 from fed.barriers import send_op, recv_op
 
-
 def _resolve_dependencies(args, current_party, current_fed_task_id):
+    flattened_args, tree = jax.tree_util.tree_flatten(args)
     resolved = []
-    for arg in args:
+    for arg in flattened_args:
         if isinstance(arg, FedObject):
             if arg.get_party() == current_party:
                 print(f"========insert fed object, arg.party={arg.get_party()}, curr_party={current_party}")
@@ -22,6 +22,7 @@ def _resolve_dependencies(args, current_party, current_fed_task_id):
                 resolved.append(recv_op_obj)
         else:
             resolved.append(arg)
+    resolved = jax.tree_util.tree_unflatten(tree, resolved)
     return resolved
 
 
@@ -117,7 +118,8 @@ class FedDAGClassMethodNode:
             ray_obj_ref = self._execute_impl(args=resolved_dependencies, kwargs=kwargs)
             fed_object = FedObject(self._node_party, self._fed_task_id, ray_obj_ref)
         else:
-            for arg in args:
+            flattened_args, _ = jax.tree_util.tree_flatten(args)
+            for arg in flattened_args:
                 # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
                     cluster = self._cluster

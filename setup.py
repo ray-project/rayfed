@@ -51,5 +51,6 @@ setup(
     author_email='kingchin1218@gmail.com',
     url='https://github.com/jovany-wang/RayFed',
     packages=find_packages(exclude=('examples', 'tests', 'tests.*')),
+    install_requires=read_requirements(),
     extras_require={'dev': ['pylint']},
 )

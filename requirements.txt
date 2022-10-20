@@ -1,0 +1,3 @@
+## setup.py read_requirements
+jax>=0.3.0
+jaxlib>=0.3.0

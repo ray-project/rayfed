@@ -37,6 +37,7 @@ cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
 
 
 def run(party):
+    ray.init()
     set_cluster(cluster=cluster)
     set_party(party)
     start_recv_proxy(cluster[party], party)
@@ -59,6 +60,7 @@ def run(party):
         [alice_model.get_weights.remote(), bob_model.get_weights.remote()]
     )
     assert latest_weights == [9, 9]
+    ray.shutdown()
 
 
 def test_fed_get_in_2_parties():

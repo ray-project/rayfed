@@ -8,6 +8,7 @@ from fed._private.global_context import get_global_context
 
 # from fed.fed_actor import FedActor
 
+import jax
 import ray
 from ray._private.inspect_util import is_cython
 from ray.dag import PARENT_CLASS_NODE_KEY, PREV_CLASS_METHOD_CALL_KEY
@@ -135,7 +136,8 @@ class FedRemoteFunction:
             ray_obj_ref = self._execute_impl(args=resolved_dependencies, kwargs=kwargs)
             fed_object = FedObject(self._node_party, fed_task_id, ray_obj_ref)
         else:
-            for arg in args:
+            flattened_args, _ = jax.tree_util.tree_flatten(args)
+            for arg in flattened_args:
                 # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
                     cluster = get_cluster()
