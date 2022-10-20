@@ -1,4 +1,3 @@
-
 import multiprocessing
 
 import pytest
@@ -23,14 +22,16 @@ class MyModel:
 
     def get_weights(self):
         return self._weights
-    
+
     def set_weights(self, new_weights):
         self._weights = new_weights
         return new_weights
 
+
 @fed.remote
 def mean(x, y):
     return (x + y) / 2
+
 
 cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
 
@@ -54,6 +55,10 @@ def run(party):
         bob_model.set_weights.remote(new_weights)
         all_mean_weights.append(result)
     assert all_mean_weights == [3, 6, 9]
+    latest_weights = fed.get(
+        [alice_model.get_weights.remote(), bob_model.get_weights.remote()]
+    )
+    assert latest_weights == [9, 9]
 
 
 def test_fed_get_in_2_parties():
