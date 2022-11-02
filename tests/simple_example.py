@@ -54,7 +54,6 @@ def run(party):
     obj = agg_fn.party("bob").remote(obj_alice_g, obj_bob_h)
     result = fed.get(obj)
     print(f"The result in party {party} is :{result}")
-
     ray.shutdown()
 
 

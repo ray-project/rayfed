@@ -1,19 +1,14 @@
+from ray.dag.class_node import ClassMethodNode, ClassNode
+from ray.dag.constants import (DAGNODE_TYPE_KEY, PARENT_CLASS_NODE_KEY,
+                               PREV_CLASS_METHOD_CALL_KEY)
 from ray.dag.dag_node import DAGNode
 from ray.dag.function_node import FunctionNode
-from ray.dag.class_node import ClassNode, ClassMethodNode
-from ray.dag.input_node import (
-    InputNode,
-    InputAttributeNode,
-    DAGInputData,
-)
-from ray.dag.constants import (
-    PARENT_CLASS_NODE_KEY,
-    PREV_CLASS_METHOD_CALL_KEY,
-    DAGNODE_TYPE_KEY,
-)
+from ray.dag.input_node import DAGInputData, InputAttributeNode, InputNode
 from ray.dag.vis_utils import plot
 
-from fed.api import remote, get
+from fed.api import get, get_party, remote, set_cluster
+from fed.barriers import start_recv_proxy
+from fed.fed_object import FedObject
 
 __all__ = [
     "ClassNode",
@@ -27,5 +22,10 @@ __all__ = [
     "PREV_CLASS_METHOD_CALL_KEY",
     "DAGNODE_TYPE_KEY",
     "plot",
+    "get",
+    "get_party",
     "remote",
+    "set_cluster",
+    "FedObject",
+    "start_recv_proxy",
 ]

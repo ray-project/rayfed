@@ -4,51 +4,57 @@ import cloudpickle
 import grpc
 import ray
 import asyncio
+import threading
 
 from fed.grpc import fed_pb2, fed_pb2_grpc
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
 def key_exists_in_two_dim_dict(the_dict, key_a, key_b) -> bool:
+    key_a, key_b = str(key_a), str(key_b)
     if key_a not in the_dict:
         return False
     return key_b in the_dict[key_a]
 
 def add_two_dim_dict(the_dict, key_a, key_b, val):
-  if key_a in the_dict:
-    the_dict[key_a].update({key_b: val})
-  else:
-    the_dict.update({key_a:{key_b: val}})
+    key_a, key_b = str(key_a), str(key_b)
+    if key_a in the_dict:
+        the_dict[key_a].update({key_b: val})
+    else:
+        the_dict.update({key_a:{key_b: val}})
 
 def get_from_two_dim_dict(the_dict, key_a, key_b):
+    key_a, key_b = str(key_a), str(key_b)
     return the_dict[key_a][key_b]
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
-    def __init__(self, all_events, all_data, party):
+    def __init__(self, all_events, all_data, party, lock):
         self._events = all_events
         self._all_data = all_data
         self._party = party
+        self._lock = lock
 
     async def SendData(self, request, context):
-        upstream_seq_id = int(request.upstream_seq_id)
-        downstream_seq_id = int(request.downstream_seq_id)
+        upstream_seq_id = request.upstream_seq_id
+        downstream_seq_id = request.downstream_seq_id
         print(
             f"=====[{self._party}] Received a grpc data from {upstream_seq_id} to {downstream_seq_id}"
         )
 
         add_two_dim_dict(self._all_data, upstream_seq_id, downstream_seq_id, request.data)
-        if not key_exists_in_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id):
-            event = asyncio.Event()
-            add_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id, event)
+        with self._lock:
+            if not key_exists_in_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id):
+                event = asyncio.Event()
+                add_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id, event)
         event = get_from_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id)
         event.set()
         print(f"=======[{self._party}] Event set for {upstream_seq_id}")
         return fed_pb2.SendDataResponse(result="OK")
 
 
-async def _run_grpc_server(port, event, all_data, party):
+async def _run_grpc_server(port, event, all_data, party, lock):
     server = grpc.aio.server()
-    fed_pb2_grpc.add_GrpcServiceServicer_to_server(SendDataService(event, all_data, party), server)
+    fed_pb2_grpc.add_GrpcServiceServicer_to_server(SendDataService(event, all_data, party, lock), server)
     server.add_insecure_port(f'[::]:{port}')
     await server.start()
     print("start service...")
@@ -64,7 +70,7 @@ async def send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id):
             upstream_seq_id=str(upstream_seq_id),
             downstream_seq_id=str(downstream_seq_id),
         )
-        response = await stub.SendData(request)
+        response = await stub.SendData(request, timeout=60)
         print("received response:", response.result)
         return response.result
 
@@ -90,6 +96,7 @@ class RecverProxyActor:
         # All events for grpc waitting usage.
         self._events = {} # map from (upstream_seq_id, downstream_seq_id) to event
         self._all_data = {} # map from (upstream_seq_id, downstream_seq_id) to data 
+        self._lock = threading.Lock()
 
     async def run_grpc_server(self):
         return await _run_grpc_server(
@@ -97,6 +104,7 @@ class RecverProxyActor:
             self._events,
             self._all_data,
             self._party,
+            self._lock,
         )
 
     async def is_ready(self):
@@ -104,8 +112,9 @@ class RecverProxyActor:
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
         print(f"====[{self._party}] Getting data for {curr_seq_id} from {upstream_seq_id}")
-        if not key_exists_in_two_dim_dict(self._events, upstream_seq_id, curr_seq_id):
-            add_two_dim_dict(self._events, upstream_seq_id, curr_seq_id, asyncio.Event())
+        with self._lock:
+            if not key_exists_in_two_dim_dict(self._events, upstream_seq_id, curr_seq_id):
+                add_two_dim_dict(self._events, upstream_seq_id, curr_seq_id, asyncio.Event())
         curr_event = get_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         await curr_event.wait()
         print(f"=======[{self._party}] Waited for {curr_seq_id}")

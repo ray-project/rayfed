@@ -19,9 +19,9 @@ class My:
         assert li[0] == "hello"
         li1 = li[1]
         li2 = li[2]
-        assert ray.get(li1[0]) == "foo-0"
+        assert li1[0] == "foo-0"
         assert li2[0] == "world"
-        assert ray.get(li2[1][0]) == "foo-1"
+        assert li2[1][0] == "foo-1"
         return True
 
 cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
@@ -58,4 +58,4 @@ def test_pass_fed_objects_in_list():
 if __name__ == "__main__":
     import sys
 
-    sys.exit(pytest.main(["-v", __file__]))
+    sys.exit(pytest.main(["-sv", __file__]))
