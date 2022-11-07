@@ -6,8 +6,8 @@ from ray.dag.function_node import FunctionNode
 from ray.dag.input_node import DAGInputData, InputAttributeNode, InputNode
 from ray.dag.vis_utils import plot
 
-from fed.api import get, get_party, remote, set_cluster
-from fed.barriers import start_recv_proxy
+from fed.api import get, get_cluster, get_party, remote, set_cluster
+from fed.barriers import start_recv_proxy, send, recv
 from fed.fed_object import FedObject
 
 __all__ = [
@@ -23,9 +23,12 @@ __all__ = [
     "DAGNODE_TYPE_KEY",
     "plot",
     "get",
+    "get_cluster",
     "get_party",
     "remote",
     "set_cluster",
     "FedObject",
     "start_recv_proxy",
+    "send",
+    "recv",
 ]

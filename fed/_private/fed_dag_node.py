@@ -5,8 +5,7 @@ import jax
 from ray.dag import PARENT_CLASS_NODE_KEY, PREV_CLASS_METHOD_CALL_KEY
 from fed.utils import resolve_dependencies
 from fed.fed_object import FedObject
-from fed.barriers import send_op
-from fed.cleanup import push_to_sending
+from fed.barriers import send
 
 
 class FedDAGClassNode:
@@ -148,14 +147,13 @@ class FedDAGClassMethodNode:
                     print(
                         f'[{self._party}] =====insert send_op to {self._node_party}, arg task id {arg.get_fed_task_id()}, to task id {self._fed_task_id}'
                     )
-                    send_op_ray_obj = ray.remote(send_op).remote(
+                    send(
                         self._party,
                         cluster[self._node_party],
                         arg.get_ray_object_ref(),
                         arg.get_fed_task_id(),
                         self._fed_task_id,
                     )
-                    push_to_sending(send_op_ray_obj)
             if (
                 self._options
                 and 'num_returns' in self._options
@@ -174,7 +172,7 @@ class FedDAGClassMethodNode:
         return self
 
     def _execute_impl(self, args, kwargs):
-        method_body = getattr(self._parent_class_node, self._method_name)
+        # method_body = getattr(self._parent_class_node, self._method_name)
         # Execute with bound args.
         # return method_body.options(**self._bound_options).remote(
         #     *self._bound_args,

@@ -1,28 +1,18 @@
 import functools
 import inspect
 import logging
-import queue
-import threading
 from typing import Any, Dict, List, Union
-from fed._private.global_context import get_global_context
-
-# from fed.fed_actor import FedActor
 
 import jax
 import ray
 from ray._private.inspect_util import is_cython
-from ray.dag import PARENT_CLASS_NODE_KEY, PREV_CLASS_METHOD_CALL_KEY
-from ray.dag.class_node import ClassMethodNode, ClassNode, _UnboundClassMethodNode
 from ray.dag.function_node import FunctionNode
 
-from fed._private.fed_dag_node import (
-    FedDAGClassNode,
-    FedDAGClassMethodNode,
-)
+from fed._private.fed_dag_node import FedDAGClassNode
+from fed._private.global_context import get_global_context
+from fed.barriers import recv, send
 from fed.fed_object import FedObject
-from .barriers import send_op, recv_op
 from fed.utils import resolve_dependencies
-from fed.cleanup import push_to_sending
 
 logger = logging.getLogger(__file__)
 
@@ -121,14 +111,13 @@ class FedRemoteFunction:
                     print(
                         f'[{self._party}] =====insert send_op to {self._node_party}, arg task id {arg.get_fed_task_id()}, to task id {fed_task_id}'
                     )
-                    send_op_ray_obj = ray.remote(send_op).remote(
+                    send(
                         self._party,
                         cluster[self._node_party],
                         arg.get_ray_object_ref(),
                         arg.get_fed_task_id(),
                         fed_task_id,
                     )
-                    push_to_sending(send_op_ray_obj)
             if (
                 self._options
                 and 'num_returns' in self._options
@@ -223,28 +212,26 @@ def get(fed_objects: Union[FedObject, List[FedObject]]) -> Any:
             # and then return the real data of that.
             ray_object_ref = fed_object.get_ray_object_ref()
             assert ray_object_ref is not None
+            ray_refs.append(ray_object_ref)
             for party_name, party_addr in cluster.items():
                 if party_name == current_party:
                     continue
                 else:
-                    send_op_ray_obj = ray.remote(send_op).remote(
+                    send(
                         current_party,
                         party_addr,
                         ray_object_ref,
                         fed_object.get_fed_task_id(),
                         fake_fed_task_id,
                     )
-                    push_to_sending(send_op_ray_obj)
-
-            ray_refs.append(ray_object_ref)
         else:
             # This is the code path that the fed_object is not in current party.
             # So we should insert a `recv_op` as a barrier to receive the real
             # data from the location party of the fed_object.
-            recv_op_obj = ray.remote(recv_op).remote(
+            recv_obj = recv(
                 current_party, fed_object.get_fed_task_id(), fake_fed_task_id
             )
-            ray_refs.append(recv_op_obj)
+            ray_refs.append(recv_obj)
 
     values = ray.get(ray_refs)
     if is_individual_id:

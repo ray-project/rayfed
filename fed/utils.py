@@ -1,5 +1,5 @@
 from fed.fed_object import FedObject
-from fed.barriers import recv_op
+from fed.barriers import recv
 import jax
 import ray
 
@@ -20,10 +20,10 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                 print(
                     f"[{current_party}] ====insert recv_op, arg task id {arg.get_fed_task_id()}, current task id {current_fed_task_id}"
                 )
-                recv_op_obj = ray.remote(recv_op).remote(
+                recv_obj = recv(
                     current_party, arg.get_fed_task_id(), current_fed_task_id
                 )
-                resolved.append(recv_op_obj)
+                resolved.append(recv_obj)
     if resolved:
         actual_vals = ray.get(resolved)
         for idx, actual_val in zip(indexes, actual_vals):

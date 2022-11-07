@@ -7,8 +7,10 @@ import asyncio
 import threading
 
 from fed.grpc import fed_pb2, fed_pb2_grpc
+from fed.cleanup import push_to_sending
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
+
 
 def key_exists_in_two_dim_dict(the_dict, key_a, key_b) -> bool:
     key_a, key_b = str(key_a), str(key_b)
@@ -16,16 +18,24 @@ def key_exists_in_two_dim_dict(the_dict, key_a, key_b) -> bool:
         return False
     return key_b in the_dict[key_a]
 
+
 def add_two_dim_dict(the_dict, key_a, key_b, val):
     key_a, key_b = str(key_a), str(key_b)
     if key_a in the_dict:
         the_dict[key_a].update({key_b: val})
     else:
-        the_dict.update({key_a:{key_b: val}})
+        the_dict.update({key_a: {key_b: val}})
+
 
 def get_from_two_dim_dict(the_dict, key_a, key_b):
     key_a, key_b = str(key_a), str(key_b)
     return the_dict[key_a][key_b]
+
+
+def pop_from_two_dim_dict(the_dict, key_a, key_b):
+    key_a, key_b = str(key_a), str(key_b)
+    return the_dict[key_a].pop(key_b)
+
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
     def __init__(self, all_events, all_data, party, lock):
@@ -41,11 +51,17 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
             f"=====[{self._party}] Received a grpc data from {upstream_seq_id} to {downstream_seq_id}"
         )
 
-        add_two_dim_dict(self._all_data, upstream_seq_id, downstream_seq_id, request.data)
         with self._lock:
-            if not key_exists_in_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id):
+            add_two_dim_dict(
+                self._all_data, upstream_seq_id, downstream_seq_id, request.data
+            )
+            if not key_exists_in_two_dim_dict(
+                self._events, upstream_seq_id, downstream_seq_id
+            ):
                 event = asyncio.Event()
-                add_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id, event)
+                add_two_dim_dict(
+                    self._events, upstream_seq_id, downstream_seq_id, event
+                )
         event = get_from_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id)
         event.set()
         print(f"=======[{self._party}] Event set for {upstream_seq_id}")
@@ -54,7 +70,9 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
 
 async def _run_grpc_server(port, event, all_data, party, lock):
     server = grpc.aio.server()
-    fed_pb2_grpc.add_GrpcServiceServicer_to_server(SendDataService(event, all_data, party, lock), server)
+    fed_pb2_grpc.add_GrpcServiceServicer_to_server(
+        SendDataService(event, all_data, party, lock), server
+    )
     server.add_insecure_port(f'[::]:{port}')
     await server.start()
     print("start service...")
@@ -79,8 +97,12 @@ def send_op(party, dest, data, upstream_seq_id, downstream_seq_id):
     # Not sure if here has a implicitly data fetching,
     # if yes, we should send data, otherwise we should
     # send `ray.get(data)`
-    print(f"====[{party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}")
-    response = asyncio.get_event_loop().run_until_complete(send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id))
+    print(
+        f"====[{party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
+    )
+    response = asyncio.get_event_loop().run_until_complete(
+        send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id)
+    )
     print(f"Sent. response is {response}")
     return True  # True indicates it's sent successfully.
 
@@ -94,8 +116,8 @@ class RecverProxyActor:
         # Workaround the threading coordinations
 
         # All events for grpc waitting usage.
-        self._events = {} # map from (upstream_seq_id, downstream_seq_id) to event
-        self._all_data = {} # map from (upstream_seq_id, downstream_seq_id) to data 
+        self._events = {}  # map from (upstream_seq_id, downstream_seq_id) to event
+        self._all_data = {}  # map from (upstream_seq_id, downstream_seq_id) to data
         self._lock = threading.Lock()
 
     async def run_grpc_server(self):
@@ -111,14 +133,22 @@ class RecverProxyActor:
         return True
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
-        print(f"====[{self._party}] Getting data for {curr_seq_id} from {upstream_seq_id}")
+        print(
+            f"====[{self._party}] Getting data for {curr_seq_id} from {upstream_seq_id}"
+        )
         with self._lock:
-            if not key_exists_in_two_dim_dict(self._events, upstream_seq_id, curr_seq_id):
-                add_two_dim_dict(self._events, upstream_seq_id, curr_seq_id, asyncio.Event())
+            if not key_exists_in_two_dim_dict(
+                self._events, upstream_seq_id, curr_seq_id
+            ):
+                add_two_dim_dict(
+                    self._events, upstream_seq_id, curr_seq_id, asyncio.Event()
+                )
         curr_event = get_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         await curr_event.wait()
         print(f"=======[{self._party}] Waited for {curr_seq_id}")
-        data = get_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
+        with self._lock:
+            data = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
+            pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         return cloudpickle.loads(data)
 
 
@@ -138,3 +168,15 @@ def start_recv_proxy(listen_addr, party):
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
     print("======== RecverProxy was created successfully.")
+
+
+def send(party, dest, data, upstream_seq_id, downstream_seq_id):
+    res = ray.remote(send_op).remote(
+        party, dest, data, upstream_seq_id, downstream_seq_id
+    )
+    push_to_sending(res)
+    return res
+
+
+def recv(party: str, upstream_seq_id, curr_seq_id):
+    return ray.remote(recv_op).remote(party, upstream_seq_id, curr_seq_id)

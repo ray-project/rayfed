@@ -2,7 +2,7 @@ import pytest
 
 import ray
 
-from fed.barriers import RecverProxyActor, send_op
+from fed.barriers import RecverProxyActor, send
 
 
 def test_n_to_1_transport():
@@ -22,7 +22,7 @@ def test_n_to_1_transport():
     sent_objs = []
     get_objs = []
     for i in range(NUM_DATA):
-        sent_obj = ray.remote(send_op).remote("test_party", SERVER_ADDRESS, f"data-{i}", i, i + 1)
+        sent_obj = send("test_party", SERVER_ADDRESS, f"data-{i}", i, i + 1)
         sent_objs.append(sent_obj)
         get_obj = recver_proxy_actor.get_data.remote(i, i + 1)
         get_objs.append(get_obj)
