@@ -12,7 +12,6 @@ from tensorflow import keras
 import fed
 
 
-
 @fed.remote
 def mean(party, x, y):
     print(f"=======[party:{party}] meaning...")
@@ -27,7 +26,8 @@ class MyActor:
         self.count = 0
 
     def load_data(self, batch_size: int, epochs: int):
-        df = pd.read_csv('iris.csv')
+        # fill missing value with 0 to avoid nan error
+        df = pd.read_csv('iris.csv').fillna(0) 
         x, y = df.iloc[:, :4].values, df.iloc[:, 4:].values
         encoder = OneHotEncoder(sparse=False)
         y = encoder.fit_transform(y)
@@ -62,7 +62,6 @@ class MyActor:
                 y_pred,
                 regularization_losses=self.model.losses,
             )
-
             trainable_vars = self.model.trainable_variables
             gradients = tape.gradient(loss, trainable_vars)
             self.model.optimizer.apply_gradients(zip(gradients, trainable_vars))
@@ -93,7 +92,6 @@ def run(party):
     learning_rate = 0.01
     input_shape = 4
     n_classes = 3
-
 
     actor_alice = MyActor.party("alice").remote(learning_rate, input_shape, n_classes)
     actor_bob = MyActor.party("bob").remote(learning_rate, input_shape, n_classes)
