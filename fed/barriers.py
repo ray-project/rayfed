@@ -9,8 +9,6 @@ import threading
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.cleanup import push_to_sending
 
-_ONE_DAY_IN_SECONDS = 60 * 60 * 24
-
 
 def key_exists_in_two_dim_dict(the_dict, key_a, key_b) -> bool:
     key_a, key_b = str(key_a), str(key_b)

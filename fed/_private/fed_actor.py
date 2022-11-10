@@ -2,13 +2,12 @@ from typing import Optional
 from fed._private.global_context import get_global_context
 import ray
 import jax
-from ray.dag import PARENT_CLASS_NODE_KEY, PREV_CLASS_METHOD_CALL_KEY
 from fed.utils import resolve_dependencies
 from fed.fed_object import FedObject
 from fed.barriers import send
 
 
-class FedDAGClassNode:
+class FedActorHandle:
     def __init__(
         self,
         fed_class_task_id,
@@ -28,9 +27,7 @@ class FedDAGClassNode:
         self._options = options
         self._cls_args = cls_args
         self._cls_kwargs = cls_kwargs
-        self._last_call: Optional["FedDAGClassMethodNode"] = None
         self._actor_handle = None
-        self._other_args_to_resolve = None
 
     def __getattr__(self, method_name: str):
         # User trying to call .bind() without a bind class method
@@ -38,13 +35,12 @@ class FedDAGClassNode:
             raise AttributeError(f".remote() cannot be used again on {type(self)} ")
         # Raise an error if the method is invalid.
         getattr(self._body, method_name)
-        call_node = FedDAGClassMethodNode(
+        call_node = FedActorMethod(
             self._cluster,
             self._party,
             self._node_party,
             self,
             method_name,
-            self._other_args_to_resolve,
         ).options(**self._options)
         return call_node
 
@@ -81,34 +77,25 @@ class FedDAGClassNode:
         return ray_object_ref
 
 
-class FedDAGClassMethodNode:
+class FedActorMethod:
     def __init__(
         self,
         cluster,
         party,
         node_party,
-        fed_dag_cls_node,
+        fed_actor_handle,
         method_name,
-        other_args_to_resolve,
     ) -> None:
         self._cluster = cluster
         self._party = party  # Current party
         self._node_party = node_party
-        self._fed_dag_cls_node = fed_dag_cls_node
+        self._fed_actor_handle = fed_actor_handle
         self._method_name = method_name
         self._options = {}
         self._fed_task_id = None  # None if uninitialized
-        self._parent_class_node: FedDAGClassNode = fed_dag_cls_node
-        # self._parent_class_node: FedDAGClassNode = other_args_to_resolve.get(
-        #     PARENT_CLASS_NODE_KEY
-        # )
+
 
     def remote(self, *args, **kwargs) -> FedObject:
-        other_args_to_resolve = {
-            PARENT_CLASS_NODE_KEY: self._fed_dag_cls_node,
-            PREV_CLASS_METHOD_CALL_KEY: self._fed_dag_cls_node._last_call,
-        }
-        self._fed_dag_cls_node.last_call = self
         assert self._fed_task_id is None, ".remote() shouldn't be invoked twice."
         self._fed_task_id = get_global_context().next_seq_id()
         print(
@@ -172,12 +159,6 @@ class FedDAGClassMethodNode:
         return self
 
     def _execute_impl(self, args, kwargs):
-        # method_body = getattr(self._parent_class_node, self._method_name)
-        # Execute with bound args.
-        # return method_body.options(**self._bound_options).remote(
-        #     *self._bound_args,
-        #     **self._bound_kwargs,
-        # )
-        return self._fed_dag_cls_node._execute_remote_method(
+        return self._fed_actor_handle._execute_remote_method(
             self._method_name, self._options, args, kwargs
         )

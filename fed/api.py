@@ -7,9 +7,8 @@ import cloudpickle
 import jax
 import ray
 from ray._private.inspect_util import is_cython
-from ray.dag.function_node import FunctionNode
 
-from fed._private.fed_dag_node import FedDAGClassNode
+from fed._private.fed_actor import FedActorHandle
 from fed._private.global_context import get_global_context
 from fed.barriers import recv, send, start_recv_proxy
 from fed.fed_object import FedObject
@@ -72,18 +71,6 @@ def get_party():
     """
     serialized = internal_kv._internal_kv_get(RAYFED_PARTY_KEY)
     return cloudpickle.loads(serialized)
-
-class FedDAGFunctionNode(FunctionNode):
-    def __init__(self, func_body, func_args, func_kwargs, party: str):
-        self._func_body = func_body
-        self._party = party
-        super().__init__(func_body, func_args, func_kwargs, None)
-
-    def get_func_or_method_name(self):
-        return self._func_body.__name__
-
-    def get_party(self):
-        return self._party
 
 
 class FedRemoteFunction:
@@ -174,7 +161,7 @@ class FedRemoteClass:
 
     def remote(self, *args, **kwargs):
         fed_class_task_id = get_global_context().next_seq_id()
-        fed_class_node = FedDAGClassNode(
+        fed_actor_handle = FedActorHandle(
             fed_class_task_id,
             get_cluster(),
             self._cls,
@@ -184,8 +171,8 @@ class FedRemoteClass:
             args,
             kwargs,
         )
-        fed_class_node._execute_impl()  # TODO(qwang): We shouldn't use Node.execute(), we should use `remote`.
-        return fed_class_node
+        fed_actor_handle._execute_impl()
+        return fed_actor_handle
 
 
 # This is the decorator `@fed.remote`
@@ -218,7 +205,7 @@ def get(fed_objects: Union[FedObject, List[FedObject]]) -> Any:
     """
 
     # A fake fed_task_id for a `fed.get()` operator. This is useful
-    # to help contruct the DAG within `fed.get`.
+    # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
     cluster = get_cluster()
     current_party = get_party()
