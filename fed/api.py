@@ -3,6 +3,9 @@ import inspect
 import logging
 from typing import Any, Dict, List, Union
 
+# Set config in the very beginning to avoid being overwritten by other packages
+logging.basicConfig(level=logging.INFO)
+
 import cloudpickle
 import jax
 import ray
@@ -17,7 +20,7 @@ from fed._private.constants import RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY
 import ray.experimental.internal_kv as internal_kv
 from ray._private.gcs_utils import GcsClient
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 def init(address: str=None,
          cluster: Dict=None,
@@ -57,7 +60,7 @@ def shutdown():
     internal_kv._internal_kv_reset()
     ray.shutdown()
 
- 
+
 def get_cluster():
     """
     Get the RayFed cluster configration.
@@ -95,7 +98,7 @@ class FedRemoteFunction:
         # This might duplicate.
         fed_object = None
         self._party = get_party()  # TODO(qwang): Refine this.
-        print(
+        logger.debug(
             f"======self._party={self._party}, node_party={self._node_party}, func={self._func_body}, options={self._options}"
         )
         if self._party == self._node_party:
@@ -117,7 +120,7 @@ class FedRemoteFunction:
                 # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
                     cluster = get_cluster()
-                    print(
+                    logger.debug(
                         f'[{self._party}] =====insert send_op to {self._node_party}, arg task id {arg.get_fed_task_id()}, to task id {fed_task_id}'
                     )
                     send(

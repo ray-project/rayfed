@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 from fed._private.global_context import get_global_context
 import ray
@@ -6,6 +7,7 @@ from fed.utils import resolve_dependencies
 from fed.fed_object import FedObject
 from fed.barriers import send
 
+logger = logging.getLogger(__name__)
 
 class FedActorHandle:
     def __init__(
@@ -63,7 +65,7 @@ class FedActorHandle:
         num_returns = 1
         if options and 'num_returns' in options:
             num_returns = options['num_returns']
-        print(
+        logger.debug(
             f"[{self._party}] Actor method call: {method_name}, num_returns: {num_returns}"
         )
         ray_object_ref = self._actor_handle._actor_method_call(
@@ -98,23 +100,23 @@ class FedActorMethod:
     def remote(self, *args, **kwargs) -> FedObject:
         assert self._fed_task_id is None, ".remote() shouldn't be invoked twice."
         self._fed_task_id = get_global_context().next_seq_id()
-        print(
+        logger.debug(
             f"[{self._party}] next_seq_id={self._fed_task_id} for method_name={self._method_name}"
         )
         ####################################
         # This might duplicate.
         if self._party == self._node_party:
-            print(
+            logger.debug(
                 f"[{self._party}] ##########################, method_name={self._method_name}"
             )
             resolved_args, resolved_kwargs = resolve_dependencies(
                 self._party, self._fed_task_id, *args, **kwargs
             )
-            print(
+            logger.debug(
                 f"[{self._party}] ##########################,  method_name={self._method_name}"
             )
             # TODO(qwang): Handle kwargs.
-            print(
+            logger.debug(
                 f"[{self._party}] all dependencies={resolved_args}, {resolved_kwargs}"
             )
             ray_obj_ref = self._execute_impl(args=resolved_args, kwargs=resolved_kwargs)
@@ -131,7 +133,7 @@ class FedActorMethod:
                 # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
                     cluster = self._cluster
-                    print(
+                    logger.debug(
                         f'[{self._party}] =====insert send_op to {self._node_party}, arg task id {arg.get_fed_task_id()}, to task id {self._fed_task_id}'
                     )
                     send(

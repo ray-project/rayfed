@@ -1,9 +1,11 @@
 # import queue
 import ray
 import threading
+import logging
 from collections import deque
 import time
 
+logger = logging.getLogger(__name__)
 _sending_obj_refs_q = deque()
 _exit_flag = False
 
@@ -18,7 +20,7 @@ def _check_sending_objs():
         ray.get(obj_ref)
     
     import os
-    print(f'{os.getpid()} check sending thread exit.')
+    logger.info(f'{os.getpid()} check sending thread exit.')
 
 
 _check_send_thread = threading.Thread(target=_check_sending_objs)
@@ -29,7 +31,7 @@ def _monitor_thread():
     main_thread = threading.main_thread()
     main_thread.join()
     import os
-    print(f'{os.getpid()} will exit and notify check sending thread to exit.')
+    logger.info(f'{os.getpid()} will exit and notify check sending thread to exit.')
     global _exit_flag
     _exit_flag = True
 
@@ -42,10 +44,10 @@ def _start_check_sending():
     if not _check_send_thread_started:
         _check_send_thread.start()
         import os
-        print(f'{os.getpid()} start check sending thread.')
+        logger.info(f'{os.getpid()} start check sending thread.')
         global _monitor
         _monitor.start()
-        print(f'{os.getpid()} start check sending monitor thread.')
+        logger.info(f'{os.getpid()} start check sending monitor thread.')
         _check_send_thread_started = True
 
 def push_to_sending(obj_ref: ray.ObjectRef):

@@ -12,6 +12,7 @@ from tensorflow import keras
 import fed
 
 
+
 @fed.remote
 def mean(party, x, y):
     print(f"=======[party:{party}] meaning...")

@@ -1,5 +1,5 @@
 import time
-
+import logging
 import cloudpickle
 import grpc
 import ray
@@ -9,6 +9,7 @@ import threading
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.cleanup import push_to_sending
 
+logger = logging.getLogger(__name__)
 
 def key_exists_in_two_dim_dict(the_dict, key_a, key_b) -> bool:
     key_a, key_b = str(key_a), str(key_b)
@@ -45,7 +46,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
     async def SendData(self, request, context):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
-        print(
+        logger.info(
             f"=====[{self._party}] Received a grpc data from {upstream_seq_id} to {downstream_seq_id}"
         )
 
@@ -62,7 +63,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
                 )
         event = get_from_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id)
         event.set()
-        print(f"=======[{self._party}] Event set for {upstream_seq_id}")
+        logger.debug(f"=======[{self._party}] Event set for {upstream_seq_id}")
         return fed_pb2.SendDataResponse(result="OK")
 
 
@@ -73,7 +74,7 @@ async def _run_grpc_server(port, event, all_data, party, lock):
     )
     server.add_insecure_port(f'[::]:{port}')
     await server.start()
-    print("start service...")
+    logger.info("start service...")
     await server.wait_for_termination()
 
 
@@ -87,7 +88,7 @@ async def send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id):
             downstream_seq_id=str(downstream_seq_id),
         )
         response = await stub.SendData(request, timeout=60)
-        print("received response:", response.result)
+        logger.debug(f"received response: {response.result}")
         return response.result
 
 
@@ -95,13 +96,13 @@ def send_op(party, dest, data, upstream_seq_id, downstream_seq_id):
     # Not sure if here has a implicitly data fetching,
     # if yes, we should send data, otherwise we should
     # send `ray.get(data)`
-    print(
+    logger.debug(
         f"====[{party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
     )
     response = asyncio.get_event_loop().run_until_complete(
         send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id)
     )
-    print(f"Sent. response is {response}")
+    logger.debug(f"Sent. response is {response}")
     return True  # True indicates it's sent successfully.
 
 
@@ -131,7 +132,7 @@ class RecverProxyActor:
         return True
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
-        print(
+        logger.info(
             f"====[{self._party}] Getting data for {curr_seq_id} from {upstream_seq_id}"
         )
         with self._lock:
@@ -143,7 +144,7 @@ class RecverProxyActor:
                 )
         curr_event = get_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         await curr_event.wait()
-        print(f"=======[{self._party}] Waited for {curr_seq_id}")
+        logging.debug(f"=======[{self._party}] Waited for {curr_seq_id}")
         with self._lock:
             data = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
@@ -165,7 +166,7 @@ def start_recv_proxy(listen_addr, party):
     ).remote(listen_addr, party)
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
-    print("======== RecverProxy was created successfully.")
+    logger.info("======== RecverProxy was created successfully.")
 
 
 def send(party, dest, data, upstream_seq_id, downstream_seq_id):
