@@ -1,0 +1,6 @@
+click
+pandas
+tensorflow>=2
+scikit-learn
+cloudpickle
+protobuf>=3.9.2,<3.20

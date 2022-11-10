@@ -1,6 +1,19 @@
 # RayFed
 A multiple parties joint, distributed execution engine on the top of Ray.
 
+## Quick Start
+Firstly, install essential dependencies by running the following commands in project's root dir:
+
+```shell
+> pip install -r requirements.txt
+> pip install -e . # install rayfed
+```
+
+Run the demo program:
+```shell
+> python examples/test_fl.py
+```
+
 ## How to use?
 ```python
 # Federated learning across 2 parties on Ray.
