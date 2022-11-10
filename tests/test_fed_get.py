@@ -2,9 +2,6 @@ import multiprocessing
 
 import pytest
 import fed
-import ray
-from fed.api import set_cluster, set_party
-from fed.barriers import start_recv_proxy
 
 
 @fed.remote
@@ -36,11 +33,8 @@ def mean(x, y):
 cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
 
 
-def run(party):
-    ray.init()
-    set_cluster(cluster=cluster)
-    set_party(party)
-    start_recv_proxy(cluster[party], party)
+def run(party):    
+    fed.init(cluster=cluster, party=party)
 
     epochs = 3
     alice_model = MyModel.party("alice").remote("alice", 2)
@@ -60,7 +54,7 @@ def run(party):
         [alice_model.get_weights.remote(), bob_model.get_weights.remote()]
     )
     assert latest_weights == [9, 9]
-    ray.shutdown()
+    fed.shutdown()
 
 
 def test_fed_get_in_2_parties():

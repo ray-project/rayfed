@@ -10,8 +10,7 @@ from sklearn.preprocessing import OneHotEncoder
 from tensorflow import keras
 
 import fed
-from fed.api import set_cluster, set_party
-from fed.barriers import start_recv_proxy
+
 
 @fed.remote
 def mean(party, x, y):
@@ -85,11 +84,7 @@ def agg_fn(obj1, obj2):
 
 def run(party):
     cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
-    set_cluster(cluster=cluster)
-    set_party(party)
-
-    ray.init(num_cpus=8, log_to_driver=True)
-    start_recv_proxy(cluster[party], party)
+    fed.init(cluster=cluster, party=party, num_cpus=8, log_to_driver=True)
     print(f"=============party name is {party}")
 
     epochs = 3
@@ -125,8 +120,7 @@ def run(party):
         # print(f'[{party}] Epoch {epoch} finished, mean is ...')
 
     print(f"======= The final result in {party} is ...")
-
-    ray.shutdown()
+    fed.shutdown()
 
 
 @click.command()

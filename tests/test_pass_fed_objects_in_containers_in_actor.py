@@ -4,8 +4,6 @@ import multiprocessing
 import pytest
 import fed
 import ray
-from fed.api import get_party, set_cluster, set_party
-from fed.barriers import start_recv_proxy
 
 import jax.tree_util as jtutil
 
@@ -28,11 +26,7 @@ cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
 
 
 def run(party):
-    ray.init()
-    set_cluster(cluster=cluster)
-    set_party(party)
-    start_recv_proxy(cluster[party], party)
-
+    fed.init(cluster=cluster, party=party)
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()
     o1 = my1.foo.remote(0)
@@ -42,7 +36,7 @@ def run(party):
 
     result = fed.get(o3)
     assert result
-    ray.shutdown()
+    fed.shutdown()
 
 
 def test_pass_fed_objects_in_list():

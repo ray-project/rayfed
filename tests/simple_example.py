@@ -2,9 +2,6 @@ import multiprocessing
 
 import fed
 import ray
-from fed.api import set_cluster, set_party
-from fed.barriers import start_recv_proxy
-
 
 @fed.remote
 class MyActor:
@@ -35,10 +32,7 @@ cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
 
 
 def run(party):
-    set_cluster(cluster=cluster)
-    set_party(party)
-    start_recv_proxy(cluster[party], party)
-
+    fed.init(cluster=cluster, party=party)
     print(f"Running the script in party {party}")
 
     ds1, ds2 = [123, 789]
@@ -54,7 +48,7 @@ def run(party):
     obj = agg_fn.party("bob").remote(obj_alice_g, obj_bob_h)
     result = fed.get(obj)
     print(f"The result in party {party} is :{result}")
-    ray.shutdown()
+    fed.shutdown()
 
 
 def main():

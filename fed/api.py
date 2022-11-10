@@ -3,6 +3,7 @@ import inspect
 import logging
 from typing import Any, Dict, List, Union
 
+import cloudpickle
 import jax
 import ray
 from ray._private.inspect_util import is_cython
@@ -10,46 +11,67 @@ from ray.dag.function_node import FunctionNode
 
 from fed._private.fed_dag_node import FedDAGClassNode
 from fed._private.global_context import get_global_context
-from fed.barriers import recv, send
+from fed.barriers import recv, send, start_recv_proxy
 from fed.fed_object import FedObject
 from fed.utils import resolve_dependencies
+from fed._private.constants import RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY
+import ray.experimental.internal_kv as internal_kv
+from ray._private.gcs_utils import GcsClient
 
 logger = logging.getLogger(__file__)
 
+def init(address: str=None,
+         cluster: Dict=None,
+         party: str=None,
+         *args,
+         **kwargs):
+    """
+    Initialize a RayFed client. it connects an exist cluster
+    if address provided, otherwise start a new local cluster.
+    """
+    assert cluster, "Cluster should be provided."
+    assert party, "Party should be provided."
 
-_PARTY = None
+    if address is not None:
+        # Connect to an exist Ray cluster as driver.
+        ray.init(adress=address, args=args, kwargs=kwargs)
+    else:
+        # Start a local Ray cluster.
+        ray.init(*args, **kwargs)
 
+    # A Ray private accessing, should be replaced in public API.
+    gcs_address = ray._private.worker._global_node.gcs_address
+    gcs_client = GcsClient(address=gcs_address, nums_reconnect_retry=10)
+    internal_kv._initialize_internal_kv(gcs_client)
+    internal_kv._internal_kv_put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
+    internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
 
-def set_party(party: str):
-    global _PARTY
-    _PARTY = party
+    # Start recv proxy
+    start_recv_proxy(cluster[party], party)
 
+def shutdown():
+    """
+    Shutdown a RayFed client.
+    """
+    internal_kv._internal_kv_del(RAYFED_CLUSTER_KEY)
+    internal_kv._internal_kv_del(RAYFED_PARTY_KEY)
+    internal_kv._internal_kv_reset()
+    ray.shutdown()
+
+ 
+def get_cluster():
+    """
+    Get the RayFed cluster configration.
+    """
+    serialized = internal_kv._internal_kv_get(RAYFED_CLUSTER_KEY)
+    return cloudpickle.loads(serialized)
 
 def get_party():
-    global _PARTY
-    return _PARTY
-
-
-_CLUSTER = None
-'''
-{
-    'alice': '127.0.0.1:10001',
-    'bob': '127.0.0.1:10002',
-}
-'''
-
-
-def get_cluster():
-    global _CLUSTER
-    return _CLUSTER
-
-
-def set_cluster(cluster: Dict, party: str = None):
-    global _CLUSTER
-    _CLUSTER = cluster
-    if party:
-        set_party(party)
-
+    """
+    Get the current party name.
+    """
+    serialized = internal_kv._internal_kv_get(RAYFED_PARTY_KEY)
+    return cloudpickle.loads(serialized)
 
 class FedDAGFunctionNode(FunctionNode):
     def __init__(self, func_body, func_args, func_kwargs, party: str):
