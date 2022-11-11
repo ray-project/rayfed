@@ -19,6 +19,7 @@ from fed.utils import resolve_dependencies
 from fed._private.constants import RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY
 import ray.experimental.internal_kv as internal_kv
 from ray._private.gcs_utils import GcsClient
+from fed._private.fed_call_holder import FedCallHolder
 
 logger = logging.getLogger(__name__)
 
@@ -81,9 +82,13 @@ class FedRemoteFunction:
         self._node_party = None
         self._func_body = func_or_class
         self._options = {}
+        self._fed_call_holder = None
 
     def party(self, party: str):
         self._node_party = party
+        # assert self._fed_call_holder is None
+        # TODO(qwang): This should be refined, to make sure we don't reuse the object twice.
+        self._fed_call_holder = FedCallHolder(self._node_party, self._execute_impl)
         return self
 
     def options(self, **options):
@@ -91,57 +96,9 @@ class FedRemoteFunction:
         return self
 
     def remote(self, *args, **kwargs):
-        # Generate a new fed task id for this call.
-        fed_task_id = get_global_context().next_seq_id()
+        assert self._node_party is not None, "A fed function should be specified within a party to execute."
+        return self._fed_call_holder.internal_remote(*args, **kwargs)
 
-        ####################################
-        # This might duplicate.
-        fed_object = None
-        self._party = get_party()  # TODO(qwang): Refine this.
-        logger.debug(
-            f"Generating new fed task: self._party={self._party}, node_party={self._node_party}, "
-            f"func={self._func_body}, options={self._options}"
-        )
-        if self._party == self._node_party:
-            resolved_args, resolved_kwargs = resolve_dependencies(
-                self._party, fed_task_id, *args, **kwargs
-            )
-            # TODO(qwang): Handle kwargs.
-            ray_obj_ref = self._execute_impl(args=resolved_args, kwargs=resolved_kwargs)
-            if isinstance(ray_obj_ref, list):
-                return [
-                    FedObject(self._node_party, fed_task_id, ref, i)
-                    for i, ref in enumerate(ray_obj_ref)
-                ]
-            else:
-                return FedObject(self._node_party, fed_task_id, ray_obj_ref)
-        else:
-            flattened_args, _ = jax.tree_util.tree_flatten((args, kwargs))
-            for arg in flattened_args:
-                # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
-                if isinstance(arg, FedObject) and arg.get_party() == self._party:
-                    cluster = get_cluster()
-                    logger.debug(
-                        f'[{self._party}] insert send_op to {self._node_party}, arg task id {arg.get_fed_task_id()}, to task id {fed_task_id}'
-                    )
-                    send(
-                        self._party,
-                        cluster[self._node_party],
-                        arg.get_ray_object_ref(),
-                        arg.get_fed_task_id(),
-                        fed_task_id,
-                    )
-            if (
-                self._options
-                and 'num_returns' in self._options
-                and self._options['num_returns'] > 1
-            ):
-                num_returns = self._options['num_returns']
-                return [FedObject(self._node_party, fed_task_id, None, i) for i in range(num_returns)]
-            else:
-                return FedObject(self._node_party, fed_task_id, None)
-        ####################################
-        return fed_object
 
     def _execute_impl(self, args, kwargs):
         return (

@@ -6,6 +6,7 @@ import jax
 from fed.utils import resolve_dependencies
 from fed.fed_object import FedObject
 from fed.barriers import send
+from fed._private.fed_call_holder import FedCallHolder
 
 logger = logging.getLogger(__name__)
 
@@ -94,66 +95,12 @@ class FedActorMethod:
         self._fed_actor_handle = fed_actor_handle
         self._method_name = method_name
         self._options = {}
-        self._fed_task_id = None  # None if uninitialized
+        self._fed_call_holder = FedCallHolder(node_party, self._execute_impl)
 
 
     def remote(self, *args, **kwargs) -> FedObject:
-        assert self._fed_task_id is None, ".remote() shouldn't be invoked twice."
-        self._fed_task_id = get_global_context().next_seq_id()
-        logger.debug(
-            f"[{self._party}] Generated fed task id: {self._fed_task_id} for method_name={self._method_name}"
-        )
-        ####################################
-        # This might duplicate.
-        if self._party == self._node_party:
-            logger.debug(
-                f"[{self._party}] Start resolving dependencies for method_name={self._method_name}."
-            )
-            resolved_args, resolved_kwargs = resolve_dependencies(
-                self._party, self._fed_task_id, *args, **kwargs
-            )
-            # TODO(qwang): Handle kwargs.
-            logger.debug(
-                f"[{self._party}] Done resolving dependencies for method_name={self._method_name}, "
-                f"resolved_args={resolved_args}, resolved_kwargs={resolved_kwargs}"
-            )
-            ray_obj_ref = self._execute_impl(args=resolved_args, kwargs=resolved_kwargs)
-            if isinstance(ray_obj_ref, list):
-                return [
-                    FedObject(self._node_party, self._fed_task_id, ref, i)
-                    for i, ref in enumerate(ray_obj_ref)
-                ]
-            else:
-                return FedObject(self._node_party, self._fed_task_id, ray_obj_ref)
-        else:
-            flattened_args, _ = jax.tree_util.tree_flatten((args, kwargs))
-            for arg in flattened_args:
-                # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
-                if isinstance(arg, FedObject) and arg.get_party() == self._party:
-                    cluster = self._cluster
-                    logger.debug(
-                        f'[{self._party}] Inserting send_op to {self._node_party}, target remote task id '
-                        f'{arg.get_fed_task_id()}, to current task id {self._fed_task_id}'
-                    )
-                    send(
-                        self._party,
-                        cluster[self._node_party],
-                        arg.get_ray_object_ref(),
-                        arg.get_fed_task_id(),
-                        self._fed_task_id,
-                    )
-            if (
-                self._options
-                and 'num_returns' in self._options
-                and self._options['num_returns'] > 1
-            ):
-                num_returns = self._options['num_returns']
-                return [
-                    FedObject(self._node_party, self._fed_task_id, None, i)
-                    for i in range(num_returns)
-                ]
-            else:
-                return FedObject(self._node_party, self._fed_task_id, None)
+        return self._fed_call_holder.internal_remote(*args, **kwargs)
+
 
     def options(self, **options):
         self._options = options
