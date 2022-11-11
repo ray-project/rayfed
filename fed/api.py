@@ -120,7 +120,7 @@ class FedRemoteClass:
         self._options = options
         return self
 
-    def remote(self, *args, **kwargs):
+    def remote(self, *cls_args, **cls_kwargs):
         fed_class_task_id = get_global_context().next_seq_id()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
@@ -129,10 +129,9 @@ class FedRemoteClass:
             get_party(),
             self._party,
             self._options,
-            args,
-            kwargs,
         )
-        fed_actor_handle._execute_impl()
+        fed_call_holder = FedCallHolder(self._party, fed_actor_handle._execute_impl)
+        fed_obj_ref = fed_call_holder.internal_remote(*cls_args, **cls_kwargs)
         return fed_actor_handle
 
 

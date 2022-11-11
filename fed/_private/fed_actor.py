@@ -19,8 +19,6 @@ class FedActorHandle:
         party,
         node_party,
         options,
-        cls_args,
-        cls_kwargs,
     ) -> None:
         self._fed_class_task_id = fed_class_task_id
         self._cluster = cluster
@@ -28,8 +26,6 @@ class FedActorHandle:
         self._party = party
         self._node_party = node_party
         self._options = options
-        self._cls_args = cls_args
-        self._cls_kwargs = cls_kwargs
         self._actor_handle = None
 
     def __getattr__(self, method_name: str):
@@ -47,7 +43,7 @@ class FedActorHandle:
         ).options(**self._options)
         return call_node
 
-    def _execute_impl(self, *args, **kwargs):
+    def _execute_impl(self, cls_args, cls_kwargs):
         """Executor of ClassNode by ray.remote()
 
         Args and kwargs are to match base class signature, but not in the
@@ -59,7 +55,7 @@ class FedActorHandle:
             self._actor_handle = (
                 ray.remote(self._body)
                 .options(**self._options)
-                .remote(*self._cls_args, **self._cls_kwargs)
+                .remote(*cls_args, **cls_kwargs)
             )
 
     def _execute_remote_method(self, method_name, options, args, kwargs):
