@@ -101,23 +101,21 @@ class FedActorMethod:
         assert self._fed_task_id is None, ".remote() shouldn't be invoked twice."
         self._fed_task_id = get_global_context().next_seq_id()
         logger.debug(
-            f"[{self._party}] next_seq_id={self._fed_task_id} for method_name={self._method_name}"
+            f"[{self._party}] Generated fed task id: {self._fed_task_id} for method_name={self._method_name}"
         )
         ####################################
         # This might duplicate.
         if self._party == self._node_party:
             logger.debug(
-                f"[{self._party}] ##########################, method_name={self._method_name}"
+                f"[{self._party}] Start resolving dependencies for method_name={self._method_name}."
             )
             resolved_args, resolved_kwargs = resolve_dependencies(
                 self._party, self._fed_task_id, *args, **kwargs
             )
-            logger.debug(
-                f"[{self._party}] ##########################,  method_name={self._method_name}"
-            )
             # TODO(qwang): Handle kwargs.
             logger.debug(
-                f"[{self._party}] all dependencies={resolved_args}, {resolved_kwargs}"
+                f"[{self._party}] Done resolving dependencies for method_name={self._method_name}, "
+                f"resolved_args={resolved_args}, resolved_kwargs={resolved_kwargs}"
             )
             ray_obj_ref = self._execute_impl(args=resolved_args, kwargs=resolved_kwargs)
             if isinstance(ray_obj_ref, list):
@@ -134,7 +132,8 @@ class FedActorMethod:
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
                     cluster = self._cluster
                     logger.debug(
-                        f'[{self._party}] =====insert send_op to {self._node_party}, arg task id {arg.get_fed_task_id()}, to task id {self._fed_task_id}'
+                        f'[{self._party}] Inserting send_op to {self._node_party}, target remote task id '
+                        f'{arg.get_fed_task_id()}, to current task id {self._fed_task_id}'
                     )
                     send(
                         self._party,

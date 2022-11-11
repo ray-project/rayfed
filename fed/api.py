@@ -99,7 +99,8 @@ class FedRemoteFunction:
         fed_object = None
         self._party = get_party()  # TODO(qwang): Refine this.
         logger.debug(
-            f"======self._party={self._party}, node_party={self._node_party}, func={self._func_body}, options={self._options}"
+            f"Generating new fed task: self._party={self._party}, node_party={self._node_party}, "
+            f"func={self._func_body}, options={self._options}"
         )
         if self._party == self._node_party:
             resolved_args, resolved_kwargs = resolve_dependencies(
@@ -121,7 +122,7 @@ class FedRemoteFunction:
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
                     cluster = get_cluster()
                     logger.debug(
-                        f'[{self._party}] =====insert send_op to {self._node_party}, arg task id {arg.get_fed_task_id()}, to task id {fed_task_id}'
+                        f'[{self._party}] insert send_op to {self._node_party}, arg task id {arg.get_fed_task_id()}, to task id {fed_task_id}'
                     )
                     send(
                         self._party,
