@@ -3,9 +3,6 @@ import inspect
 import logging
 from typing import Any, Dict, List, Union
 
-# Set config in the very beginning to avoid being overwritten by other packages
-logging.basicConfig(level=logging.INFO)
-
 import cloudpickle
 import jax
 import ray
@@ -15,8 +12,9 @@ from fed._private.fed_actor import FedActorHandle
 from fed._private.global_context import get_global_context
 from fed.barriers import recv, send, start_recv_proxy
 from fed.fed_object import FedObject
-from fed.utils import resolve_dependencies
-from fed._private.constants import RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY
+from fed.utils import resolve_dependencies, setup_logger
+from fed._private.constants import (RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY,
+                                    RAYFED_LOG_FMT, RAYFED_DATE_FMT)
 import ray.experimental.internal_kv as internal_kv
 from ray._private.gcs_utils import GcsClient
 from fed._private.fed_call_holder import FedCallHolder
@@ -34,7 +32,6 @@ def init(address: str=None,
     """
     assert cluster, "Cluster should be provided."
     assert party, "Party should be provided."
-
     if address is not None:
         # Connect to an exist Ray cluster as driver.
         ray.init(adress=address, args=args, kwargs=kwargs)
@@ -49,6 +46,13 @@ def init(address: str=None,
     internal_kv._internal_kv_put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
     internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
 
+    # Set logger.
+    # Note(NKcqx): This should be called after internal_kv has party value, i.e.
+    # after `ray.init` and `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
+    setup_logger(logging_level="info",
+                logging_format=RAYFED_LOG_FMT,
+                date_format=RAYFED_DATE_FMT,
+                party_val=get_party())
     # Start recv proxy
     start_recv_proxy(cluster[party], party)
 

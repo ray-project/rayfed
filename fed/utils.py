@@ -34,3 +34,34 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
 
     resolved_args, resolved_kwargs = jax.tree_util.tree_unflatten(tree, flattened_args)
     return resolved_args, resolved_kwargs
+
+
+def setup_logger(logging_level, logging_format, date_format, log_dir=None, party_val=None):
+    class PartyRecordFilter(logging.Filter):
+        def __init__(self, party_val = None) -> None:
+            self._party_val = party_val
+            super().__init__("PartyRecordFilter")
+        
+        def filter(self, record) -> bool:
+            if not hasattr(record, "party"):
+                record.party = self._party_val
+            return True
+
+    logger = logging.getLogger()
+
+    # Remove default handlers otherwise a msg will be printed twice.
+    for hdlr in logger.handlers:
+        logger.removeHandler(hdlr)
+
+    if type(logging_level) is str:
+        logging_level = logging.getLevelName(logging_level.upper())
+    logger.setLevel(logging_level)
+
+    _formatter = logging.Formatter(fmt=logging_format, datefmt=date_format)
+    _filter = PartyRecordFilter(party_val=party_val)
+
+    _customed_handler = logging.StreamHandler()
+    _customed_handler.setFormatter(_formatter)
+    _customed_handler.addFilter(_filter)
+
+    logger.addHandler(_customed_handler)
