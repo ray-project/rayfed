@@ -28,12 +28,24 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                 )
                 resolved.append(recv_obj)
     if resolved:
-        actual_vals = ray.get(resolved)
-        for idx, actual_val in zip(indexes, actual_vals):
+        for idx, actual_val in zip(indexes, resolved):
             flattened_args[idx] = actual_val
 
     resolved_args, resolved_kwargs = jax.tree_util.tree_unflatten(tree, flattened_args)
     return resolved_args, resolved_kwargs
+
+
+def is_ray_object_refs(objects) -> bool:
+    if isinstance(objects, ray.ObjectRef):
+        return True
+    
+    if isinstance(objects, list):
+        for object_ref in objects:
+            if not isinstance(object_ref, ray.ObjectRef):
+                return False
+        return True
+
+    return False
 
 
 def setup_logger(logging_level, logging_format, date_format, log_dir=None, party_val=None):

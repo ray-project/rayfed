@@ -7,6 +7,7 @@ import cloudpickle
 import jax
 import ray
 from ray._private.inspect_util import is_cython
+from fed.utils import is_ray_object_refs
 
 from fed._private.fed_actor import FedActorHandle
 from fed._private.global_context import get_global_context
@@ -159,7 +160,7 @@ def remote(*args, **kwargs):
     return functools.partial(_make_fed_remote, **kwargs)
 
 
-def get(fed_objects: Union[FedObject, List[FedObject]]) -> Any:
+def get(fed_objects: Union[ray.ObjectRef, List[FedObject], FedObject, List[FedObject]]) -> Any:
     """
     Gets the real data of the given fed_object.
 
@@ -167,6 +168,8 @@ def get(fed_objects: Union[FedObject, List[FedObject]]) -> Any:
     otherwise return it after receiving the real data from the located
     party.
     """
+    if is_ray_object_refs(fed_objects):
+        return ray.get(fed_objects)
 
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.

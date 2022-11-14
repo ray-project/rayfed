@@ -17,9 +17,10 @@ class My:
         assert li[0] == "hello"
         li1 = li[1]
         li2 = li[2]
-        assert li1[0] == "foo-0"
+        assert fed.get(li1[0]) == "foo-0"
         assert li2[0] == "world"
-        assert li2[1][0] == "foo-1"
+
+        assert fed.get(li2[1][0]) == "foo-1"
         return True
 
 cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
