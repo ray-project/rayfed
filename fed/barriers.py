@@ -8,6 +8,10 @@ import threading
 
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.cleanup import push_to_sending
+from fed._private.constants import (
+    GRPC_OPTIONS,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +84,7 @@ async def _run_grpc_server(port, event, all_data, party, lock):
 
 async def send_data_grpc(dest, data, upstream_seq_id, downstream_seq_id):
     data = cloudpickle.dumps(data)
-    async with grpc.aio.insecure_channel(dest) as channel:
+    async with grpc.aio.insecure_channel(dest, options=GRPC_OPTIONS) as channel:
         stub = fed_pb2_grpc.GrpcServiceStub(channel)
         request = fed_pb2.SendDataRequest(
             data=data,
