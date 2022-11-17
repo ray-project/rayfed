@@ -77,3 +77,35 @@ def setup_logger(logging_level, logging_format, date_format, log_dir=None, party
     _customed_handler.addFilter(_filter)
 
     logger.addHandler(_customed_handler)
+
+
+def tls_enabled(tls_config):
+    assert tls_config is not None
+    return len(tls_config) != 0
+
+
+def _load_from_cert_config(cert_config):
+    private_key_file = cert_config["key"]
+    cert_file = cert_config["cert"]
+    ca_cert_file = cert_config["ca_cert"]
+
+    with open(ca_cert_file, "rb") as file:
+        ca_cert = file.read()
+    with open(private_key_file, "rb") as file:
+        private_key = file.read()
+    with open(cert_file, "rb") as file:
+        cert_chain = file.read()
+
+    return ca_cert, private_key, cert_chain
+
+def load_server_certs(tls_config):
+    assert tls_enabled(tls_config)
+    server_cert_config = tls_config["cert"]
+    return _load_from_cert_config(server_cert_config)
+
+
+def load_client_certs(tls_config, target_party: str=None):
+    assert tls_enabled(tls_config)
+    all_clients = tls_config["client_certs"]
+    client_cert_config = all_clients[target_party]
+    return _load_from_cert_config(client_cert_config)

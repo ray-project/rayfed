@@ -61,7 +61,10 @@ class FedCallHolder:
                 # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
                     cluster = fed.get_cluster()
+                    tls_config = fed.get_tls()
                     send(
+                        tls_config,
+                        self._node_party,
                         self._party,
                         cluster[self._node_party],
                         arg.get_ray_object_ref(),

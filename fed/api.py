@@ -14,8 +14,12 @@ from fed._private.global_context import get_global_context
 from fed.barriers import recv, send, start_recv_proxy
 from fed.fed_object import FedObject
 from fed.utils import resolve_dependencies, setup_logger
-from fed._private.constants import (RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY,
-                                    RAYFED_LOG_FMT, RAYFED_DATE_FMT)
+from fed._private.constants import (
+    RAYFED_CLUSTER_KEY,
+    RAYFED_PARTY_KEY,
+    RAYFED_TLS_CONFIG,
+    RAYFED_LOG_FMT,
+    RAYFED_DATE_FMT)
 import ray.experimental.internal_kv as internal_kv
 from ray._private.gcs_utils import GcsClient
 from fed._private.fed_call_holder import FedCallHolder
@@ -25,6 +29,7 @@ logger = logging.getLogger(__name__)
 def init(address: str=None,
          cluster: Dict=None,
          party: str=None,
+         tls_config:Dict=None,
          *args,
          **kwargs):
     """
@@ -40,12 +45,14 @@ def init(address: str=None,
         # Start a local Ray cluster.
         ray.init(*args, **kwargs)
 
+    tls_config = {} if tls_config is None else tls_config
     # A Ray private accessing, should be replaced in public API.
     gcs_address = ray._private.worker._global_node.gcs_address
     gcs_client = GcsClient(address=gcs_address, nums_reconnect_retry=10)
     internal_kv._initialize_internal_kv(gcs_client)
     internal_kv._internal_kv_put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
     internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
+    internal_kv._internal_kv_put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
 
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
@@ -55,7 +62,7 @@ def init(address: str=None,
                 date_format=RAYFED_DATE_FMT,
                 party_val=get_party())
     # Start recv proxy
-    start_recv_proxy(cluster[party], party)
+    start_recv_proxy(tls_config, cluster[party], party)
 
 def shutdown():
     """
@@ -63,6 +70,7 @@ def shutdown():
     """
     internal_kv._internal_kv_del(RAYFED_CLUSTER_KEY)
     internal_kv._internal_kv_del(RAYFED_PARTY_KEY)
+    internal_kv._internal_kv_del(RAYFED_TLS_CONFIG)
     internal_kv._internal_kv_reset()
     ray.shutdown()
 
@@ -71,14 +79,24 @@ def get_cluster():
     """
     Get the RayFed cluster configration.
     """
+    # TODO(qwang): These getter could be cached in local.
     serialized = internal_kv._internal_kv_get(RAYFED_CLUSTER_KEY)
     return cloudpickle.loads(serialized)
+
 
 def get_party():
     """
     Get the current party name.
     """
     serialized = internal_kv._internal_kv_get(RAYFED_PARTY_KEY)
+    return cloudpickle.loads(serialized)
+
+
+def get_tls():
+    """
+    Get the tls configurations on this party.
+    """
+    serialized = internal_kv._internal_kv_get(RAYFED_TLS_CONFIG)
     return cloudpickle.loads(serialized)
 
 
@@ -175,6 +193,7 @@ def get(fed_objects: Union[ray.ObjectRef, List[FedObject], FedObject, List[FedOb
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
     cluster = get_cluster()
+    tls_config = get_tls()
     current_party = get_party()
     is_individual_id = isinstance(fed_objects, FedObject)
     if is_individual_id:
@@ -189,11 +208,14 @@ def get(fed_objects: Union[ray.ObjectRef, List[FedObject], FedObject, List[FedOb
             ray_object_ref = fed_object.get_ray_object_ref()
             assert ray_object_ref is not None
             ray_refs.append(ray_object_ref)
+
             for party_name, party_addr in cluster.items():
                 if party_name == current_party:
                     continue
                 else:
                     send(
+                        tls_config,
+                        party_name,
                         current_party,
                         party_addr,
                         ray_object_ref,

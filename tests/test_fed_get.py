@@ -30,10 +30,8 @@ def mean(x, y):
     return (x + y) / 2
 
 
-cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
-
-
 def run(party):    
+    cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
     fed.init(cluster=cluster, party=party)
 
     epochs = 3
