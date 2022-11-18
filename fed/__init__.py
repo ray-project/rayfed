@@ -1,5 +1,8 @@
-from fed.api import init, shutdown, get, get_cluster, get_party, get_tls, remote
-from fed.barriers import send, recv
+from ray.dag.vis_utils import plot
+
+from fed.api import (get, get_cluster, get_party, get_tls, init, kill, remote,
+                     shutdown)
+from fed.barriers import recv, send
 from fed.fed_object import FedObject
 
 __all__ = [
@@ -7,13 +10,11 @@ __all__ = [
     "get",
     "get_cluster",
     "get_party",
-    "remote",
     "init",
+    "kill",
+    "remote",
     "shutdown",
-    "get_cluster",
-    "get_party",
-    "get_tls",
-    "FedObject",
-    "send",
     "recv",
+    "send",
+    "FedObject",
 ]

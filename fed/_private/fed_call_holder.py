@@ -1,23 +1,15 @@
-import functools
-import inspect
 import logging
-from typing import Any, Dict, List, Union
 
 # Set config in the very beginning to avoid being overwritten by other packages
 logging.basicConfig(level=logging.INFO)
 
-import cloudpickle
+import fed
 import jax
-import ray
-from ray._private.inspect_util import is_cython
-
+from fed._private.constants import RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY
 from fed._private.global_context import get_global_context
-from fed.barriers import recv, send, start_recv_proxy
+from fed.barriers import send
 from fed.fed_object import FedObject
 from fed.utils import resolve_dependencies
-from fed._private.constants import RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY
-
-import fed
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +25,15 @@ it's a holder.
 
 """
 class FedCallHolder:
-    def __init__(self, node_party, submit_ray_task_func) -> None:
+    def __init__(self, node_party, submit_ray_task_func, options = {}) -> None:
         self._party = fed.get_party()
         self._node_party = node_party
-        self._options = {}
+        self._options = options
         self._submit_ray_task_func = submit_ray_task_func
+    
+    def options(self, **options):
+        self._options = options
+        return self
 
     def internal_remote(self, *args, **kwargs):
        # Generate a new fed task id for this call.

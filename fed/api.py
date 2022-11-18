@@ -4,25 +4,20 @@ import logging
 from typing import Any, Dict, List, Union
 
 import cloudpickle
-import jax
 import ray
+import ray.experimental.internal_kv as internal_kv
+from ray._private.gcs_utils import GcsClient
 from ray._private.inspect_util import is_cython
-from fed.utils import is_ray_object_refs
 
+from fed._private.constants import (RAYFED_CLUSTER_KEY, RAYFED_DATE_FMT,
+                                    RAYFED_LOG_FMT, RAYFED_PARTY_KEY,
+                                    RAYFED_TLS_CONFIG)
 from fed._private.fed_actor import FedActorHandle
+from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
 from fed.barriers import recv, send, start_recv_proxy
 from fed.fed_object import FedObject
-from fed.utils import resolve_dependencies, setup_logger
-from fed._private.constants import (
-    RAYFED_CLUSTER_KEY,
-    RAYFED_PARTY_KEY,
-    RAYFED_TLS_CONFIG,
-    RAYFED_LOG_FMT,
-    RAYFED_DATE_FMT)
-import ray.experimental.internal_kv as internal_kv
-from ray._private.gcs_utils import GcsClient
-from fed._private.fed_call_holder import FedCallHolder
+from fed.utils import setup_logger, is_ray_object_refs
 
 logger = logging.getLogger(__name__)
 
@@ -111,11 +106,13 @@ class FedRemoteFunction:
         self._node_party = party
         # assert self._fed_call_holder is None
         # TODO(qwang): This should be refined, to make sure we don't reuse the object twice.
-        self._fed_call_holder = FedCallHolder(self._node_party, self._execute_impl)
+        self._fed_call_holder = FedCallHolder(self._node_party, self._execute_impl, self._options)
         return self
 
     def options(self, **options):
         self._options = options
+        if self._fed_call_holder:
+            self._fed_call_holder.options(**options)
         return self
 
     def remote(self, *args, **kwargs):
@@ -153,7 +150,7 @@ class FedRemoteClass:
             self._party,
             self._options,
         )
-        fed_call_holder = FedCallHolder(self._party, fed_actor_handle._execute_impl)
+        fed_call_holder = FedCallHolder(self._party, fed_actor_handle._execute_impl, self._options)
         fed_obj_ref = fed_call_holder.internal_remote(*cls_args, **cls_kwargs)
         return fed_actor_handle
 
@@ -236,3 +233,10 @@ def get(fed_objects: Union[ray.ObjectRef, List[FedObject], FedObject, List[FedOb
         values = values[0]
 
     return values
+
+
+def kill(actor: FedActorHandle, *, no_restart=True):
+    current_party = get_party()
+    if actor._node_party == current_party:
+        handler = actor._actor_handle
+        ray.kill(handler, no_restart)

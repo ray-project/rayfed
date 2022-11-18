@@ -1,9 +1,10 @@
 # import queue
-import ray
-import threading
 import logging
-from collections import deque
+import threading
 import time
+from collections import deque
+
+import ray
 
 logger = logging.getLogger(__name__)
 _sending_obj_refs_q = deque()
@@ -17,7 +18,10 @@ def _check_sending_objs():
         except IndexError:
             time.sleep(0.5)
             continue
-        ray.get(obj_ref)
+        try:
+            ray.get(obj_ref)
+        except Exception as e:
+            print(f'send {obj_ref} failed, \n {e}')
     
     import os
     logger.info(f'{os.getpid()} check sending thread exit.')

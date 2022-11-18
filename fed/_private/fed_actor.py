@@ -1,12 +1,8 @@
 import logging
-from typing import Optional
-from fed._private.global_context import get_global_context
+
 import ray
-import jax
-from fed.utils import resolve_dependencies
-from fed.fed_object import FedObject
-from fed.barriers import send
 from fed._private.fed_call_holder import FedCallHolder
+from fed.fed_object import FedObject
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +96,7 @@ class FedActorMethod:
 
     def options(self, **options):
         self._options = options
+        self._fed_call_holder.options(**options)
         return self
 
     def _execute_impl(self, args, kwargs):

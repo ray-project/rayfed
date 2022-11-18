@@ -1,13 +1,16 @@
 import logging
-from fed.fed_object import FedObject
-from fed.barriers import recv
+
 import jax
 import ray
+
+from fed.fed_object import FedObject
+
 
 logger = logging.getLogger(__name__)
 
 
 def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
+    from fed.barriers import recv
     flattened_args, tree = jax.tree_util.tree_flatten((args, kwargs))
     indexes = []
     resolved = []
