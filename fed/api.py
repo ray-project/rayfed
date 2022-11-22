@@ -17,14 +17,14 @@ from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
 from fed.barriers import recv, send, start_recv_proxy
 from fed.fed_object import FedObject
-from fed.utils import setup_logger, is_ray_object_refs
+from fed.utils import is_ray_object_refs, setup_logger
 
 logger = logging.getLogger(__name__)
 
 def init(address: str=None,
          cluster: Dict=None,
          party: str=None,
-         tls_config:Dict=None,
+         tls_config: Dict=None,
          *args,
          **kwargs):
     """

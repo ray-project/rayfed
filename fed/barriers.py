@@ -3,10 +3,10 @@ import logging
 import threading
 
 import cloudpickle
+import grpc
 import ray
 
 import fed.utils as fed_utils
-import grpc
 from fed._private.constants import GRPC_OPTIONS
 from fed.cleanup import push_to_sending
 from fed.grpc import fed_pb2, fed_pb2_grpc
