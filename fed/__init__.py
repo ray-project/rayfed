@@ -10,6 +10,7 @@ __all__ = [
     "get",
     "get_cluster",
     "get_party",
+    "get_tls",
     "init",
     "kill",
     "remote",

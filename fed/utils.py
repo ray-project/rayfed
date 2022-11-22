@@ -5,7 +5,6 @@ import ray
 
 from fed.fed_object import FedObject
 
-
 logger = logging.getLogger(__name__)
 
 

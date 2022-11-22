@@ -1,6 +1,9 @@
 import multiprocessing
-import fed
 import os
+
+import pytest
+
+import fed
 
 
 @fed.remote

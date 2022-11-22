@@ -1,16 +1,23 @@
 import os
-import posixpath
-import shutil
-from pathlib import Path
+import platform
+import sys
 
 import setuptools
 from setuptools import find_packages, setup
-from setuptools.command import build_ext
 
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+# Default Linux platform tag
+plat_name = "manylinux2014_x86_64"
+
+if sys.platform == "darwin":
+    # Due to a bug in conda x64 python, platform tag has to be 10_16 for X64 wheel
+    if platform.machine() == "x86_64":
+        plat_name = "macosx_10_16_x86_64"
+    else:
+        plat_name = "macosx_11_0_arm64"
 
 def read_requirements():
     requirements = []
@@ -41,16 +48,17 @@ class CleanCommand(setuptools.Command):
 
 
 setup(
-    name='fed',
-    version='0.1.0-alpha',
+    name='secretflow-rayfed',
+    version='0.1.0a0',
     license='Apache 2.0',
     description='A multiple parties involved execution engine on the top of Ray.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    author='Qing Wang',
-    author_email='kingchin1218@gmail.com',
-    url='https://github.com/jovany-wang/RayFed',
+    author='AntGroup',
+    author_email='secretflow-contact@service.alipay.com',
+    url='https://github.com/secretflow/rayfed',
     packages=find_packages(exclude=('examples', 'tests', 'tests.*')),
     install_requires=read_requirements(),
     extras_require={'dev': ['pylint']},
+    options={'bdist_wheel': {'plat_name': plat_name}},
 )

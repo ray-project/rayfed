@@ -1,4 +1,7 @@
 import multiprocessing
+
+import pytest
+
 import fed
 
 
