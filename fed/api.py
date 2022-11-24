@@ -25,6 +25,7 @@ def init(address: str=None,
          cluster: Dict=None,
          party: str=None,
          tls_config: Dict=None,
+         logging_level='info',
          *args,
          **kwargs):
     """
@@ -52,12 +53,12 @@ def init(address: str=None,
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
     # after `ray.init` and `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
-    setup_logger(logging_level="info",
+    setup_logger(logging_level=logging_level,
                 logging_format=RAYFED_LOG_FMT,
                 date_format=RAYFED_DATE_FMT,
                 party_val=get_party())
     # Start recv proxy
-    start_recv_proxy(tls_config, cluster[party], party)
+    start_recv_proxy(cluster[party], party, tls_config)
 
 def shutdown():
     """
@@ -211,13 +212,13 @@ def get(fed_objects: Union[ray.ObjectRef, List[FedObject], FedObject, List[FedOb
                     continue
                 else:
                     send(
-                        tls_config,
-                        party_name,
                         current_party,
                         party_addr,
                         ray_object_ref,
                         fed_object.get_fed_task_id(),
                         fake_fed_task_id,
+                        tls_config,
+                        party_name,
                     )
         else:
             # This is the code path that the fed_object is not in current party.
@@ -239,4 +240,4 @@ def kill(actor: FedActorHandle, *, no_restart=True):
     current_party = get_party()
     if actor._node_party == current_party:
         handler = actor._actor_handle
-        ray.kill(handler, no_restart)
+        ray.kill(handler, no_restart=no_restart)

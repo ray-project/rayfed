@@ -82,8 +82,7 @@ def setup_logger(logging_level, logging_format, date_format, log_dir=None, party
 
 
 def tls_enabled(tls_config):
-    assert tls_config is not None
-    return len(tls_config) != 0
+    return True if tls_config else False
 
 
 def _load_from_cert_config(cert_config):
