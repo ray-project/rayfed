@@ -3,9 +3,9 @@ import logging
 # Set config in the very beginning to avoid being overwritten by other packages
 logging.basicConfig(level=logging.INFO)
 
-import fed
 import jax
-from fed._private.constants import RAYFED_CLUSTER_KEY, RAYFED_PARTY_KEY
+
+import fed
 from fed._private.global_context import get_global_context
 from fed.barriers import send
 from fed.fed_object import FedObject
@@ -59,13 +59,13 @@ class FedCallHolder:
                     cluster = fed.get_cluster()
                     tls_config = fed.get_tls()
                     send(
-                        tls_config,
-                        self._node_party,
                         self._party,
                         cluster[self._node_party],
                         arg.get_ray_object_ref(),
                         arg.get_fed_task_id(),
                         fed_task_id,
+                        tls_config,
+                        self._node_party,
                     )
             if (
                 self._options
