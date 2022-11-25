@@ -15,7 +15,7 @@ from fed._private.constants import (RAYFED_CLUSTER_KEY, RAYFED_DATE_FMT,
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
-from fed.barriers import recv, send, start_recv_proxy
+from fed.barriers import recv, send, start_recv_proxy, start_send_proxy
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -59,6 +59,7 @@ def init(address: str=None,
                 party_val=get_party())
     # Start recv proxy
     start_recv_proxy(cluster[party], party, tls_config)
+    start_send_proxy(party)
 
 def shutdown():
     """
@@ -212,7 +213,6 @@ def get(fed_objects: Union[ray.ObjectRef, List[FedObject], FedObject, List[FedOb
                     continue
                 else:
                     send(
-                        current_party,
                         party_addr,
                         ray_object_ref,
                         fed_object.get_fed_task_id(),
