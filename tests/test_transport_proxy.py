@@ -2,7 +2,7 @@ import pytest
 
 import ray
 
-from fed.barriers import RecverProxyActor, send
+from fed.barriers import RecverProxyActor, send, start_send_proxy
 
 
 def test_n_to_1_transport():
@@ -18,11 +18,12 @@ def test_n_to_1_transport():
     ).remote(SERVER_ADDRESS, "test_party")
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
+    start_send_proxy('test_party')
 
     sent_objs = []
     get_objs = []
     for i in range(NUM_DATA):
-        sent_obj = send("test_party", SERVER_ADDRESS, f"data-{i}", i, i + 1, {}, "test_node_party")
+        sent_obj = send(SERVER_ADDRESS, f"data-{i}", i, i + 1, {}, "test_node_party")
         sent_objs.append(sent_obj)
         get_obj = recver_proxy_actor.get_data.remote(i, i + 1)
         get_objs.append(get_obj)

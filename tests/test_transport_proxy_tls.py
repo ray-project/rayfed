@@ -5,7 +5,7 @@ import ray
 import cloudpickle
 import ray.experimental.internal_kv as internal_kv
 
-from fed.barriers import RecverProxyActor, send
+from fed.barriers import RecverProxyActor, send, start_send_proxy
 from fed._private.constants import RAYFED_TLS_CONFIG
 
 
@@ -34,12 +34,12 @@ def test_n_to_1_transport():
     ).remote(SERVER_ADDRESS, "test_party", tls_config)
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
+    start_send_proxy('test_party')
 
     sent_objs = []
     get_objs = []
     for i in range(NUM_DATA):
         sent_obj = send(
-            "test_party",
             SERVER_ADDRESS,
             f"data-{i}",
             i,

@@ -59,7 +59,6 @@ class FedCallHolder:
                     cluster = fed.get_cluster()
                     tls_config = fed.get_tls()
                     send(
-                        self._party,
                         cluster[self._node_party],
                         arg.get_ray_object_ref(),
                         arg.get_fed_task_id(),

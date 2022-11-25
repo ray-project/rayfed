@@ -149,23 +149,27 @@ async def send_data_grpc(
             return response.result
 
 
-def send_op(
-    party,
-    dest,
-    data,
-    upstream_seq_id,
-    downstream_seq_id,
-    tls_config=None,
-    node_party=None,
-):
-    # Not sure if here has a implicitly data fetching,
-    # if yes, we should send data, otherwise we should
-    # send `ray.get(data)`
-    logger.debug(
-        f"[{party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
-    )
-    response = asyncio.get_event_loop().run_until_complete(
-        send_data_grpc(
+@ray.remote
+class SendProxyActor:
+    async def __init__(self, party):
+        self._party = party
+
+    async def is_ready(self):
+        return True
+
+    async def send(
+        self,
+        dest,
+        data,
+        upstream_seq_id,
+        downstream_seq_id,
+        tls_config=None,
+        node_party=None,
+    ):
+        logger.debug(
+            f"[{self._party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
+        )
+        response = await send_data_grpc(
             dest=dest,
             data=data,
             upstream_seq_id=upstream_seq_id,
@@ -173,9 +177,8 @@ def send_op(
             tls_config=tls_config,
             node_party=node_party,
         )
-    )
-    logger.debug(f"Sent. Response is {response}")
-    return True  # True indicates it's sent successfully.
+        logger.debug(f"Sent. Response is {response}")
+        return True  # True indicates it's sent successfully.
 
 
 @ray.remote
@@ -225,13 +228,6 @@ class RecverProxyActor:
         return cloudpickle.loads(data)
 
 
-def recv_op(party: str, upstream_seq_id, curr_seq_id):
-    assert party
-    receiver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
-    data = receiver_proxy.get_data.remote(upstream_seq_id, curr_seq_id)
-    return ray.get(data)
-
-
 def start_recv_proxy(listen_addr, party, tls_config=None):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
@@ -243,8 +239,19 @@ def start_recv_proxy(listen_addr, party, tls_config=None):
     logger.info("RecverProxy was successfully created.")
 
 
+_SEND_PROXY_ACTOR = None
+def start_send_proxy(party):
+    # Create RecevrProxyActor
+    # Not that this is now a threaded actor.
+    global _SEND_PROXY_ACTOR
+    _SEND_PROXY_ACTOR = SendProxyActor.options(
+        name="SendProxyActor", max_concurrency=1000
+    ).remote(party)
+    assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote())
+    logger.info("SendProxy was successfully created.")
+
+
 def send(
-    party,
     dest,
     data,
     upstream_seq_id,
@@ -252,8 +259,8 @@ def send(
     tls_config=None,
     node_party=None,
 ):
-    res = ray.remote(send_op).remote(
-        party=party,
+    send_proxy = ray.get_actor("SendProxyActor")
+    res = send_proxy.send.remote(
         dest=dest,
         data=data,
         upstream_seq_id=upstream_seq_id,
@@ -266,4 +273,6 @@ def send(
 
 
 def recv(party: str, upstream_seq_id, curr_seq_id):
-    return ray.remote(recv_op).remote(party, upstream_seq_id, curr_seq_id)
+    assert party, 'Party can not be None.'
+    receiver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
+    return receiver_proxy.get_data.remote(upstream_seq_id, curr_seq_id)
