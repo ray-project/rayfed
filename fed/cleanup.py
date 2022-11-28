@@ -8,17 +8,18 @@ import ray
 
 logger = logging.getLogger(__name__)
 _sending_obj_refs_q = deque()
-_exit_flag = False
 
 
 def _check_sending_objs():
     global _sending_obj_refs_q
-    while not _exit_flag:
+    while True:
         try:
             obj_ref = _sending_obj_refs_q.popleft()
         except IndexError:
             time.sleep(0.5)
             continue
+        if isinstance(obj_ref, bool):
+            break
         try:
             ray.get(obj_ref)
         except Exception as e:
@@ -39,8 +40,7 @@ def _monitor_thread():
     import os
 
     logger.info(f'{os.getpid()} will exit and notify check sending thread to exit.')
-    global _exit_flag
-    _exit_flag = True
+    notify_to_exit()
 
 
 _monitor = threading.Thread(target=_monitor_thread)
@@ -67,5 +67,12 @@ def push_to_sending(obj_ref: ray.ObjectRef):
 
 
 def notify_to_exit():
-    global _exit_flag
-    _exit_flag = True
+    global _sending_obj_refs_q
+    _sending_obj_refs_q.append(True)
+
+
+def wait_sending():
+    global _check_send_thread_started
+    if _check_send_thread:
+        notify_to_exit()
+        _check_send_thread.join()
