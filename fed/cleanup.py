@@ -73,6 +73,6 @@ def notify_to_exit():
 
 def wait_sending():
     global _check_send_thread_started
-    if _check_send_thread:
+    if _check_send_thread_started:
         notify_to_exit()
         _check_send_thread.join()
