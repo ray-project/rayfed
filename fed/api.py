@@ -16,7 +16,7 @@ from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
 from fed.barriers import recv, send, start_recv_proxy, start_send_proxy
-from fed.cleanup import notify_to_exit
+from fed.cleanup import wait_sending
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -70,7 +70,7 @@ def shutdown():
     internal_kv._internal_kv_del(RAYFED_PARTY_KEY)
     internal_kv._internal_kv_del(RAYFED_TLS_CONFIG)
     internal_kv._internal_kv_reset()
-    notify_to_exit()
+    wait_sending()
     ray.shutdown()
 
 
