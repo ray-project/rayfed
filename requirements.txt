@@ -2,3 +2,5 @@
 jax>=0.3.0
 jaxlib>=0.3.0
 ray>=2.0.0
+cloudpickle
+protobuf>=3.9.2,<3.20

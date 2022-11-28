@@ -23,8 +23,6 @@ def read_requirements():
     requirements = []
     with open('requirements.txt') as file:
         requirements = file.read().splitlines()
-    with open('dev-requirements.txt') as file:
-        requirements.extend(file.read().splitlines())
     print("Requirements: ", requirements)
     return requirements
 
@@ -49,7 +47,7 @@ class CleanCommand(setuptools.Command):
 
 setup(
     name='secretflow-rayfed',
-    version='0.1.0a0',
+    version='0.1.0a2',
     license='Apache 2.0',
     description='A multiple parties involved execution engine on the top of Ray.',
     long_description=long_description,
