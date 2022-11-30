@@ -219,6 +219,7 @@ class RecverProxyActor:
                 add_two_dim_dict(
                     self._events, upstream_seq_id, curr_seq_id, asyncio.Event()
                 )
+
         curr_event = get_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         await curr_event.wait()
         logging.debug(f"[{self._party}] Waited for {curr_seq_id}.")
@@ -240,6 +241,8 @@ def start_recv_proxy(listen_addr, party, tls_config=None):
 
 
 _SEND_PROXY_ACTOR = None
+
+
 def start_send_proxy(party):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
