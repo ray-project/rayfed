@@ -6,6 +6,7 @@ import cloudpickle
 import ray.experimental.internal_kv as internal_kv
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
+from fed.cleanup import wait_sending
 from fed._private.constants import RAYFED_TLS_CONFIG
 
 
@@ -55,6 +56,8 @@ def test_n_to_1_transport():
 
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
+    
+    wait_sending()
     ray.shutdown()
 
 
