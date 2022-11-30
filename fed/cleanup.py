@@ -25,9 +25,9 @@ def _check_sending_objs():
         try:
             ray.get(obj_ref)
         except Exception as e:
-            logger.warn(f'send {obj_ref} failed, \n {e}')
+            logger.warn(f'Failed to send {obj_ref} with error: {e}')
 
-    logger.info('check sending thread exited.')
+    logger.info('Check sending thread was exited.')
     global _check_send_thread
     _check_send_thread = None
 
