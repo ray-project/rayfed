@@ -3,6 +3,7 @@ import pytest
 import ray
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
+from fed.cleanup import wait_sending
 
 
 def test_n_to_1_transport():
@@ -32,6 +33,8 @@ def test_n_to_1_transport():
     
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
+
+    wait_sending()
     ray.shutdown()
 
 if __name__ == "__main__":
