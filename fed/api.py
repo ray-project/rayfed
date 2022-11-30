@@ -9,9 +9,13 @@ import ray.experimental.internal_kv as internal_kv
 from ray._private.gcs_utils import GcsClient
 from ray._private.inspect_util import is_cython
 
-from fed._private.constants import (RAYFED_CLUSTER_KEY, RAYFED_DATE_FMT,
-                                    RAYFED_LOG_FMT, RAYFED_PARTY_KEY,
-                                    RAYFED_TLS_CONFIG)
+from fed._private.constants import (
+    RAYFED_CLUSTER_KEY,
+    RAYFED_DATE_FMT,
+    RAYFED_LOG_FMT,
+    RAYFED_PARTY_KEY,
+    RAYFED_TLS_CONFIG,
+)
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
@@ -22,13 +26,16 @@ from fed.utils import is_ray_object_refs, setup_logger
 
 logger = logging.getLogger(__name__)
 
-def init(address: str=None,
-         cluster: Dict=None,
-         party: str=None,
-         tls_config: Dict=None,
-         logging_level='info',
-         *args,
-         **kwargs):
+
+def init(
+    address: str = None,
+    cluster: Dict = None,
+    party: str = None,
+    tls_config: Dict = None,
+    logging_level='info',
+    *args,
+    **kwargs
+):
     """
     Initialize a RayFed client. it connects an exist cluster
     if address provided, otherwise start a new local cluster.
@@ -54,24 +61,28 @@ def init(address: str=None,
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
     # after `ray.init` and `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
-    setup_logger(logging_level=logging_level,
-                logging_format=RAYFED_LOG_FMT,
-                date_format=RAYFED_DATE_FMT,
-                party_val=get_party())
+    setup_logger(
+        logging_level=logging_level,
+        logging_format=RAYFED_LOG_FMT,
+        date_format=RAYFED_DATE_FMT,
+        party_val=get_party(),
+    )
     # Start recv proxy
     start_recv_proxy(cluster[party], party, tls_config)
     start_send_proxy(party)
+
 
 def shutdown():
     """
     Shutdown a RayFed client.
     """
+    wait_sending()
     internal_kv._internal_kv_del(RAYFED_CLUSTER_KEY)
     internal_kv._internal_kv_del(RAYFED_PARTY_KEY)
     internal_kv._internal_kv_del(RAYFED_TLS_CONFIG)
     internal_kv._internal_kv_reset()
-    wait_sending()
     ray.shutdown()
+    logger.info('Shutdowned ray.')
 
 
 def get_cluster():
@@ -110,7 +121,9 @@ class FedRemoteFunction:
         self._node_party = party
         # assert self._fed_call_holder is None
         # TODO(qwang): This should be refined, to make sure we don't reuse the object twice.
-        self._fed_call_holder = FedCallHolder(self._node_party, self._execute_impl, self._options)
+        self._fed_call_holder = FedCallHolder(
+            self._node_party, self._execute_impl, self._options
+        )
         return self
 
     def options(self, **options):
@@ -120,9 +133,10 @@ class FedRemoteFunction:
         return self
 
     def remote(self, *args, **kwargs):
-        assert self._node_party is not None, "A fed function should be specified within a party to execute."
+        assert (
+            self._node_party is not None
+        ), "A fed function should be specified within a party to execute."
         return self._fed_call_holder.internal_remote(*args, **kwargs)
-
 
     def _execute_impl(self, args, kwargs):
         return (
@@ -154,8 +168,10 @@ class FedRemoteClass:
             self._party,
             self._options,
         )
-        fed_call_holder = FedCallHolder(self._party, fed_actor_handle._execute_impl, self._options)
-        fed_obj_ref = fed_call_holder.internal_remote(*cls_args, **cls_kwargs)
+        fed_call_holder = FedCallHolder(
+            self._party, fed_actor_handle._execute_impl, self._options
+        )
+        fed_call_holder.internal_remote(*cls_args, **cls_kwargs)
         return fed_actor_handle
 
 
@@ -179,7 +195,9 @@ def remote(*args, **kwargs):
     return functools.partial(_make_fed_remote, **kwargs)
 
 
-def get(fed_objects: Union[ray.ObjectRef, List[FedObject], FedObject, List[FedObject]]) -> Any:
+def get(
+    fed_objects: Union[ray.ObjectRef, List[FedObject], FedObject, List[FedObject]]
+) -> Any:
     """
     Gets the real data of the given fed_object.
 

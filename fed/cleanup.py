@@ -9,6 +9,8 @@ import ray
 logger = logging.getLogger(__name__)
 _sending_obj_refs_q = deque()
 
+_check_send_thread = None
+
 
 def _check_sending_objs():
     global _sending_obj_refs_q
@@ -23,41 +25,34 @@ def _check_sending_objs():
         try:
             ray.get(obj_ref)
         except Exception as e:
-            print(f'send {obj_ref} failed, \n {e}')
+            logger.warn(f'send {obj_ref} failed, \n {e}')
 
-    import os
-
-    logger.info(f'{os.getpid()} check sending thread exit.')
-
-
-_check_send_thread = threading.Thread(target=_check_sending_objs)
-_check_send_thread_started = False
+    logger.info('check sending thread exited.')
+    global _check_send_thread
+    _check_send_thread = None
 
 
 def _monitor_thread():
     main_thread = threading.main_thread()
     main_thread.join()
-    import os
-
-    logger.info(f'{os.getpid()} will exit and notify check sending thread to exit.')
     notify_to_exit()
 
 
-_monitor = threading.Thread(target=_monitor_thread)
+_monitor_thread = None
 
 
 def _start_check_sending():
     global _check_send_thread
-    global _check_send_thread_started
-    if not _check_send_thread_started:
+    if not _check_send_thread:
+        _check_send_thread = threading.Thread(target=_check_sending_objs)
         _check_send_thread.start()
-        import os
+        logger.info('Start check sending thread.')
 
-        logger.info(f'{os.getpid()} start check sending thread.')
-        global _monitor
-        _monitor.start()
-        logger.info(f'{os.getpid()} start check sending monitor thread.')
-        _check_send_thread_started = True
+        global _monitor_thread
+        if not _monitor_thread:
+            _monitor_thread = threading.Thread(target=_monitor_thread)
+            _monitor_thread.start()
+            logger.info('Start check sending monitor thread.')
 
 
 def push_to_sending(obj_ref: ray.ObjectRef):
@@ -69,10 +64,11 @@ def push_to_sending(obj_ref: ray.ObjectRef):
 def notify_to_exit():
     global _sending_obj_refs_q
     _sending_obj_refs_q.append(True)
+    logger.info('Notify check sending thread to exit.')
 
 
 def wait_sending():
-    global _check_send_thread_started
-    if _check_send_thread_started:
+    global _check_send_thread
+    if _check_send_thread:
         notify_to_exit()
         _check_send_thread.join()

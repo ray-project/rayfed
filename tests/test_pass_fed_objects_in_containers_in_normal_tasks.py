@@ -2,10 +2,9 @@
 import multiprocessing
 
 import pytest
-import fed
-import ray
 
-import jax.tree_util as jtutil
+import fed
+
 
 @fed.remote
 def foo(i: int):
