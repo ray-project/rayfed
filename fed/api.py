@@ -44,7 +44,7 @@ def init(
     assert party, "Party should be provided."
     if address is not None:
         # Connect to an exist Ray cluster as driver.
-        ray.init(adress=address, args=args, kwargs=kwargs)
+        ray.init(address=address, args=args, kwargs=kwargs)
     else:
         # Start a local Ray cluster.
         ray.init(*args, **kwargs)
