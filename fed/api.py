@@ -33,21 +33,47 @@ def init(
     party: str = None,
     tls_config: Dict = None,
     logging_level='info',
-    *args,
-    **kwargs
+    **kwargs,
 ):
     """
-    Initialize a RayFed client. it connects an exist cluster
-    if address provided, otherwise start a new local cluster.
+    Initialize a RayFed client. It connects an exist or starts a new local
+        cluster.
+
+    Args:
+        address: optional; the address of Ray Cluster, same as `address` of
+            `ray.init`.
+        cluster: optional; a dict describes the cluster config. E.g.
+
+            .. code:: python
+                {
+                    'alice': '127.0.0.1:10001',
+                    'bob': '127.0.0.1:10002',
+                    'carol': '127.0.0.1:10003',
+                }
+        party: optional; self party.
+        tls_config: optional; a dict describes the tls config. E.g.
+
+            .. code:: python
+                {
+                    "cert": {
+                        "ca_cert": "cacert.pem",
+                        "cert": "servercert.pem",
+                        "key": "serverkey.pem",
+                    },
+                    "client_certs": {
+                        "bob":  {
+                            "ca_cert": "bob's cacert.pem",
+                            "cert": "bob's servercert.pem",
+                        }
+                    }
+                }
+        logging_level: optional; the logging level, could be `debug`, `info`,
+            `warning`, `error`, `critical`, not case sensititive.
     """
     assert cluster, "Cluster should be provided."
     assert party, "Party should be provided."
-    if address is not None:
-        # Connect to an exist Ray cluster as driver.
-        ray.init(address=address, args=args, kwargs=kwargs)
-    else:
-        # Start a local Ray cluster.
-        ray.init(*args, **kwargs)
+    assert party in cluster, f"Party {party} is not in cluster {cluster}."
+    ray.init(address=address, **kwargs)
 
     tls_config = {} if tls_config is None else tls_config
     # A Ray private accessing, should be replaced in public API.
