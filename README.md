@@ -22,7 +22,7 @@ Run the demo program:
 class MyModel:
     pass
 
-@fed.remote(party="ALICE)
+@fed.remote(party="ALICE")
 class Aggregator:
     pass
 
