@@ -1,4 +1,5 @@
 import json
+import os
 
 
 RAYFED_CLUSTER_KEY = b"__RAYFED_CLUSTER"
@@ -33,3 +34,8 @@ GRPC_OPTIONS = [
     ('grpc.enable_retries', 1),
     ('grpc.service_config', __GRPC_SERVICE_CONFIG_JSON_STRING),
     ]
+
+# Whitelist config file absolute path.
+RAYFED_PICKLE_WHITELIST_CONFIG_PATH = os.environ.get(
+    "RAYFED_PICKLE_WHITELIST_CONFIG_PATH", None
+)

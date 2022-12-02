@@ -10,6 +10,8 @@ import fed.utils as fed_utils
 from fed._private.constants import GRPC_OPTIONS
 from fed.cleanup import push_to_sending
 from fed.grpc import fed_pb2, fed_pb2_grpc
+import fed._private.serialization_utils
+
 
 logger = logging.getLogger(__name__)
 
