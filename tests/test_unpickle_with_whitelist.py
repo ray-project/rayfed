@@ -48,7 +48,7 @@ def run(party):
             assert "_pickle.UnpicklingError" in str(e)
     else:
         import time
-        time.sleep(5)
+        time.sleep(10)
     fed.shutdown()
 
 
