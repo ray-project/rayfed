@@ -20,7 +20,7 @@ class RestrictedUnpickler(pickle5.Unpickler):
             return super().find_class(module, name)
 
         # Forbid everything else.
-        raise cloudpickle.UnpicklingError("global '%s.%s' is forbidden" % (module, name))
+        raise pickle5.UnpicklingError("global '%s.%s' is forbidden" % (module, name))
 
 
 def _restricted_loads(
