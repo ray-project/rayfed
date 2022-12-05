@@ -1,4 +1,4 @@
-name: ubuntu-basic
+name: ubuntu-test_restrict_load
 
 on:
   push:

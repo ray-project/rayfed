@@ -30,33 +30,24 @@ def run(party):
     cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
     fed.init(cluster=cluster, party=party)
 
-    print(f"[{party}]================1")
     # Test passing an allowed type.
     o1 = generate_allowed_type.party("alice").remote()
     o2 = pass_arg.party("bob").remote(o1)
-    print(f"[{party}]================2")
     res = fed.get(o2)
-    print(f"[{party}]================3")
     assert res
-    print(f"[{party}]================4")
 
     # Test passing an unallowed type.
     o3 = generate_wrong_type.party("alice").remote()
     o4 = pass_arg.party("bob").remote(o3)
-    print(f"[{party}]================5")
     if party == "bob":
         try:
-            print(f"[{party}]================6")
             fed.get(o4)
-            print(f"[{party}]================7")
             assert False, "This code path shouldn't be reached."
         except Exception as e:
-            print(f"[{party}]================8")
             assert "_pickle.UnpicklingError" in str(e)
     else:
         import time
         time.sleep(10)
-        print(f"[{party}]================9")
     fed.shutdown()
 
 
