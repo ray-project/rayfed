@@ -2,11 +2,13 @@ import yaml
 import io
 import cloudpickle
 import fed
+import pickle5
+
 
 _pickle_whitelist = None
 
 
-class RestrictedUnpickler(cloudpickle.Unpickler):
+class RestrictedUnpickler(pickle5.Unpickler):
     def find_class(self, module, name):
         if _pickle_whitelist is None or (
             module in _pickle_whitelist
@@ -39,7 +41,7 @@ def _restricted_loads(
 
 def _apply_loads_function_with_whitelist():
     global _pickle_whitelist
-    whitelist_path = fed.constants.RAY_PICKLE_WHITELIST_CONFIG_PATH
+    whitelist_path = fed._private.constants.RAYFED_PICKLE_WHITELIST_CONFIG_PATH
     if whitelist_path is None:
         return
 
