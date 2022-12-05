@@ -61,7 +61,7 @@ def run(party):
 
 
 def test_restricted_loads():
-    config_path = "./test.yaml"
+    config_path = "/tmp/test.yaml"
     with tempfile.TemporaryDirectory() as tmp_dir:
         whitelist_config = {
             "pickle_whitelist": {
