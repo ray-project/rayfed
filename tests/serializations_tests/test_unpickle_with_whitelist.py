@@ -28,7 +28,7 @@ def pass_arg(d):
 
 def run(party):
     cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
-    fed.init(cluster=cluster, party=party)
+    fed.init(address='local', cluster=cluster, party=party)
 
     # Test passing an allowed type.
     o1 = generate_allowed_type.party("alice").remote()
@@ -47,6 +47,7 @@ def run(party):
             assert "_pickle.UnpicklingError" in str(e)
     else:
         import time
+
         time.sleep(10)
     fed.shutdown()
 

@@ -14,6 +14,7 @@ class My:
         self._val += delta
         return self._val
 
+
 @fed.remote
 def add(x, y):
     return x + y
@@ -22,10 +23,14 @@ def add(x, y):
 def _run(party: str):
     if party == "alice":
         import time
+
         time.sleep(10)
 
-    cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
-    fed.init(cluster=cluster, party=party)
+    cluster = {
+        'alice': {'address': '127.0.0.1:11010'},
+        'bob': {'address': '127.0.0.1:11011'},
+    }
+    fed.init(address='local', cluster=cluster, party=party)
 
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()
@@ -34,6 +39,7 @@ def _run(party: str):
     o = add.party("alice").remote(x, y)
     assert 30 == fed.get(o)
     fed.shutdown()
+
 
 # This case is used to test that we start 2 clusters not at the same time.
 def test_async_startup_2_clusters():
@@ -48,4 +54,5 @@ def test_async_startup_2_clusters():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(pytest.main(["-sv", __file__]))

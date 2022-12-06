@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import threading
+from typing import Dict
 
 import cloudpickle
 import grpc
@@ -98,7 +99,12 @@ async def _run_grpc_server(port, event, all_data, party, lock, tls_config=None):
 
 
 async def send_data_grpc(
-    dest, data, upstream_seq_id, downstream_seq_id, tls_config=None, node_party=None
+    dest,
+    data,
+    upstream_seq_id,
+    downstream_seq_id,
+    node_party=None,
+    tls_config=None,
 ):
     tls_enabled = fed_utils.tls_enabled(tls_config)
     if tls_enabled:
@@ -153,30 +159,36 @@ async def send_data_grpc(
 
 @ray.remote
 class SendProxyActor:
-    async def __init__(self, party):
+    def __init__(self, cluster: Dict, party: str, tls_config: Dict = None):
+        self._cluster = cluster
         self._party = party
+        self._tls_config = tls_config
 
     async def is_ready(self):
         return True
 
     async def send(
         self,
-        dest,
+        dest_party,
         data,
         upstream_seq_id,
         downstream_seq_id,
-        tls_config=None,
         node_party=None,
+        tls_config=None,
     ):
+        assert (
+            dest_party in self._cluster
+        ), f'Failed to find {dest_party} in cluster {self._cluster}.'
         logger.debug(
             f"[{self._party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
         )
+        dest_addr = self._cluster[dest_party]['address']
         response = await send_data_grpc(
-            dest=dest,
+            dest=dest_addr,
             data=data,
             upstream_seq_id=upstream_seq_id,
             downstream_seq_id=downstream_seq_id,
-            tls_config=tls_config,
+            tls_config=tls_config if tls_config else self._tls_config,
             node_party=node_party,
         )
         logger.debug(f"Sent. Response is {response}")
@@ -231,9 +243,13 @@ class RecverProxyActor:
         return cloudpickle.loads(data)
 
 
-def start_recv_proxy(listen_addr, party, tls_config=None):
+def start_recv_proxy(cluster: str, party: str, tls_config=None):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
+    party_addr = cluster[party]
+    listen_addr = party_addr.get('listen_addr', None)
+    if not listen_addr:
+        listen_addr =  party_addr['address']
     recver_proxy_actor = RecverProxyActor.options(
         name=f"RecverProxyActor-{party}", max_concurrency=1000
     ).remote(listen_addr, party, tls_config)
@@ -245,33 +261,32 @@ def start_recv_proxy(listen_addr, party, tls_config=None):
 _SEND_PROXY_ACTOR = None
 
 
-def start_send_proxy(party):
+def start_send_proxy(cluster: Dict, party: str, tls_config: Dict = None):
     # Create RecevrProxyActor
-    # Not that this is now a threaded actor.
     global _SEND_PROXY_ACTOR
     _SEND_PROXY_ACTOR = SendProxyActor.options(
         name="SendProxyActor", max_concurrency=1000
-    ).remote(party)
+    ).remote(cluster, party, tls_config)
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote())
     logger.info("SendProxy was successfully created.")
 
 
 def send(
-    dest,
+    dest_party,
     data,
     upstream_seq_id,
     downstream_seq_id,
-    tls_config=None,
     node_party=None,
+    tls_config=None,
 ):
     send_proxy = ray.get_actor("SendProxyActor")
     res = send_proxy.send.remote(
-        dest=dest,
+        dest_party=dest_party,
         data=data,
         upstream_seq_id=upstream_seq_id,
         downstream_seq_id=downstream_seq_id,
-        tls_config=tls_config,
         node_party=node_party,
+        tls_config=tls_config,
     )
     push_to_sending(res)
     return res

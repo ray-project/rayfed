@@ -1,4 +1,3 @@
-
 import multiprocessing
 
 import pytest
@@ -8,7 +7,6 @@ import fed
 
 @fed.remote
 class My:
-
     def foo(self, i: int):
         return f"foo-{i}"
 
@@ -22,12 +20,16 @@ class My:
         assert fed.get(li2[1][0]) == "foo-1"
         return True
 
-cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
+
+cluster = {
+    'alice': {'address': '127.0.0.1:11010'},
+    'bob': {'address': '127.0.0.1:11011'},
+}
 
 
 def run(party):
     def _run():
-        fed.init(cluster=cluster, party=party)
+        fed.init(address='local', cluster=cluster, party=party)
         my1 = My.party("alice").remote()
         my2 = My.party("bob").remote()
         o1 = my1.foo.remote(0)
@@ -38,7 +40,7 @@ def run(party):
         result = fed.get(o3)
         assert result
         fed.shutdown()
-    
+
     _run()
     _run()
 

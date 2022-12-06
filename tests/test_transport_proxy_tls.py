@@ -15,7 +15,7 @@ def test_n_to_1_transport():
     sending data to the target recver proxy, and there also have
     N receivers to `get_data` from Recver proxy at that time.
     """
-    ray.init()
+    ray.init(address='local')
 
     cert_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "cert_files/alice_certs"
@@ -35,17 +35,18 @@ def test_n_to_1_transport():
     ).remote(SERVER_ADDRESS, "test_party", tls_config)
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
-    start_send_proxy('test_party')
+    start_send_proxy(
+        {'test_party': {'address': SERVER_ADDRESS}}, 'test_party', tls_config
+    )
 
     sent_objs = []
     get_objs = []
     for i in range(NUM_DATA):
         sent_obj = send(
-            SERVER_ADDRESS,
+            'test_party',
             f"data-{i}",
             i,
             i + 1,
-            tls_config,
             "test_node_party",
         )
         sent_objs.append(sent_obj)
@@ -56,7 +57,7 @@ def test_n_to_1_transport():
 
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
-    
+
     wait_sending()
     ray.shutdown()
 

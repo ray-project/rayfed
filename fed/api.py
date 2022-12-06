@@ -46,9 +46,27 @@ def init(
 
             .. code:: python
                 {
-                    'alice': '127.0.0.1:10001',
-                    'bob': '127.0.0.1:10002',
-                    'carol': '127.0.0.1:10003',
+                    'alice': {
+                        # The address for other parties.
+                        'address': '127.0.0.1:10001',
+                        # (Optional) the listen address, the `address` will be
+                        # used if not provided.
+                        'listen_addr': '0.0.0.0:10001'
+                    },
+                    'bob': {
+                        # The address for other parties.
+                        'address': '127.0.0.1:10002',
+                        # (Optional) the listen address, the `address` will be
+                        # used if not provided.
+                        'listen_addr': '0.0.0.0:10002'
+                    },
+                    'carol': {
+                        # The address for other parties.
+                        'address': '127.0.0.1:10003',
+                        # (Optional) the listen address, the `address` will be
+                        # used if not provided.
+                        'listen_addr': '0.0.0.0:10003'
+                    },
                 }
         party: optional; self party.
         tls_config: optional; a dict describes the tls config. E.g.
@@ -69,6 +87,17 @@ def init(
                 }
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
+
+
+    Examples:
+        >>> import fed
+        >>> cluster = {
+        >>>    'alice': {'address': '127.0.0.1:10001'},
+        >>>    'bob': {'address': '127.0.0.1:10002'},
+        >>>    'carol': {'address': '127.0.0.1:10003'},
+        >>> }
+        >>> # Start as alice.
+        >>> fed.init(address='local', cluster=cluster, self_party='alice')
     """
     assert cluster, "Cluster should be provided."
     assert party, "Party should be provided."
@@ -94,8 +123,8 @@ def init(
         party_val=get_party(),
     )
     # Start recv proxy
-    start_recv_proxy(cluster[party], party, tls_config)
-    start_send_proxy(party)
+    start_recv_proxy(cluster=cluster, party=party, tls_config=tls_config)
+    start_send_proxy(cluster=cluster, party=party, tls_config=tls_config)
 
 
 def shutdown():
@@ -238,7 +267,6 @@ def get(
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
     cluster = get_cluster()
-    tls_config = get_tls()
     current_party = get_party()
     is_individual_id = isinstance(fed_objects, FedObject)
     if is_individual_id:
@@ -254,16 +282,15 @@ def get(
             assert ray_object_ref is not None
             ray_refs.append(ray_object_ref)
 
-            for party_name, party_addr in cluster.items():
+            for party_name in cluster:
                 if party_name == current_party:
                     continue
                 else:
                     send(
-                        party_addr,
+                        party_name,
                         ray_object_ref,
                         fed_object.get_fed_task_id(),
                         fake_fed_task_id,
-                        tls_config,
                         party_name,
                     )
         else:
