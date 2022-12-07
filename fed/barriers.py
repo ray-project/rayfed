@@ -240,6 +240,10 @@ class RecverProxyActor:
         with self._lock:
             data = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
+
+        # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
+        import fed._private.serialization_utils as fed_ser_utils
+        fed_ser_utils._apply_loads_function_with_whitelist()
         return cloudpickle.loads(data)
 
 
