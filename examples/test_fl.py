@@ -17,6 +17,7 @@ def mean(party, x, y):
     print(f"=======[party:{party}] meaning...")
     return np.mean([x, y], axis=0)
 
+
 @fed.remote
 class MyActor:
     def __init__(self, learning_rate, input_shape, num_classes):
@@ -27,7 +28,7 @@ class MyActor:
 
     def load_data(self, batch_size: int, epochs: int):
         # fill missing value with 0 to avoid nan error
-        df = pd.read_csv('iris.csv').fillna(0) 
+        df = pd.read_csv('iris.csv').fillna(0)
         x, y = df.iloc[:, :4].values, df.iloc[:, 4:].values
         encoder = OneHotEncoder(sparse=False)
         y = encoder.fit_transform(y)
@@ -84,7 +85,9 @@ def agg_fn(obj1, obj2):
 
 def run(party):
     cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
-    fed.init(cluster=cluster, party=party, num_cpus=8, log_to_driver=True)
+    fed.init(
+        address='local', cluster=cluster, party=party, num_cpus=8, log_to_driver=True
+    )
     print(f"=============party name is {party}")
 
     epochs = 3

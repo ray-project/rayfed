@@ -2,12 +2,13 @@ import multiprocessing
 import fed
 import ray
 
+
 @fed.remote
 class MyActor:
     def __init__(self, party, data):
         self.__data = data
         self._party = party
- 
+
     def f(self):
         print(f"=====THIS IS F IN PARTY {self._party}")
         return f"f({self._party}, ip is {ray.util.get_node_ip_address()})"
@@ -27,11 +28,14 @@ def agg_fn(obj1, obj2):
     return f"agg-{obj1}-{obj2}"
 
 
-cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
+cluster = {
+    'alice': {'address': '127.0.0.1:11010'},
+    'bob': {'address': '127.0.0.1:11011'},
+}
 
 
 def run(party):
-    fed.init(cluster=cluster, party=party)
+    fed.init(address='local', cluster=cluster, party=party)
     print(f"Running the script in party {party}")
 
     ds1, ds2 = [123, 789]

@@ -20,11 +20,14 @@ def bar(li):
     assert fed.get(li2[1][0]) == "foo-1"
     return True
 
-cluster = {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
+cluster = {
+    'alice': {'address': '127.0.0.1:11010'},
+    'bob': {'address': '127.0.0.1:11011'},
+}
 
 
 def run(party):
-    fed.init(cluster=cluster, party=party)
+    fed.init(address='local', cluster=cluster, party=party)
     o1 = foo.party("alice").remote(0)
     o2 = foo.party("bob").remote(1)
     li = ["hello", [o1], ["world", [o2]]]

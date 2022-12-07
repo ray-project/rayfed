@@ -20,8 +20,8 @@ class My:
 
 def run(party, is_inner_party):
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
-        'bob': {'address': '127.0.0.1:11011'},
+        'alice': {'address': '127.0.0.1:11010', 'listen_addr': '0.0.0.0:11010'},
+        'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
     }
     fed.init(address='local', cluster=cluster, party=party)
 
@@ -38,19 +38,9 @@ def run(party, is_inner_party):
     fed.shutdown()
 
 
-def test_pass_fed_objects_for_actor_creation_inner_party():
+def test_listen_addr():
     p_alice = multiprocessing.Process(target=run, args=('alice', True))
     p_bob = multiprocessing.Process(target=run, args=('bob', True))
-    p_alice.start()
-    p_bob.start()
-    p_alice.join()
-    p_bob.join()
-    assert p_alice.exitcode == 0 and p_bob.exitcode == 0
-
-
-def test_pass_fed_objects_for_actor_creation_across_party():
-    p_alice = multiprocessing.Process(target=run, args=('alice', False))
-    p_bob = multiprocessing.Process(target=run, args=('bob', False))
     p_alice.start()
     p_bob.start()
     p_alice.join()

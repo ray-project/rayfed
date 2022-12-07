@@ -31,8 +31,11 @@ def _run(party: str):
     tls_config_bob = { "cert": ca_config, "client_certs": { "alice": ca_config }}
     tls_config = tls_config_alice if party == "alice" else tls_config_bob
 
-    cluster =  {'alice': '127.0.0.1:11010', 'bob': '127.0.0.1:11011'}
-    fed.init(cluster=cluster, party=party, tls_config=tls_config)
+    cluster = {
+        'alice': {'address': '127.0.0.1:11010'},
+        'bob': {'address': '127.0.0.1:11011'},
+    }
+    fed.init(address='local', cluster=cluster, party=party, tls_config=tls_config)
 
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()
