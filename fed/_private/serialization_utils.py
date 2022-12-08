@@ -2,25 +2,9 @@ import yaml
 import io
 import cloudpickle
 import fed
-import pickle5
 
 
 _pickle_whitelist = None
-
-
-class RestrictedUnpickler(pickle5.Unpickler):
-    def find_class(self, module, name):
-        if _pickle_whitelist is None or (
-            module in _pickle_whitelist
-            and (_pickle_whitelist[module] is None or name in _pickle_whitelist[module])
-        ):
-            return super().find_class(module, name)
-
-        if module == "fed._private": # TODO(qwang): Not sure if it works.
-            return super().find_class(module, name)
-
-        # Forbid everything else.
-        raise pickle5.UnpicklingError("global '%s.%s' is forbidden" % (module, name))
 
 
 def _restricted_loads(
@@ -31,6 +15,28 @@ def _restricted_loads(
     errors="strict",
     buffers=None,
 ):
+    from sys import version_info
+    assert version_info.major == 3
+
+    if version_info.minor >= 8:
+        import pickle as pickle
+    else:
+        import pickle5 as pickle
+
+    class RestrictedUnpickler(pickle.Unpickler):
+        def find_class(self, module, name):
+            if _pickle_whitelist is None or (
+                module in _pickle_whitelist
+                and (_pickle_whitelist[module] is None or name in _pickle_whitelist[module])
+            ):
+                return super().find_class(module, name)
+
+            if module == "fed._private": # TODO(qwang): Not sure if it works.
+                return super().find_class(module, name)
+
+            # Forbid everything else.
+            raise pickle.UnpicklingError("global '%s.%s' is forbidden" % (module, name))
+
     if isinstance(serialized_data, str):
         raise TypeError("Can't load pickle from unicode string")
     file = io.BytesIO(serialized_data)
@@ -57,6 +63,3 @@ def _apply_loads_function_with_whitelist():
         if "*" in attr_list:
             _pickle_whitelist[module] = None
     cloudpickle.loads = _restricted_loads
-
-
-_apply_loads_function_with_whitelist()
