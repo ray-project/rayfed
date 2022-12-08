@@ -18,7 +18,7 @@ def _restricted_loads(
     from sys import version_info
     assert version_info.major == 3
 
-    if version_info.major > 8:
+    if version_info.minor > 8:
         import pickle as pickle
     else:
         import pickle5 as pickle
