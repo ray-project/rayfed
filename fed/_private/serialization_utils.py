@@ -18,7 +18,7 @@ def _restricted_loads(
     from sys import version_info
     assert version_info.major == 3
 
-    if version_info.minor > 8:
+    if version_info.minor >= 8:
         import pickle as pickle
     else:
         import pickle5 as pickle
@@ -35,7 +35,7 @@ def _restricted_loads(
                 return super().find_class(module, name)
 
             # Forbid everything else.
-            raise pickle5.UnpicklingError("global '%s.%s' is forbidden" % (module, name))
+            raise pickle.UnpicklingError("global '%s.%s' is forbidden" % (module, name))
 
     if isinstance(serialized_data, str):
         raise TypeError("Can't load pickle from unicode string")
