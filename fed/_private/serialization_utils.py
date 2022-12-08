@@ -15,9 +15,15 @@ def _restricted_loads(
     errors="strict",
     buffers=None,
 ):
-    import pickle5
+    from sys import version_info
+    assert version_info.major == 3
 
-    class RestrictedUnpickler(pickle5.Unpickler):
+    if version_info.major > 8:
+        import pickle as pickle
+    else:
+        import pickle5 as pickle
+
+    class RestrictedUnpickler(pickle.Unpickler):
         def find_class(self, module, name):
             if _pickle_whitelist is None or (
                 module in _pickle_whitelist
