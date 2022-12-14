@@ -47,7 +47,7 @@ class CleanCommand(setuptools.Command):
 
 setup(
     name='secretflow-rayfed',
-    version='0.1.0a8',
+    version='0.1.0a9',
     license='Apache 2.0',
     description='A multiple parties involved execution engine on the top of Ray.',
     long_description=long_description,
