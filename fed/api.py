@@ -32,7 +32,7 @@ def init(
     cluster: Dict = None,
     party: str = None,
     tls_config: Dict = None,
-    logging_level: str = 'debug',
+    logging_level: str = 'info',
     cross_silo_grpc_retry_policy: Dict = None,
     cross_silo_send_max_retries: int = None,
     **kwargs,
