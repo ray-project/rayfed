@@ -32,7 +32,9 @@ def init(
     cluster: Dict = None,
     party: str = None,
     tls_config: Dict = None,
-    logging_level='info',
+    logging_level: str = 'debug',
+    cross_silo_grpc_retry_policy: Dict = None,
+    cross_silo_send_max_retries: int = None,
     **kwargs,
 ):
     """
@@ -87,7 +89,23 @@ def init(
                 }
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
+        cross_silo_grpc_retry_policy: a dict descibes the retry policy for
+            cross silo rpc call. If None, the following default retry policy
+            will be used. More details please refer to
+            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_.
 
+            .. code:: python
+                {
+                    "maxAttempts": 4,
+                    "initialBackoff": "0.1s",
+                    "maxBackoff": "1s",
+                    "backoffMultiplier": 2,
+                    "retryableStatusCodes": [
+                        "UNAVAILABLE"
+                    ]
+                }
+        cross_silo_send_max_retries: the max retries for sending data cross silo.
+        kwargs: the args for ray.init().
 
     Examples:
         >>> import fed
@@ -123,8 +141,21 @@ def init(
         party_val=get_party(),
     )
     # Start recv proxy
-    start_recv_proxy(cluster=cluster, party=party, tls_config=tls_config)
-    start_send_proxy(cluster=cluster, party=party, tls_config=tls_config)
+    start_recv_proxy(
+        cluster=cluster,
+        party=party,
+        tls_config=tls_config,
+        logging_level=logging_level,
+        retry_policy=cross_silo_grpc_retry_policy,
+    )
+    start_send_proxy(
+        cluster=cluster,
+        party=party,
+        tls_config=tls_config,
+        logging_level=logging_level,
+        retry_policy=cross_silo_grpc_retry_policy,
+        max_retries=cross_silo_send_max_retries,
+    )
 
 
 def shutdown():
