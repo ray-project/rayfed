@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import threading
 from typing import Dict
@@ -8,10 +9,9 @@ import grpc
 import ray
 
 import fed.utils as fed_utils
-from fed._private.constants import GRPC_OPTIONS
+from fed._private.grpc_options import get_grpc_options
 from fed.cleanup import push_to_sending
 from fed.grpc import fed_pb2, fed_pb2_grpc
-
 
 logger = logging.getLogger(__name__)
 
@@ -72,8 +72,10 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         return fed_pb2.SendDataResponse(result="OK")
 
 
-async def _run_grpc_server(port, event, all_data, party, lock, tls_config=None):
-    server = grpc.aio.server(options=GRPC_OPTIONS)
+async def _run_grpc_server(
+    port, event, all_data, party, lock, tls_config=None, grpc_options=None
+):
+    server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
         SendDataService(event, all_data, party, lock), server
     )
@@ -104,8 +106,10 @@ async def send_data_grpc(
     downstream_seq_id,
     node_party=None,
     tls_config=None,
+    retry_policy=None,
 ):
     tls_enabled = fed_utils.tls_enabled(tls_config)
+    grpc_options = get_grpc_options(retry_policy=retry_policy)
     if tls_enabled:
         ca_cert, private_key, cert_chain = fed_utils.load_client_certs(
             tls_config, target_party=node_party
@@ -119,7 +123,7 @@ async def send_data_grpc(
         async with grpc.aio.secure_channel(
             dest,
             credentials,
-            options=GRPC_OPTIONS
+            options=grpc_options
             + [
                 # ('grpc.ssl_target_name_override', "rayfed"),
                 # ("grpc.default_authority", "rayfed"),
@@ -140,7 +144,8 @@ async def send_data_grpc(
             )
             return response.result
     else:
-        async with grpc.aio.insecure_channel(dest, options=GRPC_OPTIONS) as channel:
+        async with grpc.aio.insecure_channel(dest, options=grpc_options) as channel:
+            await channel.channel_ready()
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
             request = fed_pb2.SendDataRequest(
@@ -158,10 +163,20 @@ async def send_data_grpc(
 
 @ray.remote
 class SendProxyActor:
-    def __init__(self, cluster: Dict, party: str, tls_config: Dict = None):
+    def __init__(
+        self,
+        cluster: Dict,
+        party: str,
+        tls_config: Dict = None,
+        logging_level: str = None,
+        retry_policy: Dict = None,
+    ):
         self._cluster = cluster
         self._party = party
         self._tls_config = tls_config
+        if logging_level:
+            logger.setLevel(logging_level.upper())
+        self.retry_policy = retry_policy
 
     async def is_ready(self):
         return True
@@ -189,6 +204,7 @@ class SendProxyActor:
             downstream_seq_id=downstream_seq_id,
             tls_config=tls_config if tls_config else self._tls_config,
             node_party=node_party,
+            retry_policy=self.retry_policy,
         )
         logger.debug(f"Sent. Response is {response}")
         return True  # True indicates it's sent successfully.
@@ -196,10 +212,20 @@ class SendProxyActor:
 
 @ray.remote
 class RecverProxyActor:
-    async def __init__(self, listen_addr: str, party: str, tls_config=None):
+    def __init__(
+        self,
+        listen_addr: str,
+        party: str,
+        tls_config=None,
+        logging_level: str = None,
+        retry_policy: Dict = None,
+    ):
         self._listen_addr = listen_addr
         self._party = party
         self._tls_config = tls_config
+        if logging_level:
+            logger.setLevel(logging_level.upper())
+        self.retry_policy = retry_policy
 
         # Workaround the threading coordinations
 
@@ -216,6 +242,7 @@ class RecverProxyActor:
             self._party,
             self._lock,
             self._tls_config,
+            get_grpc_options(self.retry_policy),
         )
 
     async def is_ready(self):
@@ -242,20 +269,30 @@ class RecverProxyActor:
 
         # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
         import fed._private.serialization_utils as fed_ser_utils
+
         fed_ser_utils._apply_loads_function_with_whitelist()
         return cloudpickle.loads(data)
 
 
-def start_recv_proxy(cluster: str, party: str, tls_config=None):
+def start_recv_proxy(
+    cluster: str, party: str, tls_config=None, logging_level=None, retry_policy=None
+):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
     party_addr = cluster[party]
     listen_addr = party_addr.get('listen_addr', None)
     if not listen_addr:
-        listen_addr =  party_addr['address']
+        listen_addr = party_addr['address']
+
     recver_proxy_actor = RecverProxyActor.options(
         name=f"RecverProxyActor-{party}", max_concurrency=1000
-    ).remote(listen_addr, party, tls_config)
+    ).remote(
+        listen_addr=listen_addr,
+        party=party,
+        tls_config=tls_config,
+        logging_level=logging_level,
+        retry_policy=retry_policy,
+    )
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
     logger.info("RecverProxy was successfully created.")
@@ -264,12 +301,34 @@ def start_recv_proxy(cluster: str, party: str, tls_config=None):
 _SEND_PROXY_ACTOR = None
 
 
-def start_send_proxy(cluster: Dict, party: str, tls_config: Dict = None):
+def start_send_proxy(
+    cluster: Dict,
+    party: str,
+    tls_config: Dict = None,
+    logging_level=None,
+    retry_policy=None,
+    max_retries=None,
+):
     # Create RecevrProxyActor
     global _SEND_PROXY_ACTOR
-    _SEND_PROXY_ACTOR = SendProxyActor.options(
-        name="SendProxyActor", max_concurrency=1000
-    ).remote(cluster, party, tls_config)
+    if max_retries is not None:
+        _SEND_PROXY_ACTOR = SendProxyActor.options(
+            name="SendProxyActor",
+            max_concurrency=1000,
+            max_task_retries=max_retries,
+            max_restarts=1,
+        )
+    else:
+        _SEND_PROXY_ACTOR = SendProxyActor.options(
+            name="SendProxyActor", max_concurrency=1000
+        )
+    _SEND_PROXY_ACTOR = _SEND_PROXY_ACTOR.remote(
+        cluster=cluster,
+        party=party,
+        tls_config=tls_config,
+        logging_level=logging_level,
+        retry_policy=retry_policy,
+    )
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote())
     logger.info("SendProxy was successfully created.")
 
