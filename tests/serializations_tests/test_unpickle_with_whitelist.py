@@ -30,7 +30,15 @@ def run(party):
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    fed.init(address='local', cluster=cluster, party=party)
+    allowedlist =  {
+                "numpy.core.numeric": ["*"],
+                "numpy": ["dtype"],
+    }
+    fed.init(
+        address='local',
+        cluster=cluster,
+        party=party,
+        cross_silo_serializing_allowed_list=allowedlist)
 
     # Test passing an allowed type.
     o1 = generate_allowed_type.party("alice").remote()
@@ -55,7 +63,6 @@ def run(party):
 
 
 def test_restricted_loads():
-    config_path = "/tmp/test.yaml"
     with tempfile.TemporaryDirectory() as tmp_dir:
         whitelist_config = {
             "pickle_whitelist": {
@@ -65,7 +72,6 @@ def test_restricted_loads():
         }
         yaml.safe_dump(whitelist_config, open(config_path, "wt"))
 
-    os.environ["RAYFED_PICKLE_WHITELIST_CONFIG_PATH"] = config_path
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
