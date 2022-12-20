@@ -30,7 +30,7 @@ def run(party):
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    allowedlist =  {
+    allowed_list =  {
                 "numpy.core.numeric": ["*"],
                 "numpy": ["dtype"],
     }
@@ -38,7 +38,7 @@ def run(party):
         address='local',
         cluster=cluster,
         party=party,
-        cross_silo_serializing_allowed_list=allowedlist)
+        cross_silo_serializing_allowed_list=allowed_list)
 
     # Test passing an allowed type.
     o1 = generate_allowed_type.party("alice").remote()
@@ -63,6 +63,7 @@ def run(party):
 
 
 def test_restricted_loads():
+
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
