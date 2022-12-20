@@ -108,7 +108,7 @@ def init(
                 }
         cross_silo_send_max_retries: the max retries for sending data cross silo.
         cross_silo_serializing_allowed_list: The package or class list allowed for serializing(deserializating)
-            cross silos. It used for avoiding pickle deserializing execution attack when crossing solis.
+            cross silos. It's used for avoiding pickle deserializing execution attack when crossing solis.
         kwargs: the args for ray.init().
 
     Examples:
