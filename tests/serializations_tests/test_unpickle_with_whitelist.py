@@ -63,15 +63,6 @@ def run(party):
 
 
 def test_restricted_loads():
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        whitelist_config = {
-            "pickle_whitelist": {
-                "numpy.core.numeric": ["*"],
-                "numpy": ["dtype"],
-            }
-        }
-        yaml.safe_dump(whitelist_config, open(config_path, "wt"))
-
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
