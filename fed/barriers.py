@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import threading
 from typing import Dict
@@ -129,7 +128,6 @@ async def send_data_grpc(
                 # ("grpc.default_authority", "rayfed"),
             ],
         ) as channel:
-            await channel.channel_ready()
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
             request = fed_pb2.SendDataRequest(
@@ -145,7 +143,6 @@ async def send_data_grpc(
             return response.result
     else:
         async with grpc.aio.insecure_channel(dest, options=grpc_options) as channel:
-            await channel.channel_ready()
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
             request = fed_pb2.SendDataRequest(
