@@ -15,6 +15,7 @@ from fed._private.constants import (
     RAYFED_LOG_FMT,
     RAYFED_PARTY_KEY,
     RAYFED_TLS_CONFIG,
+    RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
 )
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
@@ -35,6 +36,7 @@ def init(
     logging_level: str = 'info',
     cross_silo_grpc_retry_policy: Dict = None,
     cross_silo_send_max_retries: int = None,
+    cross_silo_serializing_allowed_list: Dict = None,
     **kwargs,
 ):
     """
@@ -105,6 +107,8 @@ def init(
                     ]
                 }
         cross_silo_send_max_retries: the max retries for sending data cross silo.
+        cross_silo_serializing_allowed_list: The package or class list allowed for serializing(deserializating)
+            cross silos. It's used for avoiding pickle deserializing execution attack when crossing solis.
         kwargs: the args for ray.init().
 
     Examples:
@@ -130,7 +134,8 @@ def init(
     internal_kv._internal_kv_put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
     internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
     internal_kv._internal_kv_put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
-
+    internal_kv._internal_kv_put(RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
+                                 cloudpickle.dumps(cross_silo_serializing_allowed_list))
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
     # after `ray.init` and `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
@@ -166,6 +171,7 @@ def shutdown():
     internal_kv._internal_kv_del(RAYFED_CLUSTER_KEY)
     internal_kv._internal_kv_del(RAYFED_PARTY_KEY)
     internal_kv._internal_kv_del(RAYFED_TLS_CONFIG)
+    internal_kv._internal_kv_del(RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
     internal_kv._internal_kv_reset()
     ray.shutdown()
     logger.info('Shutdowned ray.')

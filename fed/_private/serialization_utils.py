@@ -3,6 +3,7 @@ import io
 import cloudpickle
 import fed
 
+import ray.experimental.internal_kv as internal_kv
 
 _pickle_whitelist = None
 
@@ -47,13 +48,13 @@ def _restricted_loads(
 
 def _apply_loads_function_with_whitelist():
     global _pickle_whitelist
-    whitelist_path = fed._private.constants.RAYFED_PICKLE_WHITELIST_CONFIG_PATH
-    if whitelist_path is None:
+
+    from fed._private.constants import RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST
+    serialized = internal_kv._internal_kv_get(RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
+    if serialized is None:
         return
 
-    _pickle_whitelist = yaml.safe_load(open(whitelist_path, "rt")).get(
-        "pickle_whitelist", None
-    )
+    _pickle_whitelist = cloudpickle.loads(serialized)
     if _pickle_whitelist is None:
         return
 
