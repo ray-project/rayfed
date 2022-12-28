@@ -21,7 +21,7 @@ from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
 from fed.barriers import recv, send, start_recv_proxy, start_send_proxy
-from fed.cleanup import wait_sending
+from fed.cleanup import set_exit_on_failure_sending, wait_sending
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -37,6 +37,7 @@ def init(
     cross_silo_grpc_retry_policy: Dict = None,
     cross_silo_send_max_retries: int = None,
     cross_silo_serializing_allowed_list: Dict = None,
+    exit_on_failure_cross_silo_sending: bool = False,
     **kwargs,
 ):
     """
@@ -109,6 +110,9 @@ def init(
         cross_silo_send_max_retries: the max retries for sending data cross silo.
         cross_silo_serializing_allowed_list: The package or class list allowed for serializing(deserializating)
             cross silos. It's used for avoiding pickle deserializing execution attack when crossing solis.
+        exit_on_failure_cross_silo_sending: whether exit when failure on
+            cross-silo sending. If True, a SIGTERM will be signaled to self
+            if failed to sending cross-silo data.
         kwargs: the args for ray.init().
 
     Examples:
@@ -145,6 +149,7 @@ def init(
         date_format=RAYFED_DATE_FMT,
         party_val=get_party(),
     )
+    set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,

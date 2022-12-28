@@ -1,5 +1,6 @@
-# import queue
 import logging
+import os
+import signal
 import threading
 import time
 from collections import deque
@@ -7,12 +8,28 @@ from collections import deque
 import ray
 
 logger = logging.getLogger(__name__)
+
 _sending_obj_refs_q = deque()
 
 _check_send_thread = None
 
+_EXIT_ON_FAILURE_SENDING = False
+
+
+def set_exit_on_failure_sending(exit_when_failure_sending: bool):
+    global _EXIT_ON_FAILURE_SENDING
+    _EXIT_ON_FAILURE_SENDING = exit_when_failure_sending
+
+
+def get_exit_when_failure_sending():
+    global _EXIT_ON_FAILURE_SENDING
+    return _EXIT_ON_FAILURE_SENDING
+
 
 def _check_sending_objs():
+    def _signal_exit():
+        os.kill(os.getpid(), signal.SIGTERM)
+
     global _sending_obj_refs_q
     while True:
         try:
@@ -26,6 +43,10 @@ def _check_sending_objs():
             ray.get(obj_ref)
         except Exception as e:
             logger.warn(f'Failed to send {obj_ref} with error: {e}')
+            if get_exit_when_failure_sending():
+                logger.warn('Signal self to exit.')
+                _signal_exit()
+                break
 
     logger.info('Check sending thread was exited.')
     global _check_send_thread
