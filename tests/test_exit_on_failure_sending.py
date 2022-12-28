@@ -10,6 +10,7 @@ import sys
 
 def signal_handler(sig, frame):
     if sig == signal.SIGTERM.value:
+        fed.shutdown()
         sys.exit(0)
 
 
