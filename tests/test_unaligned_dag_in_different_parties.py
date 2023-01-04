@@ -30,10 +30,20 @@ def run(party):
 
     o = f2.party("alice").remote()
     final_res = g.party("bob").remote(o)
-    val = fed.get(final_res)
-    print(f"[{party}] final res is {val}")
-    assert val == 100200
 
+    excepted_error = None
+    try:
+        print(f"==============A {party}")
+        val = fed.get(final_res)
+        print(f"==============B {party}")
+        val = fed.get(final_res)
+    except Exception as e:
+        excepted_error = e
+        print(f"{party}==========================e is {e}")
+    # print(f"[{party}] final res is {val}")
+    # assert val == 100200
+    assert isinstance(excepted_error, ValueError)
+    assert "31" in str(excepted_error) and "28" in str(excepted_error)
     fed.shutdown()
 
 

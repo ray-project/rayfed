@@ -111,3 +111,14 @@ def load_client_certs(tls_config, target_party: str=None):
     client_cert_config = all_clients[target_party]
     return _load_from_cert_config(client_cert_config)
 
+def error_if_dag_nodes_are_unaligned(source_invoking_frame, curr_invoking_frame):
+            #  assert invoking_frame.filename == source_invoking_frame.filename
+            # assert invoking_frame.lineno == source_invoking_frame.lineno, f"source_line_no={source_invoking_frame.lineno}, but curr_line_no={invoking_frame.lineno}"
+            # assert invoking_frame.name == source_invoking_frame.name
+    if source_invoking_frame.filename != curr_invoking_frame.filename:
+        # TODO(qwang): This is too restrict to use, because the full pathes are usually not the same in different nodes.
+        raise ValueError(f"source filename is {source_invoking_frame.filename}, but current filename is {curr_invoking_frame.filename}")
+    elif source_invoking_frame.lineno != curr_invoking_frame.lineno:
+        raise ValueError(f"source lineno is {source_invoking_frame.lineno}, but current lineno is {curr_invoking_frame.lineno}")
+    elif source_invoking_frame.name != curr_invoking_frame.name:
+        raise ValueError(f"source function name is {source_invoking_frame.name}, but current function name is {curr_invoking_frame.name}")

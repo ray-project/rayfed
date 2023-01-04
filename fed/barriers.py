@@ -276,9 +276,7 @@ class RecverProxyActor:
             print(invoking_frame)
             print(source_invoking_frame)
             print("============================")
-            assert invoking_frame.filename == source_invoking_frame.filename
-            assert invoking_frame.lineno == source_invoking_frame.lineno, f"source_line_no={source_invoking_frame.lineno}, but curr_line_no={invoking_frame.lineno}"
-            assert invoking_frame.name == source_invoking_frame.name
+            fed_utils.error_if_dag_nodes_are_unaligned(source_invoking_frame, invoking_frame)
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
 
         # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
