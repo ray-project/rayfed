@@ -5,6 +5,10 @@ import fed
 import multiprocessing
 import numpy
 import ray
+import os
+import test_utils
+from test_utils import use_tls, build_env
+import pytest
 
 
 @fed.remote
@@ -25,7 +29,8 @@ def pass_arg(d):
     return True
 
 
-def run(party):
+def run(party, env):
+    os.environ = env
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -61,11 +66,11 @@ def run(party):
         time.sleep(10)
     fed.shutdown()
 
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_restricted_loads(use_tls):
 
-def test_restricted_loads():
-
-    p_alice = multiprocessing.Process(target=run, args=('alice',))
-    p_bob = multiprocessing.Process(target=run, args=('bob',))
+    p_alice = multiprocessing.Process(target=run, args=('alice', build_env()))
+    p_bob = multiprocessing.Process(target=run, args=('bob', build_env()))
     p_alice.start()
     p_bob.start()
     p_alice.join()

@@ -1,7 +1,9 @@
 import multiprocessing
 import fed
 import ray
-
+import os
+import test_utils
+from test_utils import use_tls, build_env
 
 @fed.remote
 class MyActor:
@@ -34,7 +36,8 @@ cluster = {
 }
 
 
-def run(party):
+def run(party, env):
+    os.environ = env
     fed.init(address='local', cluster=cluster, party=party)
     print(f"Running the script in party {party}")
 
@@ -54,9 +57,10 @@ def run(party):
     fed.shutdown()
 
 
-def main():
-    p_alice = multiprocessing.Process(target=run, args=('alice',))
-    p_bob = multiprocessing.Process(target=run, args=('bob',))
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_main(use_tls):
+    p_alice = multiprocessing.Process(target=run, args=('alice', build_env()))
+    p_bob = multiprocessing.Process(target=run, args=('bob', build_env()))
     p_alice.start()
     p_bob.start()
     p_alice.join()
@@ -64,4 +68,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    sys.exit(pytest.main(["-sv", __file__]))
