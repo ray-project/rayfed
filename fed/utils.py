@@ -111,30 +111,3 @@ def load_client_certs(tls_config, target_party: str=None):
     client_cert_config = all_clients[target_party]
     return _load_from_cert_config(client_cert_config)
 
-
-class InvokingFrame:
-    def __init__(self, func_name=None, line_no=None, file_name=None) -> None:
-        self._func_name = func_name
-        self._line_no = line_no
-        self._file_name = file_name
-
-
-    def get_func_name(self):
-        return self._func_name
-    
-    def get_line_no(self):
-        return self._line_no
-
-    def get_file_name(self):
-        return self._file_name
-
-    def serialize(self):
-        import cloudpickle
-        li = [self._func_name, self._line_no, self._file_name]
-        return cloudpickle.dumps(li)
-
-    @staticmethod
-    def deserialize(bs):
-        import cloudpickle
-        li = cloudpickle.loads(bs)
-        return InvokingFrame(li[0], li[1], li[2])

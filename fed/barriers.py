@@ -51,7 +51,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         serialized_invoking_frame = request.serialized_invoking_frame
-        invoking_frame = fed_utils.InvokingFrame.deserialize(serialized_invoking_frame)
+        invoking_frame = cloudpickle.loads(serialized_invoking_frame)
         logger.debug(
             f"[{self._party}] Received a grpc data request from {upstream_seq_id} to {downstream_seq_id}."
         )
@@ -202,11 +202,6 @@ class SendProxyActor:
             f"[{self._party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
         )
         dest_addr = self._cluster[dest_party]['address']
-        iframe = fed_utils.InvokingFrame(
-            invoking_frame.name,
-            invoking_frame.lineno,
-            invoking_frame.filename,
-        )
         response = await send_data_grpc(
             dest=dest_addr,
             data=data,
@@ -215,7 +210,7 @@ class SendProxyActor:
             tls_config=tls_config if tls_config else self._tls_config,
             node_party=node_party,
             retry_policy=self.retry_policy,
-            invoking_frame=iframe.serialize(),
+            invoking_frame=cloudpickle.dumps(invoking_frame),
         )
         logger.debug(f"Sent. Response is {response}")
         return True  # True indicates it's sent successfully.
@@ -281,9 +276,9 @@ class RecverProxyActor:
             print(invoking_frame)
             print(source_invoking_frame)
             print("============================")
-            assert invoking_frame.filename == source_invoking_frame.get_file_name()
-            assert invoking_frame.lineno == source_invoking_frame.get_line_no(), f"source_line_no={source_invoking_frame.get_line_no()}, but curr_line_no={invoking_frame.lineno}"
-            assert invoking_frame.name == source_invoking_frame.get_func_name()
+            assert invoking_frame.filename == source_invoking_frame.filename
+            assert invoking_frame.lineno == source_invoking_frame.lineno, f"source_line_no={source_invoking_frame.lineno}, but curr_line_no={invoking_frame.lineno}"
+            assert invoking_frame.name == source_invoking_frame.name
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
 
         # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
