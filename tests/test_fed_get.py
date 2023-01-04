@@ -2,7 +2,9 @@ import multiprocessing
 
 import pytest
 import fed
-
+import test_utils
+from test_utils import use_tls, build_env
+import os
 
 @fed.remote
 class MyModel:
@@ -30,7 +32,9 @@ def mean(x, y):
     return (x + y) / 2
 
 
-def run(party):    
+def run(party, env):
+    import os
+    os.environ = env
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -57,10 +61,10 @@ def run(party):
     assert latest_weights == [9, 9]
     fed.shutdown()
 
-
-def test_fed_get_in_2_parties():
-    p_alice = multiprocessing.Process(target=run, args=('alice',))
-    p_bob = multiprocessing.Process(target=run, args=('bob',))
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_fed_get_in_2_parties(use_tls):
+    p_alice = multiprocessing.Process(target=run, args=('alice', build_env()))
+    p_bob = multiprocessing.Process(target=run, args=('bob', build_env()))
     p_alice.start()
     p_bob.start()
     p_alice.join()
