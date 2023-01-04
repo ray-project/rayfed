@@ -134,11 +134,6 @@ async def send_data_grpc(
         ) as channel:
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
-            # iframe = fed_utils.InvokingFrame(
-            #     invoking_frame.name,
-            #     invoking_frame.lineno,
-            #     invoking_frame.filename,
-            # )
             request = fed_pb2.SendDataRequest(
                 data=data,
                 upstream_seq_id=str(upstream_seq_id),
@@ -155,11 +150,6 @@ async def send_data_grpc(
         async with grpc.aio.insecure_channel(dest, options=grpc_options) as channel:
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
-            # iframe = fed_utils.InvokingFrame(
-            #     invoking_frame.name,
-            #     invoking_frame.lineno,
-            #     invoking_frame.filename,
-            # )
             request = fed_pb2.SendDataRequest(
                 data=data,
                 upstream_seq_id=str(upstream_seq_id),
