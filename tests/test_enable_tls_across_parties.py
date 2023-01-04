@@ -1,6 +1,7 @@
 import multiprocessing
 import os
-
+import test_utils
+from test_utils import use_tls, build_env
 import pytest
 
 import fed
@@ -20,7 +21,8 @@ def add(x, y):
     return x + y
 
 
-def _run(party: str):
+def _run(party: str, env):
+    os.environ = env
     cert_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cert_files/alice_certs")
     ca_config = {
                 "ca_cert": os.path.join(cert_dir, "cacert.pem"),
@@ -45,9 +47,10 @@ def _run(party: str):
     assert fed.get(o) == 30
     fed.shutdown()
 
-def test_enable_tls_across_parties():
-    p_alice = multiprocessing.Process(target=_run, args=('alice',))
-    p_bob = multiprocessing.Process(target=_run, args=('bob',))
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_enable_tls_across_parties(use_tls):
+    p_alice = multiprocessing.Process(target=_run, args=('alice', build_env()))
+    p_bob = multiprocessing.Process(target=_run, args=('bob', build_env()))
     p_alice.start()
     p_bob.start()
     p_alice.join()

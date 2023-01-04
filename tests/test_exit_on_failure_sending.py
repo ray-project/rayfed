@@ -1,4 +1,7 @@
 import multiprocessing
+import os
+import test_utils
+from test_utils import use_tls, build_env
 
 import pytest
 import fed
@@ -28,7 +31,8 @@ class My:
         return self._value
 
 
-def run(party, is_inner_party):
+def run(party, is_inner_party, env):
+    os.environ = env
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -57,9 +61,10 @@ def run(party, is_inner_party):
     time.sleep(86400)
 
 
-def test_exit_when_failure_on_sending():
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_exit_when_failure_on_sending(use_tls):
     signal.signal(signal.SIGTERM, signal_handler)
-    p_alice = multiprocessing.Process(target=run, args=('alice', True))
+    p_alice = multiprocessing.Process(target=run, args=('alice', True, build_env()))
     p_alice.start()
     p_alice.join()
     assert p_alice.exitcode == 0

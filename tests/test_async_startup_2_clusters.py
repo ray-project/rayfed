@@ -1,5 +1,7 @@
 import multiprocessing
-
+import os
+import test_utils
+from test_utils import use_tls, build_env
 import pytest
 
 import fed
@@ -20,7 +22,8 @@ def add(x, y):
     return x + y
 
 
-def _run(party: str):
+def _run(party: str, env):
+    os.environ = env
     if party == "alice":
         import time
 
@@ -42,9 +45,10 @@ def _run(party: str):
 
 
 # This case is used to test that we start 2 clusters not at the same time.
-def test_async_startup_2_clusters():
-    p_alice = multiprocessing.Process(target=_run, args=('alice',))
-    p_bob = multiprocessing.Process(target=_run, args=('bob',))
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_async_startup_2_clusters(use_tls):
+    p_alice = multiprocessing.Process(target=_run, args=('alice', build_env()))
+    p_bob = multiprocessing.Process(target=_run, args=('bob', build_env()))
     p_alice.start()
     p_bob.start()
     p_alice.join()

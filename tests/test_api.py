@@ -1,9 +1,13 @@
 import multiprocessing
+import os
+import test_utils
+from test_utils import use_tls, build_env
 import pytest
 import fed
 
 
-def run():
+def run(env):
+    os.environ = env
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -14,8 +18,9 @@ def run():
     fed.shutdown()
 
 
-def test_fed_apis():
-    p_alice = multiprocessing.Process(target=run)
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_fed_apis(use_tls):
+    p_alice = multiprocessing.Process(target=run, args=(build_env(),))
     p_alice.start()
     p_alice.join()
     assert p_alice.exitcode == 0

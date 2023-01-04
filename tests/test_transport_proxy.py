@@ -1,12 +1,15 @@
 import pytest
-
+import os
+import test_utils
+from test_utils import use_tls, build_env
 import ray
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
 from fed.cleanup import wait_sending
 
 
-def test_n_to_1_transport():
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_n_to_1_transport(use_tls):
     """This case is used to test that we have N send_op barriers,
     sending data to the target recver proxy, and there also have
     N receivers to `get_data` from Recver proxy at that time.

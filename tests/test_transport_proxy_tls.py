@@ -1,4 +1,6 @@
 import os
+import test_utils
+from test_utils import use_tls, build_env
 import pytest
 
 import ray
@@ -10,7 +12,8 @@ from fed.cleanup import wait_sending
 from fed._private.constants import RAYFED_TLS_CONFIG
 
 
-def test_n_to_1_transport():
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_n_to_1_transport(use_tls):
     """This case is used to test that we have N send_op barriers,
     sending data to the target recver proxy, and there also have
     N receivers to `get_data` from Recver proxy at that time.

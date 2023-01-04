@@ -1,5 +1,7 @@
 import multiprocessing
-
+import test_utils
+from test_utils import use_tls, build_env
+import os
 import pytest
 import fed
 
@@ -18,7 +20,8 @@ class My:
         return self._value
 
 
-def run(party, is_inner_party):
+def run(party, is_inner_party, env):
+    os.environ = env
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -47,9 +50,10 @@ def run(party, is_inner_party):
     fed.shutdown()
 
 
-def test_listen_addr():
-    p_alice = multiprocessing.Process(target=run, args=('alice', True))
-    p_bob = multiprocessing.Process(target=run, args=('bob', True))
+@pytest.mark.parametrize("use_tls", [True], indirect=True)
+def test_listen_addr(use_tls):
+    p_alice = multiprocessing.Process(target=run, args=('alice', True, build_env()))
+    p_bob = multiprocessing.Process(target=run, args=('bob', True, build_env()))
     p_alice.start()
     
     import time
