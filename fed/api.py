@@ -230,10 +230,14 @@ class FedRemoteFunction:
         return self
 
     def remote(self, *args, **kwargs):
+        import traceback
+        stack = traceback.extract_stack()
+        invoking_frame = stack[len(stack) - 2]
+        
         assert (
             self._node_party is not None
         ), "A fed function should be specified within a party to execute."
-        return self._fed_call_holder.internal_remote(*args, **kwargs)
+        return self._fed_call_holder.internal_remote(invoking_frame, *args, **kwargs)
 
     def _execute_impl(self, args, kwargs):
         return (
@@ -334,6 +338,8 @@ def get(
                         fed_object.get_fed_task_id(),
                         fake_fed_task_id,
                         party_name,
+                        None,
+                        fed_object.get_invoking_frame(),
                     )
         else:
             # This is the code path that the fed_object is not in current party.

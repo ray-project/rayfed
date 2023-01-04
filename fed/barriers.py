@@ -50,13 +50,15 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
     async def SendData(self, request, context):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
+        serialized_invoking_frame = request.serialized_invoking_frame
+        invoking_frame = fed_utils.InvokingFrame.deserialize(serialized_invoking_frame)
         logger.debug(
             f"[{self._party}] Received a grpc data request from {upstream_seq_id} to {downstream_seq_id}."
         )
 
         with self._lock:
             add_two_dim_dict(
-                self._all_data, upstream_seq_id, downstream_seq_id, request.data
+                self._all_data, upstream_seq_id, downstream_seq_id, (request.data, invoking_frame)
             )
             if not key_exists_in_two_dim_dict(
                 self._events, upstream_seq_id, downstream_seq_id
@@ -106,7 +108,9 @@ async def send_data_grpc(
     node_party=None,
     tls_config=None,
     retry_policy=None,
+    invoking_frame=None,
 ):
+    assert invoking_frame is not None
     tls_enabled = fed_utils.tls_enabled(tls_config)
     grpc_options = get_grpc_options(retry_policy=retry_policy)
     if tls_enabled:
@@ -134,6 +138,12 @@ async def send_data_grpc(
                 data=data,
                 upstream_seq_id=str(upstream_seq_id),
                 downstream_seq_id=str(downstream_seq_id),
+                iframe = fed_utils.InvokingFrame(
+                    invoking_frame.name,
+                    invoking_frame.lineno,
+                    invoking_frame.filename,
+                )
+                serialized_invoking_frame=iframe.serialize(),
             )
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
@@ -145,10 +155,16 @@ async def send_data_grpc(
         async with grpc.aio.insecure_channel(dest, options=grpc_options) as channel:
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
+            iframe = fed_utils.InvokingFrame(
+                invoking_frame.name,
+                invoking_frame.lineno,
+                invoking_frame.filename,
+            )
             request = fed_pb2.SendDataRequest(
                 data=data,
                 upstream_seq_id=str(upstream_seq_id),
                 downstream_seq_id=str(downstream_seq_id),
+                serialized_invoking_frame=iframe.serialize(),
             )
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
@@ -186,7 +202,9 @@ class SendProxyActor:
         downstream_seq_id,
         node_party=None,
         tls_config=None,
+        invoking_frame=None,
     ):
+        assert invoking_frame is not None
         assert (
             dest_party in self._cluster
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
@@ -202,6 +220,7 @@ class SendProxyActor:
             tls_config=tls_config if tls_config else self._tls_config,
             node_party=node_party,
             retry_policy=self.retry_policy,
+            invoking_frame=invoking_frame,
         )
         logger.debug(f"Sent. Response is {response}")
         return True  # True indicates it's sent successfully.
@@ -245,10 +264,11 @@ class RecverProxyActor:
     async def is_ready(self):
         return True
 
-    async def get_data(self, upstream_seq_id, curr_seq_id):
+    async def get_data(self, upstream_seq_id, curr_seq_id, invoking_frame=None):
         logger.debug(
             f"[{self._party}] Getting data for {curr_seq_id} from {upstream_seq_id}"
         )
+        assert invoking_frame is not None
         with self._lock:
             if not key_exists_in_two_dim_dict(
                 self._events, upstream_seq_id, curr_seq_id
@@ -261,7 +281,10 @@ class RecverProxyActor:
         await curr_event.wait()
         logging.debug(f"[{self._party}] Waited for {curr_seq_id}.")
         with self._lock:
-            data = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
+            data, source_invoking_frame = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
+            assert invoking_frame.filename == source_invoking_frame.filename
+            assert invoking_frame.lineno == source_invoking_frame.lineno
+            assert invoking_frame.name == source_invoking_frame.name
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
 
         # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
@@ -337,7 +360,9 @@ def send(
     downstream_seq_id,
     node_party=None,
     tls_config=None,
+    invoking_frame=None,
 ):
+    assert invoking_frame is not None
     send_proxy = ray.get_actor("SendProxyActor")
     res = send_proxy.send.remote(
         dest_party=dest_party,
@@ -345,13 +370,15 @@ def send(
         upstream_seq_id=upstream_seq_id,
         downstream_seq_id=downstream_seq_id,
         node_party=node_party,
-        tls_config=tls_config,
+        tls_config=tls_config, # TODO(qwang): This should be passed in ctor?
+        invoking_frame=invoking_frame,
     )
     push_to_sending(res)
     return res
 
 
-def recv(party: str, upstream_seq_id, curr_seq_id):
+def recv(party: str, upstream_seq_id, curr_seq_id, invoking_frame=None):
+    assert invoking_frame is not None
     assert party, 'Party can not be None.'
     receiver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
-    return receiver_proxy.get_data.remote(upstream_seq_id, curr_seq_id)
+    return receiver_proxy.get_data.remote(upstream_seq_id, curr_seq_id, invoking_frame)

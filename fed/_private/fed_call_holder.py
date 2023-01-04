@@ -35,7 +35,8 @@ class FedCallHolder:
         self._options = options
         return self
 
-    def internal_remote(self, *args, **kwargs):
+    def internal_remote(self, invoking_frame=None, *args, **kwargs):
+        assert invoking_frame is not None
        # Generate a new fed task id for this call.
         fed_task_id = get_global_context().next_seq_id()
         if self._party == self._node_party:
@@ -46,11 +47,11 @@ class FedCallHolder:
             ray_obj_ref = self._submit_ray_task_func(resolved_args, resolved_kwargs)
             if isinstance(ray_obj_ref, list):
                 return [
-                    FedObject(self._node_party, fed_task_id, ref, i)
+                    FedObject(self._node_party, fed_task_id, ref, i, invoking_frame)
                     for i, ref in enumerate(ray_obj_ref)
                 ]
             else:
-                return FedObject(self._node_party, fed_task_id, ray_obj_ref)
+                return FedObject(self._node_party, fed_task_id, ray_obj_ref, None, invoking_frame)
         else:
             flattened_args, _ = jax.tree_util.tree_flatten((args, kwargs))
             for arg in flattened_args:
@@ -62,6 +63,8 @@ class FedCallHolder:
                         arg.get_fed_task_id(),
                         fed_task_id,
                         self._node_party,
+                        tls_config=None,
+                        invoking_frame=invoking_frame,
                     )
             if (
                 self._options
@@ -69,6 +72,6 @@ class FedCallHolder:
                 and self._options['num_returns'] > 1
             ):
                 num_returns = self._options['num_returns']
-                return [FedObject(self._node_party, fed_task_id, None, i) for i in range(num_returns)]
+                return [FedObject(self._node_party, fed_task_id, None, i, invoking_frame) for i in range(num_returns)]
             else:
-                return FedObject(self._node_party, fed_task_id, None)
+                return FedObject(self._node_party, fed_task_id, None, None, invoking_frame)
