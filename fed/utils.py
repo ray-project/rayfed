@@ -26,7 +26,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                     f"[{current_party}] Insert recv_op, arg task id {arg.get_fed_task_id()}, current task id {current_fed_task_id}"
                 )
                 recv_obj = recv(
-                    current_party, arg.get_fed_task_id(), current_fed_task_id, arg.get_invoking_frame
+                    current_party, arg.get_fed_task_id(), current_fed_task_id, arg.get_invoking_frame()
                 )
                 resolved.append(recv_obj)
     if resolved:
@@ -117,7 +117,8 @@ class InvokingFrame:
         self._func_name = func_name
         self._line_no = line_no
         self._file_name = file_name
-    
+
+
     def get_func_name(self):
         return self._func_name
     
@@ -128,6 +129,16 @@ class InvokingFrame:
         return self._file_name
 
     def serialize(self):
+        def __unicode_encode(s):
+            import codecs
+            tp = codecs.unicode_escape_encode(s)
+            return tp[0]
+
+        def __utf8_encode(s):
+            import codecs
+            tp = codecs.utf_8_encode(s)
+            return tp[0]
+
         import cloudpickle
         li = [self._func_name, self._line_no, self._file_name]
         return cloudpickle.dumps(li)
@@ -135,5 +146,15 @@ class InvokingFrame:
     @staticmethod
     def deserialize(bs):
         import cloudpickle
+        def __unicode_decode(self, b):
+            import codecs
+            tp = codecs.unicode_escape_decode(b)
+            return tp[0]
+
+        def __utf8_decode(self, b):
+            import codecs
+            tp = codecs.utf_8_decode(b)
+            return tp[0]
+
         li = cloudpickle.loads(bs)
         return InvokingFrame(li[0], li[1], li[2])

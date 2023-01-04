@@ -10,7 +10,7 @@ message SendDataRequest {
     bytes data = 1;
     string upstream_seq_id = 2;
     string downstream_seq_id = 3;
-    string serialized_invoking_frame = 4;
+    bytes serialized_invoking_frame = 4;
 };
 
 message SendDataResponse {

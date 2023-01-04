@@ -134,16 +134,16 @@ async def send_data_grpc(
         ) as channel:
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
+            # iframe = fed_utils.InvokingFrame(
+            #     invoking_frame.name,
+            #     invoking_frame.lineno,
+            #     invoking_frame.filename,
+            # )
             request = fed_pb2.SendDataRequest(
                 data=data,
                 upstream_seq_id=str(upstream_seq_id),
                 downstream_seq_id=str(downstream_seq_id),
-                iframe = fed_utils.InvokingFrame(
-                    invoking_frame.name,
-                    invoking_frame.lineno,
-                    invoking_frame.filename,
-                )
-                serialized_invoking_frame=iframe.serialize(),
+                serialized_invoking_frame=invoking_frame,
             )
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
@@ -155,16 +155,16 @@ async def send_data_grpc(
         async with grpc.aio.insecure_channel(dest, options=grpc_options) as channel:
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
-            iframe = fed_utils.InvokingFrame(
-                invoking_frame.name,
-                invoking_frame.lineno,
-                invoking_frame.filename,
-            )
+            # iframe = fed_utils.InvokingFrame(
+            #     invoking_frame.name,
+            #     invoking_frame.lineno,
+            #     invoking_frame.filename,
+            # )
             request = fed_pb2.SendDataRequest(
                 data=data,
                 upstream_seq_id=str(upstream_seq_id),
                 downstream_seq_id=str(downstream_seq_id),
-                serialized_invoking_frame=iframe.serialize(),
+                serialized_invoking_frame=invoking_frame,
             )
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
@@ -212,6 +212,11 @@ class SendProxyActor:
             f"[{self._party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
         )
         dest_addr = self._cluster[dest_party]['address']
+        iframe = fed_utils.InvokingFrame(
+            invoking_frame.name,
+            invoking_frame.lineno,
+            invoking_frame.filename,
+        )
         response = await send_data_grpc(
             dest=dest_addr,
             data=data,
@@ -220,7 +225,7 @@ class SendProxyActor:
             tls_config=tls_config if tls_config else self._tls_config,
             node_party=node_party,
             retry_policy=self.retry_policy,
-            invoking_frame=invoking_frame,
+            invoking_frame=iframe.serialize(),
         )
         logger.debug(f"Sent. Response is {response}")
         return True  # True indicates it's sent successfully.
@@ -282,9 +287,13 @@ class RecverProxyActor:
         logging.debug(f"[{self._party}] Waited for {curr_seq_id}.")
         with self._lock:
             data, source_invoking_frame = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
-            assert invoking_frame.filename == source_invoking_frame.filename
-            assert invoking_frame.lineno == source_invoking_frame.lineno
-            assert invoking_frame.name == source_invoking_frame.name
+            print("============================")
+            print(invoking_frame)
+            print(source_invoking_frame)
+            print("============================")
+            assert invoking_frame.filename == source_invoking_frame.get_file_name()
+            assert invoking_frame.lineno == source_invoking_frame.get_line_no(), f"source_line_no={source_invoking_frame.get_line_no()}, but curr_line_no={invoking_frame.lineno}"
+            assert invoking_frame.name == source_invoking_frame.get_func_name()
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
 
         # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
