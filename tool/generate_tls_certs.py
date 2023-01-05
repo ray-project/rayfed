@@ -3,6 +3,33 @@ import os
 import sys
 import socket
 import tempfile
+import errno
+
+def try_make_directory_shared(directory_path):
+    try:
+        os.chmod(directory_path, 0o0777)
+    except OSError as e:
+        # Silently suppress the PermissionError that is thrown by the chmod.
+        # This is done because the user attempting to change the permissions
+        # on a directory may not own it. The chmod is attempted whether the
+        # directory is new or not to avoid race conditions.
+        # ray-project/ray/#3591
+        if e.errno in [errno.EACCES, errno.EPERM]:
+            pass
+        else:
+            raise
+
+def try_to_create_directory(directory_path):
+    """Attempt to create a directory that is globally readable/writable.
+
+    Args:
+        directory_path: The path of the directory to create.
+    """
+    directory_path = os.path.expanduser(directory_path)
+    os.makedirs(directory_path, exist_ok=True)
+    # Change the log directory permissions so others can use it. This is
+    # important when multiple people are using the same machine.
+    try_make_directory_shared(directory_path)
 
 
 def generate_self_signed_tls_certs():
@@ -67,14 +94,14 @@ def generate_self_signed_tls_certs():
 
 
 def dump_to_files(cert_contents, key_contents):
-    cert, key = generate_self_signed_tls_certs()
     temp_dir = "/tmp/rayfed/test-certs"
+    try_to_create_directory(temp_dir)
     cert_filepath = os.path.join(temp_dir, "server.crt")
     key_filepath = os.path.join(temp_dir, "server.key")
     with open(cert_filepath, "w") as fh:
-        fh.write(cert)
+        fh.write(cert_contents)
     with open(key_filepath, "w") as fh:
-        fh.write(key)
+        fh.write(key_contents)
 
     return key_filepath, cert_filepath, temp_dir
 
