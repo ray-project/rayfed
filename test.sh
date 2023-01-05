@@ -10,7 +10,9 @@ export RAY_TLS_SERVER_CERT="/tmp/rayfed/test-certs/server.crt"
 export RAY_TLS_SERVER_KEY="/tmp/rayfed/test-certs/server.key"
 export RAY_TLS_CA_CERT="/tmp/rayfed/test-certs/server.crt"
 
-pushd tests
+cd tests
 python3 -m pytest -v -s test_*
 python3 -m pytest -v -s serializations_tests/test_*
-popd
+cd -
+
+echo "All tests finished."
