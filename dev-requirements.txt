@@ -2,3 +2,4 @@ click
 pandas
 tensorflow>=2
 scikit-learn
+cryptography
