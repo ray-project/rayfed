@@ -67,18 +67,18 @@ if __name__ == "__main__":
 Open a terminal and run the code as `alice`. It's recommended to run the code with Ray tls enabled (please refer to [Ray TLS](https://docs.ray.io/en/latest/ray-core/configure.html#tls-authentication))
 ```shell
 RAY_USE_TLS=1 \
-RAY_TLS_SERVER_CERT='the server cert' \
-RAY_TLS_SERVER_KEY='the server key' \
-RAY_TLS_CA_CERT='the ca cert' \
+RAY_TLS_SERVER_CERT='/path/to/the/server/cert/file' \
+RAY_TLS_SERVER_KEY='/path/to/the/server/key/file' \
+RAY_TLS_CA_CERT='/path/to/the/ca/cert/file' \
 python test.py alice
 ```
 
 In the mean time, open another terminal and run the code as `bob`.
 ```shell
 RAY_USE_TLS=1 \
-RAY_TLS_SERVER_CERT='the server cert' \
-RAY_TLS_SERVER_KEY='the server key' \
-RAY_TLS_CA_CERT='the ca cert' \
+RAY_TLS_SERVER_CERT='/path/to/the/server/cert/file' \
+RAY_TLS_SERVER_KEY='/path/to/the/server/key/file' \
+RAY_TLS_CA_CERT='/path/to/the/ca/cert/file' \
 python test.py bob
 ```
 
