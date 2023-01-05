@@ -64,7 +64,7 @@ if __name__ == "__main__":
 
 ### Step 2: run the code.
 
-Open a terminal and run the code as `alice`. It's recommended to run the code with Ray tls enabled (please refer to [Ray TLS](https://docs.ray.io/en/latest/ray-core/configure.html#tls-authentication))
+Open a terminal and run the code as `alice`. It's recommended to run the code with Ray TLS enabled (please refer to [Ray TLS](https://docs.ray.io/en/latest/ray-core/configure.html#tls-authentication))
 ```shell
 RAY_USE_TLS=1 \
 RAY_TLS_SERVER_CERT='/path/to/the/server/cert/file' \
