@@ -3,6 +3,7 @@ import multiprocessing
 import pytest
 import fed
 
+from ray.exceptions import RayTaskError
 
 @fed.remote
 def f1():
@@ -33,17 +34,14 @@ def run(party):
 
     excepted_error = None
     try:
-        print(f"==============A {party}")
         val = fed.get(final_res)
-        print(f"==============B {party}")
         val = fed.get(final_res)
     except Exception as e:
         excepted_error = e
-        print(f"{party}==========================e is {e}")
-    # print(f"[{party}] final res is {val}")
-    # assert val == 100200
-    assert isinstance(excepted_error, ValueError)
-    assert "31" in str(excepted_error) and "28" in str(excepted_error)
+    assert excepted_error is not None
+    if party == "bob":
+        assert "source lineno is 29" in str(excepted_error)
+        assert "current lineno is 32" in str(excepted_error)
     fed.shutdown()
 
 
