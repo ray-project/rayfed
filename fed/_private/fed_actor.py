@@ -91,7 +91,10 @@ class FedActorMethod:
 
 
     def remote(self, *args, **kwargs) -> FedObject:
-        return self._fed_call_holder.internal_remote(*args, **kwargs)
+        import traceback
+        stack = traceback.extract_stack()
+        invoking_frame = stack[len(stack) - 2]
+        return self._fed_call_holder.internal_remote(invoking_frame, *args, **kwargs)
 
 
     def options(self, **options):

@@ -64,7 +64,7 @@ class FedCallHolder:
                         fed_task_id,
                         self._node_party,
                         tls_config=None,
-                        invoking_frame=invoking_frame,
+                        invoking_frame=arg.get_invoking_frame(),
                     )
             if (
                 self._options

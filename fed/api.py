@@ -233,7 +233,7 @@ class FedRemoteFunction:
         import traceback
         stack = traceback.extract_stack()
         invoking_frame = stack[len(stack) - 2]
-        
+
         assert (
             self._node_party is not None
         ), "A fed function should be specified within a party to execute."
@@ -272,7 +272,10 @@ class FedRemoteClass:
         fed_call_holder = FedCallHolder(
             self._party, fed_actor_handle._execute_impl, self._options
         )
-        fed_call_holder.internal_remote(*cls_args, **cls_kwargs)
+        import traceback
+        stack = traceback.extract_stack()
+        invoking_frame = stack[len(stack) - 2]
+        fed_call_holder.internal_remote(invoking_frame, *cls_args, **cls_kwargs)
         return fed_actor_handle
 
 
@@ -346,7 +349,10 @@ def get(
             # So we should insert a `recv_op` as a barrier to receive the real
             # data from the location party of the fed_object.
             recv_obj = recv(
-                current_party, fed_object.get_fed_task_id(), fake_fed_task_id
+                current_party,
+                fed_object.get_fed_task_id(),
+                fake_fed_task_id,
+                fed_object.get_invoking_frame(),
             )
             ray_refs.append(recv_obj)
 

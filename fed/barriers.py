@@ -272,10 +272,6 @@ class RecverProxyActor:
         logging.debug(f"[{self._party}] Waited for {curr_seq_id}.")
         with self._lock:
             data, source_invoking_frame = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
-            print("============================")
-            print(invoking_frame)
-            print(source_invoking_frame)
-            print("============================")
             fed_utils.error_if_dag_nodes_are_unaligned(source_invoking_frame, invoking_frame)
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
 
