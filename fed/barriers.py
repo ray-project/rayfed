@@ -65,7 +65,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
-            f"[{self._party}] Received a grpc data request from {upstream_seq_id} to {downstream_seq_id}."
+            f"Received a grpc data request from {upstream_seq_id} to {downstream_seq_id}."
         )
 
         with self._lock:
@@ -81,7 +81,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
                 )
         event = get_from_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id)
         event.set()
-        logger.debug(f"[{self._party}] Event set for {upstream_seq_id}")
+        logger.debug(f"Event set for {upstream_seq_id}")
         return fed_pb2.SendDataResponse(result="OK")
 
 
@@ -205,7 +205,7 @@ class SendProxyActor:
             dest_party in self._cluster
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
         logger.debug(
-            f"[{self._party}] Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
+            f"Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
         )
         dest_addr = self._cluster[dest_party]['address']
         response = await send_data_grpc(
@@ -261,7 +261,7 @@ class RecverProxyActor:
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
         logger.debug(
-            f"[{self._party}] Getting data for {curr_seq_id} from {upstream_seq_id}"
+            f"Getting data for {curr_seq_id} from {upstream_seq_id}"
         )
         with self._lock:
             if not key_exists_in_two_dim_dict(
@@ -273,7 +273,7 @@ class RecverProxyActor:
 
         curr_event = get_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         await curr_event.wait()
-        logging.debug(f"[{self._party}] Waited for {curr_seq_id}.")
+        logging.debug(f"Waited for {curr_seq_id}.")
         with self._lock:
             data = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
