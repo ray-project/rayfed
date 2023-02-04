@@ -16,6 +16,7 @@ from fed.api import (get, get_cluster, get_party, get_tls, init, kill, remote,
                      shutdown)
 from fed.barriers import recv, send
 from fed.fed_object import FedObject
+from fed._private.grpc_options import set_max_message_length
 
 __all__ = [
     "get",
@@ -28,5 +29,6 @@ __all__ = [
     "shutdown",
     "recv",
     "send",
+    "set_max_message_length",
     "FedObject",
 ]
