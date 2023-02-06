@@ -53,7 +53,7 @@ def init(
     cross_silo_send_max_retries: int = None,
     cross_silo_serializing_allowed_list: Dict = None,
     exit_on_failure_cross_silo_sending: bool = False,
-    grpc_max_size_in_bytes: int = None,
+    cross_silo_messages_max_size_in_bytes: int = None,
     **kwargs,
 ):
     """
@@ -129,7 +129,7 @@ def init(
         exit_on_failure_cross_silo_sending: whether exit when failure on
             cross-silo sending. If True, a SIGTERM will be signaled to self
             if failed to sending cross-silo data.
-        grpc_max_size_in_bytes: The maximum length in bytes of gRPC messages.
+        cross_silo_messages_max_size_in_bytes: The maximum length in bytes of cross-silo messages.
             If None, the default value of 500 MB is specified.
         kwargs: the args for ray.init().
 
@@ -168,7 +168,7 @@ def init(
         party_val=get_party(),
     )
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
-    set_max_message_length(grpc_max_size_in_bytes)
+    set_max_message_length(cross_silo_messages_max_size_in_bytes)
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
