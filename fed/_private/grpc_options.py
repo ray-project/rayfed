@@ -31,8 +31,8 @@ _GRPC_MAX_SEND_MESSAGE_LENGTH = _DEFAULT_GRPC_MAX_SEND_MESSAGE_LENGTH
 _GRPC_MAX_RECEIVE_MESSAGE_LENGTH = _DEFAULT_GRPC_MAX_RECEIVE_MESSAGE_LENGTH
 
 def set_max_message_length(max_size_in_bytes):
-    """
-    Set the maximum length in bytes of gRPC messages.
+    """Set the maximum length in bytes of gRPC messages.
+    
     NOTE: The default maximum length is 500MB(500 * 1024 * 1024)
     """
     global _GRPC_MAX_SEND_MESSAGE_LENGTH
