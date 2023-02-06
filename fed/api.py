@@ -129,6 +129,8 @@ def init(
         exit_on_failure_cross_silo_sending: whether exit when failure on
             cross-silo sending. If True, a SIGTERM will be signaled to self
             if failed to sending cross-silo data.
+        grpc_max_size_in_bytes: The maximum length in bytes of gRPC messages.
+            If None, the default value of 500 MB is specified.
         kwargs: the args for ray.init().
 
     Examples:
