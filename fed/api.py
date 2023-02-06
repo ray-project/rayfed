@@ -34,6 +34,7 @@ from fed._private.constants import (
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
+from fed._private.grpc_options import set_max_message_length
 from fed.barriers import recv, send, start_recv_proxy, start_send_proxy
 from fed.cleanup import set_exit_on_failure_sending, wait_sending
 from fed.fed_object import FedObject
@@ -52,6 +53,7 @@ def init(
     cross_silo_send_max_retries: int = None,
     cross_silo_serializing_allowed_list: Dict = None,
     exit_on_failure_cross_silo_sending: bool = False,
+    grpc_max_size_in_bytes: int = None,
     **kwargs,
 ):
     """
@@ -164,6 +166,7 @@ def init(
         party_val=get_party(),
     )
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
+    set_max_message_length(grpc_max_size_in_bytes)
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,

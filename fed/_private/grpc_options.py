@@ -37,6 +37,8 @@ def set_max_message_length(max_size_in_bytes):
     """
     global _GRPC_MAX_SEND_MESSAGE_LENGTH
     global _GRPC_MAX_RECEIVE_MESSAGE_LENGTH
+    if not max_size_in_bytes:
+        return
     if max_size_in_bytes < 0:
         raise ValueError("Negative max size is not allowed") 
     _GRPC_MAX_SEND_MESSAGE_LENGTH = max_size_in_bytes
