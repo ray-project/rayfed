@@ -35,7 +35,7 @@ def add(x, y):
 
 
 def _run(party: str):
-    cert_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cert_files/alice_certs")
+    cert_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/")
     ca_config = {
                 "ca_cert": os.path.join(cert_dir, "cacert.pem"),
                 "cert": os.path.join(cert_dir, "servercert.pem"),
