@@ -37,9 +37,9 @@ def add(x, y):
 def _run(party: str):
     cert_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/")
     ca_config = {
-                "ca_cert": os.path.join(cert_dir, "cacert.pem"),
-                "cert": os.path.join(cert_dir, "servercert.pem"),
-                "key": os.path.join(cert_dir, "serverkey.pem"),
+                "ca_cert": os.path.join(cert_dir, "server.crt"),
+                "cert": os.path.join(cert_dir, "server.crt"),
+                "key": os.path.join(cert_dir, "server.key"),
     }
     tls_config_alice = { "cert": ca_config, "client_certs": { "bob": ca_config }}
     tls_config_bob = { "cert": ca_config, "client_certs": { "alice": ca_config }}
