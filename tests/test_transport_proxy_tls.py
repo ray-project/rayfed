@@ -32,12 +32,12 @@ def test_n_to_1_transport():
     ray.init(address='local')
 
     cert_dir = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "cert_files/alice_certs"
+        os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"
     )
     ca_config = {
-        "ca_cert": os.path.join(cert_dir, "cacert.pem"),
-        "cert": os.path.join(cert_dir, "servercert.pem"),
-        "key": os.path.join(cert_dir, "serverkey.pem"),
+        "ca_cert": os.path.join(cert_dir, "server.crt"),
+        "cert": os.path.join(cert_dir, "server.crt"),
+        "key": os.path.join(cert_dir, "server.key"),
     }
     tls_config = {"cert": ca_config, "client_certs": {"test_node_party": ca_config}}
     internal_kv._internal_kv_put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
