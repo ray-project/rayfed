@@ -32,12 +32,12 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
             indexes.append(idx)
             if arg.get_party() == current_party:
                 logger.debug(
-                    f"[{current_party}] Insert fed object, arg.party={arg.get_party()}"
+                    f"Insert fed object, arg.party={arg.get_party()}"
                 )
                 resolved.append(arg.get_ray_object_ref())
             else:
                 logger.debug(
-                    f"[{current_party}] Insert recv_op, arg task id {arg.get_fed_task_id()}, current task id {current_fed_task_id}"
+                    f"Insert recv_op, arg task id {arg.get_fed_task_id()}, current task id {current_fed_task_id}"
                 )
                 recv_obj = recv(
                     current_party, arg.get_fed_task_id(), current_fed_task_id

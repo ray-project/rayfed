@@ -73,7 +73,7 @@ class FedActorHandle:
         if options and 'num_returns' in options:
             num_returns = options['num_returns']
         logger.debug(
-            f"[{self._party}] Actor method call: {method_name}, num_returns: {num_returns}"
+            f"Actor method call: {method_name}, num_returns: {num_returns}"
         )
         ray_object_ref = self._actor_handle._actor_method_call(
             method_name,
