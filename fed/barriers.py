@@ -123,7 +123,6 @@ async def send_data_grpc(
 ):
     tls_enabled = fed_utils.tls_enabled(tls_config)
     grpc_options = get_grpc_options(retry_policy=retry_policy)
-    logger.info("{grpc_options}")
     if tls_enabled:
         ca_cert, private_key, cert_chain = fed_utils.load_client_certs(
             tls_config, target_party=node_party
