@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import json
 
 _GRPC_RETRY_POLICY = {
@@ -43,6 +44,7 @@ def set_max_message_length(max_size_in_bytes):
         raise ValueError("Negative max size is not allowed") 
     _GRPC_MAX_SEND_MESSAGE_LENGTH = max_size_in_bytes
     _GRPC_MAX_RECEIVE_MESSAGE_LENGTH = max_size_in_bytes
+    logging.info(f"the max length is set {_GRPC_MAX_SEND_MESSAGE_LENGTH} {_GRPC_MAX_RECEIVE_MESSAGE_LENGTH}")
 
 def get_grpc_options(
     retry_policy=None, max_send_message_length=None, max_receive_message_length=None
@@ -51,8 +53,10 @@ def get_grpc_options(
         retry_policy = _GRPC_RETRY_POLICY
     if not max_send_message_length:
         max_send_message_length = _GRPC_MAX_SEND_MESSAGE_LENGTH
+        logging.info(f"the max send length {max_send_message_length}")
     if not max_receive_message_length:
         max_receive_message_length = _GRPC_MAX_RECEIVE_MESSAGE_LENGTH
+        logging.info(f"the max recieve length {max_receive_message_length}")
 
     return [
         (
