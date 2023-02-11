@@ -17,10 +17,14 @@ import pytest
 import fed
 
 @fed.remote
-class MyActor:
-    def __init__(self, party, value):
-        self._party = party
-        self.value = value
+class My:
+    def __init__(self) -> None:
+        self._val = ""
+
+    def set_val(self, val):
+        self._val += val
+        return self._val
+
 
 @fed.remote
 def concat_str(val1, val2):
@@ -34,8 +38,10 @@ def run(party):
     fed.init(address='local', cluster=cluster, party=party, cross_silo_messages_max_size_in_bytes=10)
 
     # The given strings are too long for cross_silo_messages_max_size_in_bytes
-    val_alice = MyActor.party("alice").remote("alice", "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.")
-    val_bob = MyActor.party("bob").remote("bob", "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+    actor_alice = My.party("alice").remote()
+    actor_bob = My.party("bob").remote()
+    val_alice = actor_alice.set_val.remote("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.")
+    val_bob = actor_bob.set_val.remote("Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 
     concatenated_val_obj = concat_str.party("bob").remote(val_alice, val_bob)
     result = fed.get(concatenated_val_obj)
