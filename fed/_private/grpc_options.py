@@ -31,6 +31,8 @@ _DEFAULT_GRPC_MAX_RECEIVE_MESSAGE_LENGTH = 500 * 1024 * 1024
 _GRPC_MAX_SEND_MESSAGE_LENGTH = _DEFAULT_GRPC_MAX_SEND_MESSAGE_LENGTH
 _GRPC_MAX_RECEIVE_MESSAGE_LENGTH = _DEFAULT_GRPC_MAX_RECEIVE_MESSAGE_LENGTH
 
+logging.info(f"global {_GRPC_MAX_SEND_MESSAGE_LENGTH} {_GRPC_MAX_RECEIVE_MESSAGE_LENGTH}")
+
 def set_max_message_length(max_size_in_bytes):
     """Set the maximum length in bytes of gRPC messages.
     
@@ -38,6 +40,7 @@ def set_max_message_length(max_size_in_bytes):
     """
     global _GRPC_MAX_SEND_MESSAGE_LENGTH
     global _GRPC_MAX_RECEIVE_MESSAGE_LENGTH
+    logging.info(f"set max message length {max_size_in_bytes}")
     if not max_size_in_bytes:
         return
     if max_size_in_bytes < 0:
@@ -46,17 +49,25 @@ def set_max_message_length(max_size_in_bytes):
     _GRPC_MAX_RECEIVE_MESSAGE_LENGTH = max_size_in_bytes
     logging.info(f"the max length is set {_GRPC_MAX_SEND_MESSAGE_LENGTH} {_GRPC_MAX_RECEIVE_MESSAGE_LENGTH}")
 
+def get_grpc_max_send_message_length():
+    global _GRPC_MAX_SEND_MESSAGE_LENGTH
+    return _GRPC_MAX_SEND_MESSAGE_LENGTH
+
+def get_grpc_max_recieve_message_length():
+    global _GRPC_MAX_SEND_MESSAGE_LENGTH
+    return _GRPC_MAX_SEND_MESSAGE_LENGTH
+
 def get_grpc_options(
     retry_policy=None, max_send_message_length=None, max_receive_message_length=None
 ):
     if not retry_policy:
         retry_policy = _GRPC_RETRY_POLICY
     if not max_send_message_length:
-        max_send_message_length = _GRPC_MAX_SEND_MESSAGE_LENGTH
-        logging.info(f"the max send length {max_send_message_length}")
+        max_send_message_length = get_grpc_max_send_message_length()
+        logging.info(f"the max send length {max_send_message_length} get_grpc_max{get_grpc_max_send_message_length()}")
     if not max_receive_message_length:
-        max_receive_message_length = _GRPC_MAX_RECEIVE_MESSAGE_LENGTH
-        logging.info(f"the max recieve length {max_receive_message_length}")
+        max_receive_message_length = get_grpc_max_recieve_message_length()
+        logging.info(f"the max recieve length {max_receive_message_length} get_grpc_max{get_grpc_max_recieve_message_length()}")
 
     return [
         (
