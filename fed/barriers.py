@@ -260,7 +260,7 @@ class RecverProxyActor:
         return True
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
-        logger.debug(
+        logger.info(
             f"Getting data for {curr_seq_id} from {upstream_seq_id}"
         )
         with self._lock:

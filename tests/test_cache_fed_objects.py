@@ -37,6 +37,9 @@ def run(party):
     o1 = g.party("bob").remote(o, 1)
     o2 = g.party("bob").remote(o, 2)
 
+    import time
+    # time.sleep(1000)
+    
     a, b, c = fed.get([o, o1, o2])
     assert a == "hello"
     assert b == "hello1"
