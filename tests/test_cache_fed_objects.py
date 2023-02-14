@@ -37,16 +37,17 @@ def run(party):
     o1 = g.party("bob").remote(o, 1)
     o2 = g.party("bob").remote(o, 2)
 
-    import time
-    # time.sleep(1000)
-    
     a, b, c = fed.get([o, o1, o2])
     assert a == "hello"
     assert b == "hello1"
     assert c == "hello2"
-    print(f"[{party}]====a is {a}")
-    print(f"[{party}]====a is {b}")
-    print(f"[{party}]====a is {c}")
+    
+    if party == "bob":
+        import ray
+        proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
+        stats = ray.get(proxy_actor._get_stats.remote())
+        assert stats["receive_op_count"] == 1
+
     fed.shutdown()
 
 
