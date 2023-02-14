@@ -5,7 +5,7 @@ A multiple parties joint, distributed execution engine on the top of Ray.
 Install it from pypi.
 
 ```shell
-pip install -U secretflow-rayfed
+pip install -U rayfed
 ```
 
 ## Quick Start
