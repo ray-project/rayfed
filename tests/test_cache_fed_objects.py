@@ -38,7 +38,12 @@ def run(party):
     o2 = g.party("bob").remote(o, 2)
 
     a, b, c = fed.get([o, o1, o2])
-
+    assert a == "hello"
+    assert b == "hello1"
+    assert c == "hello2"
+    print(f"[{party}]====a is {a}")
+    print(f"[{party}]====a is {b}")
+    print(f"[{party}]====a is {c}")
     fed.shutdown()
 
 

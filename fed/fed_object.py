@@ -42,19 +42,19 @@ class FedObject:
         self,
         node_party: str,
         fed_task_id: int,
-        object_ref: ObjectRef,
+        ray_object_ref: ObjectRef,
         idx_in_task: int = 0,
     ) -> None:
         # The party name to exeute the task which produce this fed object.
         self._node_party = node_party
-        self._object_ref = object_ref
+        self._ray_object_ref = ray_object_ref
         self._fed_task_id = fed_task_id
         self._idx_in_task = idx_in_task
         self._sending_context = FedObjectSendingContext()
         self._receiving_context = FedObjectReceivingContext()
 
     def get_ray_object_ref(self):
-        return self._object_ref
+        return self._ray_object_ref
 
     def get_fed_task_id(self):
         return f'{self._fed_task_id}#{self._idx_in_task}'
@@ -67,3 +67,6 @@ class FedObject:
     
     def was_sending_or_sent_to_party(self, target_party: str):
         return self._sending_context.was_sending_or_sent_to_party(target_party)
+
+    def _cache_ray_object_ref(self, ray_object_ref):
+        self._ray_object_ref = ray_object_ref
