@@ -370,6 +370,7 @@ def get(
                 received_ray_object_ref = recv(
                     current_party, fed_object.get_fed_task_id(), fake_fed_task_id
                 )
+                fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)
 
     values = ray.get(ray_refs)
