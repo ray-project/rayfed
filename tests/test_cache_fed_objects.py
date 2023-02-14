@@ -47,11 +47,15 @@ def run(party):
         proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["receive_op_count"] == 1
-
+    if party == "alice":
+        import ray
+        proxy_actor = ray.get_actor("SendProxyActor")
+        stats = ray.get(proxy_actor._get_states.remote())
+        assert stats["send_op_count"] == 1
     fed.shutdown()
 
 
-def test_fed_get_in_2_parties():
+def test_cache_fed_object_if_sent():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
