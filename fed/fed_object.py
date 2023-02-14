@@ -16,6 +16,7 @@ from ray import ObjectRef
 
 
 class FedObjectSendingContext:
+    """The class that's used for holding the all contexts about sending side."""
     def __init__(self) -> None:
         # This field holds the target(downstream) parties that this fed object
         # is sending or sent to.
@@ -30,8 +31,11 @@ class FedObjectSendingContext:
     def was_sending_or_sent_to_party(self, target_party: str):
         return target_party in self._is_sending_or_sent
 
+
 class FedObjectReceivingContext:
+    """The class that's used for holding the all contexts about receiving side."""
     pass
+
 
 class FedObject:
     """The class that represents for a fed object handle for the result
@@ -63,10 +67,13 @@ class FedObject:
         return self._node_party
 
     def _mark_is_sending_to_party(self, target_party: str):
+        """Mark this fed object is sending to the target party."""
         self._sending_context.mark_is_sending_to_party(target_party)
     
-    def was_sending_or_sent_to_party(self, target_party: str):
+    def _was_sending_or_sent_to_party(self, target_party: str):
+        """Query whether this fed object was sending or sent to the target party."""
         return self._sending_context.was_sending_or_sent_to_party(target_party)
 
     def _cache_ray_object_ref(self, ray_object_ref):
+        """Cache the ray object reference for this fed object."""
         self._ray_object_ref = ray_object_ref

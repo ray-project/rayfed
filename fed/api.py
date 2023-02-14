@@ -347,7 +347,7 @@ def get(
                 if party_name == current_party:
                     continue
                 else:
-                    if fed_object.was_sending_or_sent_to_party(party_name):
+                    if fed_object._was_sending_or_sent_to_party(party_name):
                         # This object was sending or sent to the target party,
                         # so no need to do it again.
                         continue

@@ -70,7 +70,7 @@ class FedCallHolder:
             for arg in flattened_args:
                 # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
-                    if arg.was_sending_or_sent_to_party(self._node_party):
+                    if arg._was_sending_or_sent_to_party(self._node_party):
                         # This object was sending or sent to the target party, so no need to do it again.
                         continue
                     else:
