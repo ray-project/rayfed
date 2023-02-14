@@ -25,7 +25,6 @@ class FedObjectSendingContext:
         self._is_sending_or_sent = {}
 
     def mark_is_sending_to_party(self, target_party: str):
-        assert target_party not in self._is_sending_or_sent
         self._is_sending_or_sent[target_party] = True
 
     def was_sending_or_sent_to_party(self, target_party: str):
