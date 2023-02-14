@@ -347,21 +347,31 @@ def get(
                 if party_name == current_party:
                     continue
                 else:
-                    send(
-                        party_name,
-                        ray_object_ref,
-                        fed_object.get_fed_task_id(),
-                        fake_fed_task_id,
-                        party_name,
-                    )
+                    if fed_object._was_sending_or_sent_to_party(party_name):
+                        # This object was sending or sent to the target party,
+                        # so no need to do it again.
+                        continue
+                    else:
+                        fed_object._mark_is_sending_to_party(party_name)
+                        send(
+                            party_name,
+                            ray_object_ref,
+                            fed_object.get_fed_task_id(),
+                            fake_fed_task_id,
+                            party_name,
+                        )
         else:
             # This is the code path that the fed_object is not in current party.
             # So we should insert a `recv_op` as a barrier to receive the real
             # data from the location party of the fed_object.
-            recv_obj = recv(
-                current_party, fed_object.get_fed_task_id(), fake_fed_task_id
-            )
-            ray_refs.append(recv_obj)
+            if fed_object.get_ray_object_ref() is not None:
+                received_ray_object_ref = fed_object.get_ray_object_ref()
+            else:
+                received_ray_object_ref = recv(
+                    current_party, fed_object.get_fed_task_id(), fake_fed_task_id
+                )
+                fed_object._cache_ray_object_ref(received_ray_object_ref)
+            ray_refs.append(received_ray_object_ref)
 
     values = ray.get(ray_refs)
     if is_individual_id:

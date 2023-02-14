@@ -182,6 +182,7 @@ class SendProxyActor:
         logging_level: str = None,
         retry_policy: Dict = None,
     ):
+        self._stats = {"send_op_count" : 0}
         self._cluster = cluster
         self._party = party
         self._tls_config = tls_config
@@ -201,6 +202,7 @@ class SendProxyActor:
         node_party=None,
         tls_config=None,
     ):
+        self._stats["send_op_count"] += 1
         assert (
             dest_party in self._cluster
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
@@ -220,6 +222,8 @@ class SendProxyActor:
         logger.debug(f"Sent. Response is {response}")
         return True  # True indicates it's sent successfully.
 
+    async def _get_stats(self):
+        return self._stats
 
 @ray.remote
 class RecverProxyActor:
@@ -231,6 +235,7 @@ class RecverProxyActor:
         logging_level: str = None,
         retry_policy: Dict = None,
     ):
+        self._stats = {"receive_op_count": 0}
         self._listen_addr = listen_addr
         self._party = party
         self._tls_config = tls_config
@@ -260,6 +265,7 @@ class RecverProxyActor:
         return True
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
+        self._stats["receive_op_count"] += 1
         logger.debug(
             f"Getting data for {curr_seq_id} from {upstream_seq_id}"
         )
@@ -283,6 +289,9 @@ class RecverProxyActor:
 
         fed_ser_utils._apply_loads_function_with_whitelist()
         return cloudpickle.loads(data)
+    
+    async def _get_stats(self):
+        return self._stats
 
 
 def start_recv_proxy(

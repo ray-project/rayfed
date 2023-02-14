@@ -70,13 +70,18 @@ class FedCallHolder:
             for arg in flattened_args:
                 # TODO(qwang): We still need to cosider kwargs and a deeply object_ref in this party.
                 if isinstance(arg, FedObject) and arg.get_party() == self._party:
-                    send(
-                        self._node_party,
-                        arg.get_ray_object_ref(),
-                        arg.get_fed_task_id(),
-                        fed_task_id,
-                        self._node_party,
-                    )
+                    if arg._was_sending_or_sent_to_party(self._node_party):
+                        # This object was sending or sent to the target party, so no need to do it again.
+                        continue
+                    else:
+                        arg._mark_is_sending_to_party(self._node_party)
+                        send(
+                            self._node_party,
+                            arg.get_ray_object_ref(),
+                            arg.get_fed_task_id(),
+                            fed_task_id,
+                            self._node_party,
+                        )
             if (
                 self._options
                 and 'num_returns' in self._options

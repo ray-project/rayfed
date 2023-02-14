@@ -39,10 +39,16 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                 logger.debug(
                     f"Insert recv_op, arg task id {arg.get_fed_task_id()}, current task id {current_fed_task_id}"
                 )
-                recv_obj = recv(
-                    current_party, arg.get_fed_task_id(), current_fed_task_id
-                )
-                resolved.append(recv_obj)
+                if arg.get_ray_object_ref() is not None:
+                    # This code path indicates the ray object is already received in this
+                    # party, so there is no need to receive it any longer.
+                    received_ray_obj = arg.get_ray_object_ref()
+                else:
+                    received_ray_obj = recv(
+                        current_party, arg.get_fed_task_id(), current_fed_task_id
+                    )
+                    arg._cache_ray_object_ref(received_ray_obj)
+                resolved.append(received_ray_obj)
     if resolved:
         for idx, actual_val in zip(indexes, resolved):
             flattened_args[idx] = actual_val
