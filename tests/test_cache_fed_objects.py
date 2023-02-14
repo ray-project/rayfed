@@ -50,7 +50,7 @@ def run(party):
     if party == "alice":
         import ray
         proxy_actor = ray.get_actor("SendProxyActor")
-        stats = ray.get(proxy_actor._get_states.remote())
+        stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["send_op_count"] == 1
     fed.shutdown()
 
