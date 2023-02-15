@@ -38,15 +38,15 @@ class CleanCommand(setuptools.Command):
 
 
 setup(
-    name='secretflow-rayfed',
-    version='0.1.0b1',
+    name='rayfed',
+    version='0.1.0a1',
     license='Apache 2.0',
-    description='A multiple parties involved execution engine on the top of Ray.',
+    description='A multiple parties joint, distributed execution engine on the top of Ray.',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    author='AntGroup',
+    author='RayFed Team',
     author_email='secretflow-contact@service.alipay.com',
-    url='https://github.com/secretflow/rayfed',
+    url='https://github.com/ray-project/rayfed',
     packages=find_packages(exclude=('examples', 'tests', 'tests.*')),
     install_requires=read_requirements(),
     extras_require={'dev': ['pylint']},
