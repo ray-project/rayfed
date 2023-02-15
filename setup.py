@@ -45,7 +45,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='RayFed Team',
-    author_email='secretflow-contact@service.alipay.com',
+    author_email='rayfed-dev@googlegroups.com',
     url='https://github.com/ray-project/rayfed',
     packages=find_packages(exclude=('examples', 'tests', 'tests.*')),
     install_requires=read_requirements(),
