@@ -67,7 +67,7 @@ def _check_sending_objs():
     _check_send_thread = None
 
 
-def _monitor_thread():
+def _main_thread_monitor():
     main_thread = threading.main_thread()
     main_thread.join()
     notify_to_exit()
@@ -85,7 +85,7 @@ def _start_check_sending():
 
         global _monitor_thread
         if not _monitor_thread:
-            _monitor_thread = threading.Thread(target=_monitor_thread)
+            _monitor_thread = threading.Thread(target=_main_thread_monitor)
             _monitor_thread.start()
             logger.info('Start check sending monitor thread.')
 
