@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  run-unit-tests:
+  build-wheels:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     container: docker.io/library/ubuntu:latest
