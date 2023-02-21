@@ -15,7 +15,7 @@ A multiple parties joint, distributed execution engine based on Ray, to help bui
 ## Supported Ray Versions
 | RayFed Versions | ray2.0.0 | ray2.1.0 | ray2.2.0 | ray2.3.0 |
 |:---------------:|:--------:|:--------:|:--------:|:--------:|
-| 0.1.0           | YES      | YES      | YES      | YES      |
+| 0.1.0           |✅      | ✅      | ✅      | ✅      |
 | 0.2.0           |          |          |          |          |
 
 
