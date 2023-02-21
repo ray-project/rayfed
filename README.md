@@ -9,7 +9,7 @@ A multiple parties joint, distributed execution engine based on Ray, to help bui
 
 - **Multiple Controller Execution Mode**  
   
-  The RayFed job can be run in single controller mode when developing and debugging, while it will be run in multiple controller mode in production without any code change.
+  The RayFed job can be run in the single-controller mode for developing and debugging and the multiple-controller mode for production without code change.
   
 - **Very Restricted and Clear Data Perimeters**  
   
