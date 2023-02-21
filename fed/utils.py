@@ -37,8 +37,8 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                 resolved.append(arg.get_ray_object_ref())
             else:
                 logger.debug(
-                    f'Insert recv_op, arg task id {arg.get_fed_task_id()}, current task id '
-                    '{current_fed_task_id}'
+                    f'Insert recv_op, arg task id {arg.get_fed_task_id()}, current'
+                    'task id {current_fed_task_id}'
                 )
                 if arg.get_ray_object_ref() is not None:
                     # This code path indicates the ray object is already received in
@@ -77,7 +77,7 @@ def setup_logger(
     date_format,
     log_dir=None,
     party_val=None,
-    ):
+):
     class PartyRecordFilter(logging.Filter):
         def __init__(self, party_val=None) -> None:
             self._party_val = party_val
