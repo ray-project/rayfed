@@ -22,7 +22,9 @@ import grpc
 import ray
 
 import fed.utils as fed_utils
-from fed._private.grpc_options import get_grpc_options
+from fed._private.grpc_options import (
+    get_grpc_options,
+    set_max_message_length)
 from fed.cleanup import push_to_sending
 from fed.grpc import fed_pb2, fed_pb2_grpc
 
@@ -181,6 +183,7 @@ class SendProxyActor:
         tls_config: Dict = None,
         logging_level: str = None,
         retry_policy: Dict = None,
+        cross_silo_messages_max_size_in_bytes=None,
     ):
         self._cluster = cluster
         self._party = party
@@ -188,7 +191,7 @@ class SendProxyActor:
         if logging_level:
             logger.setLevel(logging_level.upper())
         self.retry_policy = retry_policy
-
+        set_max_message_length(cross_silo_messages_max_size_in_bytes)
     async def is_ready(self):
         return True
 
@@ -230,6 +233,7 @@ class RecverProxyActor:
         tls_config=None,
         logging_level: str = None,
         retry_policy: Dict = None,
+        cross_silo_messages_max_size_in_bytes: int=None,
     ):
         self._listen_addr = listen_addr
         self._party = party
@@ -237,7 +241,7 @@ class RecverProxyActor:
         if logging_level:
             logger.setLevel(logging_level.upper())
         self.retry_policy = retry_policy
-
+        set_max_message_length(cross_silo_messages_max_size_in_bytes)
         # Workaround the threading coordinations
 
         # All events for grpc waitting usage.
@@ -286,7 +290,12 @@ class RecverProxyActor:
 
 
 def start_recv_proxy(
-    cluster: str, party: str, tls_config=None, logging_level=None, retry_policy=None
+    cluster: str,
+    party: str,
+    tls_config=None,
+    logging_level=None,
+    retry_policy=None,
+    cross_silo_messages_max_size_in_bytes=None,
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
@@ -303,6 +312,7 @@ def start_recv_proxy(
         tls_config=tls_config,
         logging_level=logging_level,
         retry_policy=retry_policy,
+        cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
@@ -319,6 +329,7 @@ def start_send_proxy(
     logging_level=None,
     retry_policy=None,
     max_retries=None,
+    cross_silo_messages_max_size_in_bytes=None,
 ):
     # Create RecevrProxyActor
     global _SEND_PROXY_ACTOR
@@ -339,6 +350,7 @@ def start_send_proxy(
         tls_config=tls_config,
         logging_level=logging_level,
         retry_policy=retry_policy,
+        cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote())
     logger.info("SendProxy was successfully created.")
