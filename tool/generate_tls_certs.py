@@ -1,9 +1,8 @@
 import datetime
 import os
-import sys
 import socket
-import tempfile
 import errno
+
 
 def try_make_directory_shared(directory_path):
     try:
@@ -18,6 +17,7 @@ def try_make_directory_shared(directory_path):
             pass
         else:
             raise
+
 
 def try_to_create_directory(directory_path):
     """Attempt to create a directory that is globally readable/writable.
@@ -104,7 +104,6 @@ def dump_to_files(cert_contents, key_contents):
         fh.write(key_contents)
 
     return key_filepath, cert_filepath, temp_dir
-
 
 
 def main():

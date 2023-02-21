@@ -28,7 +28,7 @@ def g(x, index):
     return x + str(index)
 
 
-def run(party):    
+def run(party):  
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
