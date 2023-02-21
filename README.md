@@ -1,5 +1,23 @@
 # RayFed
-A multiple parties joint, distributed execution engine on the top of Ray.
+A multiple parties joint, distributed execution engine based on Ray, to help build your own federated learning frameworks in minutes.
+
+
+## Features
+- Ray native programming pattern
+  Write your federated computing applications like writing a single meachine program.
+- Multiple Controller Execution Mode:
+  
+- Very restricted and clear data perimeters
+  
+- Very large scale federated computing or training
+  
+
+## Supported Ray Versions
+| RayFed Versions | ray2.0.0 | ray2.1.0 | ray2.2.0 | ray2.3.0 |
+|:---------------:|:--------:|:--------:|:--------:|:--------:|
+| 0.1.0           | YES      | YES      | YES      | YES      |
+| 0.2.0           |          |          |          |          |
+
 
 ## Installation
 Install it from pypi.
