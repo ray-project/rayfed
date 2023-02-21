@@ -2,6 +2,7 @@
 exclude =
   fed_pb2_grpc.py
   fed_pb2.py
+  build
 max-line-length = 88
 inline-quotes = "
 ignore =

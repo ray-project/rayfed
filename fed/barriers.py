@@ -65,7 +65,8 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
-            f"Received a grpc data request from {upstream_seq_id} to {downstream_seq_id}."
+            f'Received a grpc data request from {upstream_seq_id} to '
+            '{downstream_seq_id}.'
         )
 
         with self._lock:
@@ -107,7 +108,8 @@ async def _run_grpc_server(
 
     await server.start()
     logger.info(
-        f"Successfully start Grpc service with{'out' if not tls_enabled else ''} credentials."
+        f'Successfully start Grpc service with{"out" if not tls_enabled else ""} '
+        'credentials.'
     )
     await server.wait_for_termination()
 
@@ -152,7 +154,8 @@ async def send_data_grpc(
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
             logger.debug(
-                f"Received data response from seq_id {downstream_seq_id} result: {response.result}."
+                f'Received data response from seq_id {downstream_seq_id} result: '
+                '{response.result}.'
             )
             return response.result
     else:
@@ -167,7 +170,8 @@ async def send_data_grpc(
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
             logger.debug(
-                f"Received data response from seq_id {downstream_seq_id} result: {response.result}."
+                f'Received data response from seq_id {downstream_seq_id} result: '
+                '{response.result}.'
             )
             return response.result
 
@@ -224,6 +228,7 @@ class SendProxyActor:
 
     async def _get_stats(self):
         return self._stats
+
 
 @ray.remote
 class RecverProxyActor:
@@ -289,7 +294,7 @@ class RecverProxyActor:
 
         fed_ser_utils._apply_loads_function_with_whitelist()
         return cloudpickle.loads(data)
-    
+
     async def _get_stats(self):
         return self._stats
 
