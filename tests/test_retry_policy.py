@@ -65,7 +65,7 @@ def test_listen_addr():
     p_alice = multiprocessing.Process(target=run, args=('alice', True))
     p_bob = multiprocessing.Process(target=run, args=('bob', True))
     p_alice.start()
-    
+
     import time
 
     time.sleep(10)

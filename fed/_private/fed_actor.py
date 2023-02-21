@@ -20,6 +20,7 @@ from fed.fed_object import FedObject
 
 logger = logging.getLogger(__name__)
 
+
 class FedActorHandle:
     def __init__(
         self,
@@ -103,10 +104,8 @@ class FedActorMethod:
         self._options = {}
         self._fed_call_holder = FedCallHolder(node_party, self._execute_impl)
 
-
     def remote(self, *args, **kwargs) -> FedObject:
         return self._fed_call_holder.internal_remote(*args, **kwargs)
-
 
     def options(self, **options):
         self._options = options

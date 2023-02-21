@@ -111,7 +111,7 @@ def init(
         cross_silo_grpc_retry_policy: a dict descibes the retry policy for
             cross silo rpc call. If None, the following default retry policy
             will be used. More details please refer to
-            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_.
+            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_. # noqa
 
             .. code:: python
                 {
@@ -124,12 +124,14 @@ def init(
                     ]
                 }
         cross_silo_send_max_retries: the max retries for sending data cross silo.
-        cross_silo_serializing_allowed_list: The package or class list allowed for serializing(deserializating)
-            cross silos. It's used for avoiding pickle deserializing execution attack when crossing solis.
+        cross_silo_serializing_allowed_list: The package or class list allowed for
+            serializing(deserializating) cross silos. It's used for avoiding pickle
+            deserializing execution attack when crossing solis.
         exit_on_failure_cross_silo_sending: whether exit when failure on
             cross-silo sending. If True, a SIGTERM will be signaled to self
             if failed to sending cross-silo data.
-        cross_silo_messages_max_size_in_bytes: The maximum length in bytes of cross-silo messages.
+        cross_silo_messages_max_size_in_bytes: The maximum length in bytes of
+            cross-silo messages.
             If None, the default value of 500 MB is specified.
         kwargs: the args for ray.init().
 
@@ -160,7 +162,8 @@ def init(
                                  cloudpickle.dumps(cross_silo_serializing_allowed_list))
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
-    # after `ray.init` and `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
+    # after `ray.init` and
+    # `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
     setup_logger(
         logging_level=logging_level,
         logging_format=RAYFED_LOG_FMT,
@@ -236,7 +239,8 @@ class FedRemoteFunction:
     def party(self, party: str):
         self._node_party = party
         # assert self._fed_call_holder is None
-        # TODO(qwang): This should be refined, to make sure we don't reuse the object twice.
+        # TODO(qwang): This should be refined, to make sure we don't reuse the object
+        # twice.
         self._fed_call_holder = FedCallHolder(
             self._node_party, self._execute_impl, self._options
         )

@@ -1,4 +1,4 @@
-name: build-wheels
+name: lint
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  build-wheels:
-    timeout-minutes: 60
+  lint:
+    timeout-minutes: 10 # Lint should be done in 10 minutes.
     runs-on: ubuntu-latest
     container: docker.io/library/ubuntu:latest
 
@@ -29,14 +29,9 @@ jobs:
             which python
             pip install pytest torch cloudpickle cryptography
             pip install ray==2.0.0
+            pip install flake8 # For code style checking
 
-    - name: Install and export wheels
+    - name: Lint
       run: |
            . py3/bin/activate
-           python3 setup.py sdist bdist_wheel -d dist
-           
-    - name: Archive rayfed-wheel
-      uses: actions/upload-artifact@v1
-      with:
-        name: rayfed_python39_wheel_on_ubuntu
-        path: dist/
+           flake8

@@ -68,7 +68,7 @@ class FedObject:
     def _mark_is_sending_to_party(self, target_party: str):
         """Mark this fed object is sending to the target party."""
         self._sending_context.mark_is_sending_to_party(target_party)
-    
+
     def _was_sending_or_sent_to_party(self, target_party: str):
         """Query whether this fed object was sending or sent to the target party."""
         return self._sending_context.was_sending_or_sent_to_party(target_party)

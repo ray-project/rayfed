@@ -29,20 +29,22 @@ class My:
         self._val += delta
         return self._val
 
+
 @fed.remote
 def add(x, y):
     return x + y
 
 
 def _run(party: str):
-    cert_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/")
+    cert_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/")
     ca_config = {
                 "ca_cert": os.path.join(cert_dir, "server.crt"),
                 "cert": os.path.join(cert_dir, "server.crt"),
                 "key": os.path.join(cert_dir, "server.key"),
     }
-    tls_config_alice = { "cert": ca_config, "client_certs": { "bob": ca_config }}
-    tls_config_bob = { "cert": ca_config, "client_certs": { "alice": ca_config }}
+    tls_config_alice = {"cert": ca_config, "client_certs": {"bob": ca_config}}
+    tls_config_bob = {"cert": ca_config, "client_certs": {"alice": ca_config}}
     tls_config = tls_config_alice if party == "alice" else tls_config_bob
 
     cluster = {
@@ -58,6 +60,7 @@ def _run(party: str):
     o = add.party("alice").remote(x, y)
     assert fed.get(o) == 30
     fed.shutdown()
+
 
 def test_enable_tls_across_parties():
     p_alice = multiprocessing.Process(target=_run, args=('alice',))

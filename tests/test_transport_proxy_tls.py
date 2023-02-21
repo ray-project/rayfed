@@ -45,7 +45,7 @@ def test_n_to_1_transport():
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"
     recver_proxy_actor = RecverProxyActor.options(
-        name=f"RecverProxyActor-TEST", max_concurrency=2000
+        name="RecverProxyActor-TEST", max_concurrency=2000
     ).remote(SERVER_ADDRESS, "test_party", tls_config)
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())

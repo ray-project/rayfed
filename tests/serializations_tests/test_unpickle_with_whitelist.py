@@ -12,13 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import yaml
-import tempfile
-import os
+import pytest
 import fed
 import multiprocessing
 import numpy
-import ray
 
 
 @fed.remote
@@ -44,7 +41,7 @@ def run(party):
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    allowed_list =  {
+    allowed_list = {
                 "numpy.core.numeric": ["*"],
                 "numpy": ["dtype"],
     }

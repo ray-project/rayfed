@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class GlobalContext:
     def __init__(self) -> None:
         self._seq_count = 0

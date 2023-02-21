@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import yaml
 import io
 import cloudpickle
-import fed
 
 import ray.experimental.internal_kv as internal_kv
 
@@ -42,11 +40,12 @@ def _restricted_loads(
         def find_class(self, module, name):
             if _pickle_whitelist is None or (
                 module in _pickle_whitelist
-                and (_pickle_whitelist[module] is None or name in _pickle_whitelist[module])
+                and (_pickle_whitelist[module] is None or name in _pickle_whitelist[
+                    module])
             ):
                 return super().find_class(module, name)
 
-            if module == "fed._private": # TODO(qwang): Not sure if it works.
+            if module == "fed._private":  # TODO(qwang): Not sure if it works.
                 return super().find_class(module, name)
 
             # Forbid everything else.
@@ -64,7 +63,8 @@ def _apply_loads_function_with_whitelist():
     global _pickle_whitelist
 
     from fed._private.constants import RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST
-    serialized = internal_kv._internal_kv_get(RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
+    serialized = internal_kv._internal_kv_get(
+        RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
     if serialized is None:
         return
 

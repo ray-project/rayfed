@@ -23,12 +23,13 @@ class Foo:
     def run(self):
         return 2, 3
 
+
 @fed.remote
 def bar(x):
     return x / 2, x * 2
 
 
-def run(party):    
+def run(party):
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -41,7 +42,7 @@ def run(party):
 
     assert a == 2 and b == 3
     assert c == 1 and d == 4
-    
+
     fed.shutdown()
 
 

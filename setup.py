@@ -1,6 +1,4 @@
 import os
-import platform
-import sys
 
 import setuptools
 from setuptools import find_packages, setup
@@ -10,6 +8,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 plat_name = "any"
+
 
 def read_requirements():
     requirements = []
@@ -41,7 +40,8 @@ setup(
     name='rayfed',
     version='0.1.0a1',
     license='Apache 2.0',
-    description='A multiple parties joint, distributed execution engine on the top of Ray.',
+    description='A multiple parties joint, distributed execution engine based on Ray,'
+                'to help build your own federated learning frameworks in minutes.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='RayFed Team',

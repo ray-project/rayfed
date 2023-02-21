@@ -60,7 +60,7 @@ def run(party):
     obj_bob_f = actor_bob.f.remote()
 
     obj_alice_g = actor_alice.g.remote(obj_alice_f)
-    obj_bob_h = actor_bob.h.remote(obj_alice_f)
+    obj_bob_h = actor_bob.h.remote(obj_bob_f)
 
     obj = agg_fn.party("bob").remote(obj_alice_g, obj_bob_h)
     result = fed.get(obj)
