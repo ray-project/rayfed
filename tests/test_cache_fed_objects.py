@@ -22,9 +22,11 @@ import fed
 def f():
     return "hello"
 
+
 @fed.remote
 def g(x, index):
     return x + str(index)
+
 
 def run(party):    
     cluster = {
@@ -41,7 +43,7 @@ def run(party):
     assert a == "hello"
     assert b == "hello1"
     assert c == "hello2"
-    
+
     if party == "bob":
         import ray
         proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
