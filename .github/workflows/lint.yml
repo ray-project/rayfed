@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    timeout-minutes: 60
+    timeout-minutes: 10 # Lint should be done in 10 minutes.
     runs-on: ubuntu-latest
     container: docker.io/library/ubuntu:latest
 
