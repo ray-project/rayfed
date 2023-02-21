@@ -43,8 +43,8 @@ def _run(party: str):
                 "cert": os.path.join(cert_dir, "server.crt"),
                 "key": os.path.join(cert_dir, "server.key"),
     }
-    tls_config_alice = { "cert": ca_config, "client_certs": { "bob": ca_config } }
-    tls_config_bob = { "cert": ca_config, "client_certs": { "alice": ca_config } }
+    tls_config_alice = {"cert": ca_config, "client_certs": {"bob": ca_config}}
+    tls_config_bob = {"cert": ca_config, "client_certs": {"alice": ca_config}}
     tls_config = tls_config_alice if party == "alice" else tls_config_bob
 
     cluster = {

@@ -96,7 +96,8 @@ class FedCallHolder:
                 and self._options['num_returns'] > 1
             ):
                 num_returns = self._options['num_returns']
-                return [FedObject(self._node_party, fed_task_id, None, i)
-                    for i in range(num_returns)]
+                return [FedObject(
+                    self._node_party, fed_task_id, None, i) for i in range(
+                        num_returns)]
             else:
                 return FedObject(self._node_party, fed_task_id, None)

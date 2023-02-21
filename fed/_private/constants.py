@@ -19,10 +19,10 @@ RAYFED_PARTY_KEY = b"__RAYFED_PARTY"
 
 RAYFED_TLS_CONFIG = b"__RAYFED_TLS_CONFIG"
 
-RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST
-    = b"__RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST"
+RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST = b"__RAYFED_CROSS_SILO_SERIALIZING_"
+    "ALLOWED_LIST"
 
 RAYFED_LOG_FMT = "%(asctime)s %(levelname)s %(filename)s:%(lineno)s [%(party)s] "
-                 "--  %(message)s"
+    "--  %(message)s"
 
 RAYFED_DATE_FMT = "%Y-%m-%d %H:%M:%S"

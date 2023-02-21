@@ -40,12 +40,12 @@ def _restricted_loads(
         def find_class(self, module, name):
             if _pickle_whitelist is None or (
                 module in _pickle_whitelist
-                and (_pickle_whitelist[module] is None or 
-                        name in _pickle_whitelist[module])
+                and (_pickle_whitelist[module] is None or name in _pickle_whitelist[
+                    module])
             ):
                 return super().find_class(module, name)
 
-            if module == "fed._private":  #TODO(qwang): Not sure if it works.
+            if module == "fed._private":  # TODO(qwang): Not sure if it works.
                 return super().find_class(module, name)
 
             # Forbid everything else.
