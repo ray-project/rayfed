@@ -1,4 +1,4 @@
-# Copyright 2022 Ant Group Co., Ltd.
+# Copyright 2022 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from fed._private.fed_call_holder import FedCallHolder
 from fed.fed_object import FedObject
 
 logger = logging.getLogger(__name__)
+
 
 class FedActorHandle:
     def __init__(
@@ -103,10 +104,8 @@ class FedActorMethod:
         self._options = {}
         self._fed_call_holder = FedCallHolder(node_party, self._execute_impl)
 
-
     def remote(self, *args, **kwargs) -> FedObject:
         return self._fed_call_holder.internal_remote(*args, **kwargs)
-
 
     def options(self, **options):
         self._options = options

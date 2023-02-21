@@ -1,4 +1,4 @@
-# Copyright 2022 Ant Group Co., Ltd.
+# Copyright 2022 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -110,7 +110,7 @@ def init(
         cross_silo_grpc_retry_policy: a dict descibes the retry policy for
             cross silo rpc call. If None, the following default retry policy
             will be used. More details please refer to
-            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_.
+            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_. # noqa
 
             .. code:: python
                 {
@@ -123,12 +123,14 @@ def init(
                     ]
                 }
         cross_silo_send_max_retries: the max retries for sending data cross silo.
-        cross_silo_serializing_allowed_list: The package or class list allowed for serializing(deserializating)
-            cross silos. It's used for avoiding pickle deserializing execution attack when crossing solis.
+        cross_silo_serializing_allowed_list: The package or class list allowed for
+            serializing(deserializating) cross silos. It's used for avoiding pickle
+            deserializing execution attack when crossing solis.
         exit_on_failure_cross_silo_sending: whether exit when failure on
             cross-silo sending. If True, a SIGTERM will be signaled to self
             if failed to sending cross-silo data.
-        cross_silo_messages_max_size_in_bytes: The maximum length in bytes of cross-silo messages.
+        cross_silo_messages_max_size_in_bytes: The maximum length in bytes of
+            cross-silo messages.
             If None, the default value of 500 MB is specified.
         kwargs: the args for ray.init().
 
@@ -159,7 +161,8 @@ def init(
                                  cloudpickle.dumps(cross_silo_serializing_allowed_list))
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
-    # after `ray.init` and `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
+    # after `ray.init` and
+    # `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
     setup_logger(
         logging_level=logging_level,
         logging_format=RAYFED_LOG_FMT,
@@ -236,7 +239,8 @@ class FedRemoteFunction:
     def party(self, party: str):
         self._node_party = party
         # assert self._fed_call_holder is None
-        # TODO(qwang): This should be refined, to make sure we don't reuse the object twice.
+        # TODO(qwang): This should be refined, to make sure we don't reuse the object
+        # twice.
         self._fed_call_holder = FedCallHolder(
             self._node_party, self._execute_impl, self._options
         )
@@ -347,21 +351,31 @@ def get(
                 if party_name == current_party:
                     continue
                 else:
-                    send(
-                        party_name,
-                        ray_object_ref,
-                        fed_object.get_fed_task_id(),
-                        fake_fed_task_id,
-                        party_name,
-                    )
+                    if fed_object._was_sending_or_sent_to_party(party_name):
+                        # This object was sending or sent to the target party,
+                        # so no need to do it again.
+                        continue
+                    else:
+                        fed_object._mark_is_sending_to_party(party_name)
+                        send(
+                            party_name,
+                            ray_object_ref,
+                            fed_object.get_fed_task_id(),
+                            fake_fed_task_id,
+                            party_name,
+                        )
         else:
             # This is the code path that the fed_object is not in current party.
             # So we should insert a `recv_op` as a barrier to receive the real
             # data from the location party of the fed_object.
-            recv_obj = recv(
-                current_party, fed_object.get_fed_task_id(), fake_fed_task_id
-            )
-            ray_refs.append(recv_obj)
+            if fed_object.get_ray_object_ref() is not None:
+                received_ray_object_ref = fed_object.get_ray_object_ref()
+            else:
+                received_ray_object_ref = recv(
+                    current_party, fed_object.get_fed_task_id(), fake_fed_task_id
+                )
+                fed_object._cache_ray_object_ref(received_ray_object_ref)
+            ray_refs.append(received_ray_object_ref)
 
     values = ray.get(ray_refs)
     if is_individual_id:

@@ -1,11 +1,37 @@
 # RayFed
-A multiple parties joint, distributed execution engine on the top of Ray.
+A multiple parties joint, distributed execution engine based on Ray, to help build your own federated learning frameworks in minutes.
+
+
+## Features
+- **Ray Native Programming Pattern**  
+  
+  Let you write your federated and distributed computing applications like a single-machine program.
+
+- **Multiple Controller Execution Mode**  
+  
+  The RayFed job can be run in the single-controller mode for developing and debugging and the multiple-controller mode for production without code change.
+  
+- **Very Restricted and Clear Data Perimeters**  
+  
+  Because of the PUSH-BASED data transferring mechanism and multiple controller execution mode, the data transmission authority is held by the data owner rather than the data demander.
+
+- **Very Large Scale Federated Computing and Training**  
+  
+  Powered by the scalabilities and the distributed abilities from Ray, large scale federated computing and training jobs are naturally supported.
+
+
+## Supported Ray Versions
+| RayFed Versions | ray2.0.0 | ray2.1.0 | ray2.2.0 | ray2.3.0 |
+|:---------------:|:--------:|:--------:|:--------:|:--------:|
+| 0.1.0           |✅      | ✅      | ✅      | ✅      |
+| 0.2.0           |not released|not released|not released|not released|
+
 
 ## Installation
 Install it from pypi.
 
 ```shell
-pip install -U secretflow-rayfed
+pip install -U rayfed
 ```
 
 ## Quick Start

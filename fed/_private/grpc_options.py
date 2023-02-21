@@ -1,4 +1,4 @@
-# Copyright 2022 Ant Group Co., Ltd.
+# Copyright 2022 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ logging.info(f"global {_GRPC_MAX_SEND_MESSAGE_LENGTH} {_GRPC_MAX_RECEIVE_MESSAGE
 
 def set_max_message_length(max_size_in_bytes):
     """Set the maximum length in bytes of gRPC messages.
-    
+
     NOTE: The default maximum length is 500MB(500 * 1024 * 1024)
     """
     global _GRPC_MAX_SEND_MESSAGE_LENGTH
@@ -44,7 +44,7 @@ def set_max_message_length(max_size_in_bytes):
     if not max_size_in_bytes:
         return
     if max_size_in_bytes < 0:
-        raise ValueError("Negative max size is not allowed") 
+        raise ValueError("Negative max size is not allowed")
     _GRPC_MAX_SEND_MESSAGE_LENGTH = max_size_in_bytes
     _GRPC_MAX_RECEIVE_MESSAGE_LENGTH = max_size_in_bytes
     logging.info(f"the max length is set {_GRPC_MAX_SEND_MESSAGE_LENGTH} {_GRPC_MAX_RECEIVE_MESSAGE_LENGTH}")
@@ -56,6 +56,7 @@ def get_grpc_max_send_message_length():
 def get_grpc_max_recieve_message_length():
     global _GRPC_MAX_SEND_MESSAGE_LENGTH
     return _GRPC_MAX_SEND_MESSAGE_LENGTH
+
 
 def get_grpc_options(
     retry_policy=None, max_send_message_length=None, max_receive_message_length=None

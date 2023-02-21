@@ -1,4 +1,4 @@
-# Copyright 2022 Ant Group Co., Ltd.
+# Copyright 2022 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,7 +67,8 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
-            f"Received a grpc data request from {upstream_seq_id} to {downstream_seq_id}."
+            f'Received a grpc data request from {upstream_seq_id} to '
+            '{downstream_seq_id}.'
         )
 
         with self._lock:
@@ -109,7 +110,8 @@ async def _run_grpc_server(
 
     await server.start()
     logger.info(
-        f"Successfully start Grpc service with{'out' if not tls_enabled else ''} credentials."
+        f'Successfully start Grpc service with{"out" if not tls_enabled else ""} '
+        'credentials.'
     )
     await server.wait_for_termination()
 
@@ -154,7 +156,8 @@ async def send_data_grpc(
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
             logger.debug(
-                f"Received data response from seq_id {downstream_seq_id} result: {response.result}."
+                f'Received data response from seq_id {downstream_seq_id} result: '
+                '{response.result}.'
             )
             return response.result
     else:
@@ -169,7 +172,8 @@ async def send_data_grpc(
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
             logger.debug(
-                f"Received data response from seq_id {downstream_seq_id} result: {response.result}."
+                f'Received data response from seq_id {downstream_seq_id} result: '
+                '{response.result}.'
             )
             return response.result
 
@@ -185,6 +189,7 @@ class SendProxyActor:
         retry_policy: Dict = None,
         cross_silo_messages_max_size_in_bytes=None,
     ):
+        self._stats = {"send_op_count" : 0}
         self._cluster = cluster
         self._party = party
         self._tls_config = tls_config
@@ -204,6 +209,7 @@ class SendProxyActor:
         node_party=None,
         tls_config=None,
     ):
+        self._stats["send_op_count"] += 1
         assert (
             dest_party in self._cluster
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
@@ -223,6 +229,9 @@ class SendProxyActor:
         logger.debug(f"Sent. Response is {response}")
         return True  # True indicates it's sent successfully.
 
+    async def _get_stats(self):
+        return self._stats
+
 
 @ray.remote
 class RecverProxyActor:
@@ -235,6 +244,7 @@ class RecverProxyActor:
         retry_policy: Dict = None,
         cross_silo_messages_max_size_in_bytes: int=None,
     ):
+        self._stats = {"receive_op_count": 0}
         self._listen_addr = listen_addr
         self._party = party
         self._tls_config = tls_config
@@ -264,6 +274,7 @@ class RecverProxyActor:
         return True
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
+        self._stats["receive_op_count"] += 1
         logger.debug(
             f"Getting data for {curr_seq_id} from {upstream_seq_id}"
         )
@@ -287,6 +298,9 @@ class RecverProxyActor:
 
         fed_ser_utils._apply_loads_function_with_whitelist()
         return cloudpickle.loads(data)
+
+    async def _get_stats(self):
+        return self._stats
 
 
 def start_recv_proxy(

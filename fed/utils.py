@@ -1,4 +1,4 @@
-# Copyright 2022 Ant Group Co., Ltd.
+# Copyright 2022 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -37,12 +37,19 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                 resolved.append(arg.get_ray_object_ref())
             else:
                 logger.debug(
-                    f"Insert recv_op, arg task id {arg.get_fed_task_id()}, current task id {current_fed_task_id}"
+                    f'Insert recv_op, arg task id {arg.get_fed_task_id()}, current'
+                    'task id {current_fed_task_id}'
                 )
-                recv_obj = recv(
-                    current_party, arg.get_fed_task_id(), current_fed_task_id
-                )
-                resolved.append(recv_obj)
+                if arg.get_ray_object_ref() is not None:
+                    # This code path indicates the ray object is already received in
+                    # this party, so there is no need to receive it any longer.
+                    received_ray_obj = arg.get_ray_object_ref()
+                else:
+                    received_ray_obj = recv(
+                        current_party, arg.get_fed_task_id(), current_fed_task_id
+                    )
+                    arg._cache_ray_object_ref(received_ray_obj)
+                resolved.append(received_ray_obj)
     if resolved:
         for idx, actual_val in zip(indexes, resolved):
             flattened_args[idx] = actual_val
@@ -54,7 +61,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
 def is_ray_object_refs(objects) -> bool:
     if isinstance(objects, ray.ObjectRef):
         return True
-    
+
     if isinstance(objects, list):
         for object_ref in objects:
             if not isinstance(object_ref, ray.ObjectRef):
@@ -64,12 +71,18 @@ def is_ray_object_refs(objects) -> bool:
     return False
 
 
-def setup_logger(logging_level, logging_format, date_format, log_dir=None, party_val=None):
+def setup_logger(
+    logging_level,
+    logging_format,
+    date_format,
+    log_dir=None,
+    party_val=None,
+):
     class PartyRecordFilter(logging.Filter):
-        def __init__(self, party_val = None) -> None:
+        def __init__(self, party_val=None) -> None:
             self._party_val = party_val
             super().__init__("PartyRecordFilter")
-        
+
         def filter(self, record) -> bool:
             if not hasattr(record, "party"):
                 record.party = self._party_val
@@ -113,13 +126,14 @@ def _load_from_cert_config(cert_config):
 
     return ca_cert, private_key, cert_chain
 
+
 def load_server_certs(tls_config):
     assert tls_enabled(tls_config)
     server_cert_config = tls_config["cert"]
     return _load_from_cert_config(server_cert_config)
 
 
-def load_client_certs(tls_config, target_party: str=None):
+def load_client_certs(tls_config, target_party: str = None):
     assert tls_enabled(tls_config)
     all_clients = tls_config["client_certs"]
     client_cert_config = all_clients[target_party]

@@ -12,28 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import multiprocessing
+
 import pytest
 import fed
-import multiprocessing
-import numpy
 
 
 @fed.remote
-def generate_wrong_type():
-    class WrongType:
-        pass
-
-    return WrongType()
+def f():
+    return "hello"
 
 
 @fed.remote
-def generate_allowed_type():
-    return numpy.array([1, 2, 3, 4, 5])
-
-
-@fed.remote
-def pass_arg(d):
-    return True
+def g(x, index):
+    return x + str(index)
 
 
 def run(party):
@@ -41,40 +33,31 @@ def run(party):
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    allowed_list = {
-                "numpy.core.numeric": ["*"],
-                "numpy": ["dtype"],
-    }
-    fed.init(
-        address='local',
-        cluster=cluster,
-        party=party,
-        cross_silo_serializing_allowed_list=allowed_list)
+    fed.init(address='local', cluster=cluster, party=party)
 
-    # Test passing an allowed type.
-    o1 = generate_allowed_type.party("alice").remote()
-    o2 = pass_arg.party("bob").remote(o1)
-    res = fed.get(o2)
-    assert res
+    o = f.party("alice").remote()
+    o1 = g.party("bob").remote(o, 1)
+    o2 = g.party("bob").remote(o, 2)
 
-    # Test passing an unallowed type.
-    o3 = generate_wrong_type.party("alice").remote()
-    o4 = pass_arg.party("bob").remote(o3)
+    a, b, c = fed.get([o, o1, o2])
+    assert a == "hello"
+    assert b == "hello1"
+    assert c == "hello2"
+
     if party == "bob":
-        try:
-            fed.get(o4)
-            assert False, "This code path shouldn't be reached."
-        except Exception as e:
-            assert "_pickle.UnpicklingError" in str(e)
-    else:
-        import time
-
-        time.sleep(10)
+        import ray
+        proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
+        stats = ray.get(proxy_actor._get_stats.remote())
+        assert stats["receive_op_count"] == 1
+    if party == "alice":
+        import ray
+        proxy_actor = ray.get_actor("SendProxyActor")
+        stats = ray.get(proxy_actor._get_stats.remote())
+        assert stats["send_op_count"] == 1
     fed.shutdown()
 
 
-def test_restricted_loads():
-
+def test_cache_fed_object_if_sent():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()

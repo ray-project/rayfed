@@ -1,4 +1,4 @@
-# Copyright 2022 Ant Group Co., Ltd.
+# Copyright 2022 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ def test_n_to_1_transport():
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
     recver_proxy_actor = RecverProxyActor.options(
-        name=f"RecverProxyActor-TEST", max_concurrency=2000
+        name="RecverProxyActor-TEST", max_concurrency=2000
     ).remote(SERVER_ADDRESS, "test_party")
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())

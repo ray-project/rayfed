@@ -1,4 +1,4 @@
-# Copyright 2022 Ant Group Co., Ltd.
+# Copyright 2022 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ def run(party):
     obj_bob_f = actor_bob.f.remote()
 
     obj_alice_g = actor_alice.g.remote(obj_alice_f)
-    obj_bob_h = actor_bob.h.remote(obj_alice_f)
+    obj_bob_h = actor_bob.h.remote(obj_bob_f)
 
     obj = agg_fn.party("bob").remote(obj_alice_g, obj_bob_h)
     result = fed.get(obj)
