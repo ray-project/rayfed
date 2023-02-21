@@ -15,7 +15,7 @@
 import logging
 
 # Set config in the very beginning to avoid being overwritten by other packages.
-logging.basicConfig(level=logging.INFO) # noqa
+logging.basicConfig(level=logging.INFO)
 
 import jax
 
