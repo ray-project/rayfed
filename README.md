@@ -5,11 +5,11 @@ A multiple parties joint, distributed execution engine based on Ray, to help bui
 ## Features
 - **Ray Native Programming Pattern**  
   
-  Let your write your federated and distributed computing applications like writing a single machine program.
+  Let you write your federated and distributed computing applications like a single-machine program.
 
 - **Multiple Controller Execution Mode**  
   
-  The RayFed job can be ran in single controller mode when developing and debugging, while it will be ran in multiple controller mode in production without any code change.
+  The RayFed job can be run in single controller mode when developing and debugging, while it will be run in multiple controller mode in production without any code change.
   
 - **Very Restricted and Clear Data Perimeters**  
   
