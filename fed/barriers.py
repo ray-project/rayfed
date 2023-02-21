@@ -232,6 +232,9 @@ class SendProxyActor:
     async def _get_stats(self):
         return self._stats
 
+    async def _get_grpc_options(self):
+        return get_grpc_options()
+
 
 @ray.remote
 class RecverProxyActor:
@@ -301,6 +304,9 @@ class RecverProxyActor:
 
     async def _get_stats(self):
         return self._stats
+
+    async def _get_grpc_options(self):
+        return get_grpc_options()
 
 
 def start_recv_proxy(
