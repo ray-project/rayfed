@@ -17,6 +17,7 @@ import pytest
 import fed
 import ray
 
+
 def run(party):
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
@@ -28,7 +29,7 @@ def run(party):
         party=party,
         cross_silo_messages_max_size_in_bytes=10,
     )
-    
+
     def _assert_on_proxy(proxy_actor):
         options = ray.get(proxy_actor._get_grpc_options.remote())
         assert options[0][0] == "grpc.max_send_message_length"
@@ -40,6 +41,7 @@ def run(party):
     _assert_on_proxy(recver_proxy)
 
     fed.shutdown()
+
 
 def test_grpc_max_size():
     p_alice = multiprocessing.Process(target=run, args=('alice',))

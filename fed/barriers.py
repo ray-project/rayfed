@@ -197,6 +197,7 @@ class SendProxyActor:
             logger.setLevel(logging_level.upper())
         self.retry_policy = retry_policy
         set_max_message_length(cross_silo_messages_max_size_in_bytes)
+
     async def is_ready(self):
         return True
 
@@ -245,7 +246,7 @@ class RecverProxyActor:
         tls_config=None,
         logging_level: str = None,
         retry_policy: Dict = None,
-        cross_silo_messages_max_size_in_bytes: int=None,
+        cross_silo_messages_max_size_in_bytes: int = None,
     ):
         self._stats = {"receive_op_count": 0}
         self._listen_addr = listen_addr
