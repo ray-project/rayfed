@@ -6,6 +6,7 @@ Welcome to RayFed documentation!
 to help build your own federated learning frameworks **in minutes**.
 
 RayFed has the following highlight features:
+
 1. Ray Native Programming Pattern
 2. Multiple Controller Execution Mode
 3. Very Restricted and Clear Data Perimeters
