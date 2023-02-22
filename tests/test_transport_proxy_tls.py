@@ -60,7 +60,6 @@ def test_n_to_1_transport():
             f"data-{i}",
             i,
             i + 1,
-            "test_node_party",
         )
         sent_objs.append(sent_obj)
         get_obj = recver_proxy_actor.get_data.remote(i, i + 1)
