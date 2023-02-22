@@ -22,9 +22,7 @@ import grpc
 import ray
 
 import fed.utils as fed_utils
-from fed._private.grpc_options import (
-    get_grpc_options,
-    set_max_message_length)
+from fed._private.grpc_options import get_grpc_options, set_max_message_length
 from fed.cleanup import push_to_sending
 from fed.grpc import fed_pb2, fed_pb2_grpc
 
@@ -98,7 +96,7 @@ async def _run_grpc_server(
 
     tls_enabled = fed_utils.tls_enabled(tls_config)
     if tls_enabled:
-        ca_cert, private_key, cert_chain = fed_utils.load_server_certs(tls_config)
+        ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
         server_credentials = grpc.ssl_server_credentials(
             [(private_key, cert_chain)],
             root_certificates=ca_cert,
@@ -121,16 +119,13 @@ async def send_data_grpc(
     data,
     upstream_seq_id,
     downstream_seq_id,
-    node_party=None,
     tls_config=None,
     retry_policy=None,
 ):
     tls_enabled = fed_utils.tls_enabled(tls_config)
     grpc_options = get_grpc_options(retry_policy=retry_policy)
     if tls_enabled:
-        ca_cert, private_key, cert_chain = fed_utils.load_client_certs(
-            tls_config, target_party=node_party
-        )
+        ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
         credentials = grpc.ssl_channel_credentials(
             certificate_chain=cert_chain,
             private_key=private_key,
@@ -189,7 +184,7 @@ class SendProxyActor:
         retry_policy: Dict = None,
         cross_silo_messages_max_size_in_bytes=None,
     ):
-        self._stats = {"send_op_count" : 0}
+        self._stats = {"send_op_count": 0}
         self._cluster = cluster
         self._party = party
         self._tls_config = tls_config
@@ -207,15 +202,14 @@ class SendProxyActor:
         data,
         upstream_seq_id,
         downstream_seq_id,
-        node_party=None,
-        tls_config=None,
     ):
         self._stats["send_op_count"] += 1
         assert (
             dest_party in self._cluster
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
         logger.debug(
-            f"Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}"
+            f'Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}'
+            f'with{"out" if not self._tls_config else ""} credentials.'
         )
         dest_addr = self._cluster[dest_party]['address']
         response = await send_data_grpc(
@@ -223,8 +217,7 @@ class SendProxyActor:
             data=data,
             upstream_seq_id=upstream_seq_id,
             downstream_seq_id=downstream_seq_id,
-            tls_config=tls_config if tls_config else self._tls_config,
-            node_party=node_party,
+            tls_config=self._tls_config,
             retry_policy=self.retry_policy,
         )
         logger.debug(f"Sent. Response is {response}")
@@ -279,9 +272,7 @@ class RecverProxyActor:
 
     async def get_data(self, upstream_seq_id, curr_seq_id):
         self._stats["receive_op_count"] += 1
-        logger.debug(
-            f"Getting data for {curr_seq_id} from {upstream_seq_id}"
-        )
+        logger.debug(f"Getting data for {curr_seq_id} from {upstream_seq_id}")
         with self._lock:
             if not key_exists_in_two_dim_dict(
                 self._events, upstream_seq_id, curr_seq_id
@@ -382,8 +373,6 @@ def send(
     data,
     upstream_seq_id,
     downstream_seq_id,
-    node_party=None,
-    tls_config=None,
 ):
     send_proxy = ray.get_actor("SendProxyActor")
     res = send_proxy.send.remote(
@@ -391,8 +380,6 @@ def send(
         data=data,
         upstream_seq_id=upstream_seq_id,
         downstream_seq_id=downstream_seq_id,
-        node_party=node_party,
-        tls_config=tls_config,
     )
     push_to_sending(res)
     return res

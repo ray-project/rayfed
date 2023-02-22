@@ -90,20 +90,22 @@ def init(
                 }
         party: optional; self party.
         tls_config: optional; a dict describes the tls config. E.g.
+            For alice,
 
             .. code:: python
                 {
-                    "cert": {
-                        "ca_cert": "cacert.pem",
-                        "cert": "servercert.pem",
-                        "key": "serverkey.pem",
-                    },
-                    "client_certs": {
-                        "bob":  {
-                            "ca_cert": "bob's cacert.pem",
-                            "cert": "bob's servercert.pem",
-                        }
-                    }
+                    "ca_cert": "root ca cert of other parties.",
+                    "cert": "alice's server cert",
+                    "key": "alice's server cert key",
+                }
+
+            For bob,
+
+            .. code:: python
+                {
+                    "ca_cert": "root ca cert of other parties.",
+                    "cert": "bob's server cert",
+                    "key": "bob's server cert key",
                 }
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
@@ -150,6 +152,10 @@ def init(
     ray.init(address=address, **kwargs)
 
     tls_config = {} if tls_config is None else tls_config
+    if tls_config:
+        assert (
+            'cert' in tls_config and 'key' in tls_config
+        ), 'Cert or key are not in tls_config.'
     # A Ray private accessing, should be replaced in public API.
     gcs_address = ray._private.worker._global_node.gcs_address
     gcs_client = GcsClient(address=gcs_address, nums_reconnect_retry=10)
@@ -157,8 +163,10 @@ def init(
     internal_kv._internal_kv_put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
     internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
     internal_kv._internal_kv_put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
-    internal_kv._internal_kv_put(RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
-                                 cloudpickle.dumps(cross_silo_serializing_allowed_list))
+    internal_kv._internal_kv_put(
+        RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
+        cloudpickle.dumps(cross_silo_serializing_allowed_list),
+    )
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
     # after `ray.init` and
@@ -358,11 +366,10 @@ def get(
                     else:
                         fed_object._mark_is_sending_to_party(party_name)
                         send(
-                            party_name,
-                            ray_object_ref,
-                            fed_object.get_fed_task_id(),
-                            fake_fed_task_id,
-                            party_name,
+                            dest_party=party_name,
+                            data=ray_object_ref,
+                            upstream_seq_id=fed_object.get_fed_task_id(),
+                            downstream_seq_id=fake_fed_task_id,
                         )
         else:
             # This is the code path that the fed_object is not in current party.
