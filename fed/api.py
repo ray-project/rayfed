@@ -109,7 +109,7 @@ def init(
                 }
             
             There are some known problems when there are more than two parties
-            and every party has different root ca, and we're working on it.
+            and every party has different root ca. We're working on it.
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
         cross_silo_grpc_retry_policy: a dict descibes the retry policy for
