@@ -37,21 +37,19 @@ def add(x, y):
 
 def _run(party: str):
     cert_dir = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/")
-    ca_config = {
-                "ca_cert": os.path.join(cert_dir, "server.crt"),
-                "cert": os.path.join(cert_dir, "server.crt"),
-                "key": os.path.join(cert_dir, "server.key"),
+        os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"
+    )
+    cert_config = {
+        "ca_cert": os.path.join(cert_dir, "server.crt"),
+        "cert": os.path.join(cert_dir, "server.crt"),
+        "key": os.path.join(cert_dir, "server.key"),
     }
-    tls_config_alice = {"cert": ca_config, "client_certs": {"bob": ca_config}}
-    tls_config_bob = {"cert": ca_config, "client_certs": {"alice": ca_config}}
-    tls_config = tls_config_alice if party == "alice" else tls_config_bob
 
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    fed.init(address='local', cluster=cluster, party=party, tls_config=tls_config)
+    fed.init(address='local', cluster=cluster, party=party, tls_config=cert_config)
 
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()
@@ -74,4 +72,5 @@ def test_enable_tls_across_parties():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(pytest.main(["-sv", __file__]))

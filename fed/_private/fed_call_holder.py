@@ -40,6 +40,7 @@ class FedCallHolder:
     it's a holder.
 
     """
+
     def __init__(
         self,
         node_party,
@@ -84,11 +85,10 @@ class FedCallHolder:
                     else:
                         arg._mark_is_sending_to_party(self._node_party)
                         send(
-                            self._node_party,
-                            arg.get_ray_object_ref(),
-                            arg.get_fed_task_id(),
-                            fed_task_id,
-                            self._node_party,
+                            dest_party=self._node_party,
+                            data=arg.get_ray_object_ref(),
+                            upstream_seq_id=arg.get_fed_task_id(),
+                            downstream_seq_id=fed_task_id,
                         )
             if (
                 self._options
@@ -96,8 +96,9 @@ class FedCallHolder:
                 and self._options['num_returns'] > 1
             ):
                 num_returns = self._options['num_returns']
-                return [FedObject(
-                    self._node_party, fed_task_id, None, i) for i in range(
-                        num_returns)]
+                return [
+                    FedObject(self._node_party, fed_task_id, None, i)
+                    for i in range(num_returns)
+                ]
             else:
                 return FedObject(self._node_party, fed_task_id, None)

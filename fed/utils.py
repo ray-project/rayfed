@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
     from fed.barriers import recv
+
     flattened_args, tree = jax.tree_util.tree_flatten((args, kwargs))
     indexes = []
     resolved = []
@@ -31,9 +32,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
         if isinstance(arg, FedObject):
             indexes.append(idx)
             if arg.get_party() == current_party:
-                logger.debug(
-                    f"Insert fed object, arg.party={arg.get_party()}"
-                )
+                logger.debug(f"Insert fed object, arg.party={arg.get_party()}")
                 resolved.append(arg.get_ray_object_ref())
             else:
                 logger.debug(
@@ -112,29 +111,14 @@ def tls_enabled(tls_config):
     return True if tls_config else False
 
 
-def _load_from_cert_config(cert_config):
-    private_key_file = cert_config["key"]
-    cert_file = cert_config["cert"]
-    ca_cert_file = cert_config["ca_cert"]
-
-    with open(ca_cert_file, "rb") as file:
-        ca_cert = file.read()
-    with open(private_key_file, "rb") as file:
+def load_cert_config(cert_config):
+    ca_cert, private_key, cert_chain = None, None, None
+    if "ca_cert" in cert_config:
+        with open(cert_config["ca_cert"], "rb") as file:
+            ca_cert = file.read()
+    with open(cert_config["key"], "rb") as file:
         private_key = file.read()
-    with open(cert_file, "rb") as file:
+    with open(cert_config["cert"], "rb") as file:
         cert_chain = file.read()
 
     return ca_cert, private_key, cert_chain
-
-
-def load_server_certs(tls_config):
-    assert tls_enabled(tls_config)
-    server_cert_config = tls_config["cert"]
-    return _load_from_cert_config(server_cert_config)
-
-
-def load_client_certs(tls_config, target_party: str = None):
-    assert tls_enabled(tls_config)
-    all_clients = tls_config["client_certs"]
-    client_cert_config = all_clients[target_party]
-    return _load_from_cert_config(client_cert_config)

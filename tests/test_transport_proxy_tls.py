@@ -34,12 +34,11 @@ def test_n_to_1_transport():
     cert_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"
     )
-    ca_config = {
+    tls_config = {
         "ca_cert": os.path.join(cert_dir, "server.crt"),
         "cert": os.path.join(cert_dir, "server.crt"),
         "key": os.path.join(cert_dir, "server.key"),
     }
-    tls_config = {"cert": ca_config, "client_certs": {"test_node_party": ca_config}}
     internal_kv._internal_kv_put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
 
     NUM_DATA = 10
@@ -61,7 +60,6 @@ def test_n_to_1_transport():
             f"data-{i}",
             i,
             i + 1,
-            "test_node_party",
         )
         sent_objs.append(sent_obj)
         get_obj = recver_proxy_actor.get_data.remote(i, i + 1)
