@@ -1,0 +1,7 @@
+## setup.py read_requirements
+jax>=0.3.0
+jaxlib>=0.3.0
+secretflow-ray>=2.1.0
+cloudpickle
+pickle5==0.0.11; python_version < '3.8'
+protobuf>=3.9.2,<3.20
