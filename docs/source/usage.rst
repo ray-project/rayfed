@@ -6,29 +6,28 @@ Usage
 Installation
 ------------
 
-To use Lumache, first install it using pip:
+To use RayFed, first install it using pip:
 
 .. code-block:: console
 
-   (.venv) $ pip install lumache
+   (.venv) $ pip install -U rayfed
 
-Creating recipes
-----------------
+Starting RayFed
+---------------
 
-To retrieve a list of random ingredients,
-you can use the ``lumache.get_random_ingredients()`` function:
+To start a RayFed application, you can use ``fed.init()`` function:
 
-.. autofunction:: lumache.get_random_ingredients
+.. autofunction:: fed.init
 
 The ``kind`` parameter should be either ``"meat"``, ``"fish"``,
-or ``"veggies"``. Otherwise, :py:func:`lumache.get_random_ingredients`
+or ``"veggies"``. Otherwise, :py:func:`fed.init`
 will raise an exception.
 
 .. autoexception:: lumache.InvalidKindError
 
 For example:
 
->>> import lumache
->>> lumache.get_random_ingredients()
-['shells', 'gorgonzola', 'parsley']
+>>> import fed
+>>> fed.init(cluster=cluster, party="Alice", tls_config=tls_config)
+Successfully to connect to current Ray cluster in party `Alice`
 
