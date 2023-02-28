@@ -122,3 +122,25 @@ def load_cert_config(cert_config):
         cert_chain = file.read()
 
     return ca_cert, private_key, cert_chain
+
+
+def is_cython(obj):
+    """Check if an object is a Cython function or method"""
+
+    # TODO(suo): We could split these into two functions, one for Cython
+    # functions and another for Cython methods.
+    # TODO(suo): There doesn't appear to be a Cython function 'type' we can
+    # check against via isinstance. Please correct me if I'm wrong.
+    def check_cython(x):
+        return type(x).__name__ == "cython_function_or_method"
+
+    # Check if function or method, respectively
+    return check_cython(obj) or (
+        hasattr(obj, "__func__") and check_cython(obj.__func__)
+    )
+
+def get_gcs_address_from_ray_worker():
+    try:
+        return ray._private.worker._global_node.gcs_address
+    except AttributeError:
+        return ray.worker._global_node.gcs_address

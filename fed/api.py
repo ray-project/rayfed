@@ -21,7 +21,8 @@ import cloudpickle
 import ray
 import ray.experimental.internal_kv as internal_kv
 from ray._private.gcs_utils import GcsClient
-from ray._private.inspect_util import is_cython
+# from ray._private.inspect_util import is_cython
+import fed.utils as fed_utils
 
 from fed._private.constants import (
     RAYFED_CLUSTER_KEY,
@@ -152,7 +153,11 @@ def init(
     assert cluster, "Cluster should be provided."
     assert party, "Party should be provided."
     assert party in cluster, f"Party {party} is not in cluster {cluster}."
-    ray.init(address=address, **kwargs)
+
+    if address == "local" and ray.__version__ == "1.13.0":
+        ray.init(**kwargs)
+    else:
+        ray.init(address=address, **kwargs)
 
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
@@ -160,8 +165,10 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
     # A Ray private accessing, should be replaced in public API.
-    gcs_address = ray._private.worker._global_node.gcs_address
-    gcs_client = GcsClient(address=gcs_address, nums_reconnect_retry=10)
+
+    gcs_client = GcsClient(
+        address=fed_utils.get_gcs_address_from_ray_worker(),
+        nums_reconnect_retry=10)
     internal_kv._initialize_internal_kv(gcs_client)
     internal_kv._internal_kv_put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
     internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
@@ -309,7 +316,7 @@ class FedRemoteClass:
 # This is the decorator `@fed.remote`
 def remote(*args, **kwargs):
     def _make_fed_remote(function_or_class, **options):
-        if inspect.isfunction(function_or_class) or is_cython(function_or_class):
+        if inspect.isfunction(function_or_class) or fed_utils.is_cython(function_or_class):
             return FedRemoteFunction(function_or_class).options(**options)
 
         if inspect.isclass(function_or_class):
