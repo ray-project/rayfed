@@ -1,4 +1,4 @@
-name: ubuntu-basic
+name: test-on-ray1.13.0
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
             . py3/bin/activate
             which python
             pip install pytest torch cloudpickle cryptography
-            pip install ray==2.0.0
+            pip install ray==1.13.0
 
     - name: Build and test
       run: |
