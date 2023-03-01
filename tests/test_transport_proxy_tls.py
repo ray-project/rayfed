@@ -18,6 +18,7 @@ import pytest
 import ray
 import cloudpickle
 import ray.experimental.internal_kv as internal_kv
+import fed._private.compatible_utils as compatible_utils
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
 from fed.cleanup import wait_sending
@@ -29,10 +30,7 @@ def test_n_to_1_transport():
     sending data to the target recver proxy, and there also have
     N receivers to `get_data` from Recver proxy at that time.
     """
-    if ray.__version__ == "1.13.0":
-        ray.init()
-    else:
-        ray.init(address='local')
+    compatible_utils.init(address='local')
 
     cert_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"

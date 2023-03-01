@@ -138,9 +138,3 @@ def is_cython(obj):
     return check_cython(obj) or (
         hasattr(obj, "__func__") and check_cython(obj.__func__)
     )
-
-def get_gcs_address_from_ray_worker():
-    try:
-        return ray._private.worker._global_node.gcs_address
-    except AttributeError:
-        return ray.worker._global_node.gcs_address

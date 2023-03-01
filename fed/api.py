@@ -21,8 +21,8 @@ import cloudpickle
 import ray
 import ray.experimental.internal_kv as internal_kv
 from ray._private.gcs_utils import GcsClient
-# from ray._private.inspect_util import is_cython
 import fed.utils as fed_utils
+import fed._private.compatible_utils as compatible_utils
 
 from fed._private.constants import (
     RAYFED_CLUSTER_KEY,
@@ -154,11 +154,7 @@ def init(
     assert party, "Party should be provided."
     assert party in cluster, f"Party {party} is not in cluster {cluster}."
 
-    if address == "local" and ray.__version__ == "1.13.0":
-        ray.init(**kwargs)
-    else:
-        ray.init(address=address, **kwargs)
-
+    compatible_utils.init_ray(address=address, **kwargs)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
@@ -167,7 +163,7 @@ def init(
     # A Ray private accessing, should be replaced in public API.
 
     gcs_client = GcsClient(
-        address=fed_utils.get_gcs_address_from_ray_worker(),
+        address=compatible_utils.get_gcs_address_from_ray_worker(),
         nums_reconnect_retry=10)
     internal_kv._initialize_internal_kv(gcs_client)
     internal_kv._internal_kv_put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
