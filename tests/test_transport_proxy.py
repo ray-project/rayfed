@@ -18,6 +18,7 @@ import ray
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
 from fed.cleanup import wait_sending
+import fed._private.compatible_utils as compatible_utils
 
 
 def test_n_to_1_transport():
@@ -25,7 +26,7 @@ def test_n_to_1_transport():
     sending data to the target recver proxy, and there also have
     N receivers to `get_data` from Recver proxy at that time.
     """
-    ray.init(address='local')
+    compatible_utils.init_ray(address='local')
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
     recver_proxy_actor = RecverProxyActor.options(

@@ -24,3 +24,5 @@ RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST = b"__RAYFED_CROSS_SILO_SERIALIZING_A
 RAYFED_LOG_FMT = "%(asctime)s %(levelname)s %(filename)s:%(lineno)s [%(party)s] --  %(message)s" # noqa
 
 RAYFED_DATE_FMT = "%Y-%m-%d %H:%M:%S"
+
+RAY_VERSION_2_0_0_STR = "2.0.0"
