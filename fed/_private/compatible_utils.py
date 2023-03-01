@@ -29,9 +29,9 @@ def _ray_version_greater_than_2_0_0():
 
 def init_ray(address: str=None, **kwargs):
     if address == "local" and _ray_version_greater_than_2_0_0():
-        ray.init(**kwargs)
-    else:
         ray.init(address=address, **kwargs)
+    else:
+        ray.init(**kwargs)
 
 def get_gcs_address_from_ray_worker():
     try:

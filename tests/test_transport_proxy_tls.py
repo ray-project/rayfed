@@ -30,7 +30,7 @@ def test_n_to_1_transport():
     sending data to the target recver proxy, and there also have
     N receivers to `get_data` from Recver proxy at that time.
     """
-    compatible_utils.init(address='local')
+    compatible_utils.init_ray(address='local')
 
     cert_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"
