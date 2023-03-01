@@ -25,7 +25,10 @@ def test_n_to_1_transport():
     sending data to the target recver proxy, and there also have
     N receivers to `get_data` from Recver proxy at that time.
     """
-    ray.init(address='local')
+    if ray.__version__ == "1.13.0":
+        ray.init()
+    else:
+        ray.init(address='local')
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
     recver_proxy_actor = RecverProxyActor.options(
