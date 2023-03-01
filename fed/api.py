@@ -312,7 +312,8 @@ class FedRemoteClass:
 # This is the decorator `@fed.remote`
 def remote(*args, **kwargs):
     def _make_fed_remote(function_or_class, **options):
-        if inspect.isfunction(function_or_class) or fed_utils.is_cython(function_or_class):
+        if (inspect.isfunction(function_or_class)
+                or fed_utils.is_cython(function_or_class)):
             return FedRemoteFunction(function_or_class).options(**options)
 
         if inspect.isclass(function_or_class):
