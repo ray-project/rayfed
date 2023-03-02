@@ -69,6 +69,19 @@ class FedActorHandle:
                 .remote(*cls_args, **cls_kwargs)
             )
 
+    # def __call__(self, *args, **kwargs):
+    #     raise TypeError(
+    #         "Remote function cannot be called directly. "
+    #         f"Use {self._name}.remote method instead"
+    #     )
+
+    # def remote(self, *args, **kwargs):
+    #     # Check if supplied parameters match the function signature. Same case
+    #     # at the other callsites.
+    #     self._signature.bind(*args, **kwargs)
+    #     return return_refs(ray.call_remote(self, *args, **kwargs))
+    
+
     def _execute_remote_method(self, method_name, options, args, kwargs):
         num_returns = 1
         if options and 'num_returns' in options:
@@ -76,14 +89,19 @@ class FedActorHandle:
         logger.debug(
             f"Actor method call: {method_name}, num_returns: {num_returns}"
         )
-        ray_object_ref = self._actor_handle._actor_method_call(
-            method_name,
-            args=args,
-            kwargs=kwargs,
-            name="",
-            num_returns=num_returns,
-            concurrency_group_name="",
-        )
+
+        # self._actor_handle._signature.bind(*args, **kwargs)
+        ray_object_ref = ray.util.client.common.return_refs(
+            ray.util.client.ray.call_remote(self._actor_handle, *args, **kwargs))
+
+        # ray_object_ref = self._actor_handle._actor_method_call(
+        #     method_name,
+        #     args=args,
+        #     kwargs=kwargs,
+        #     name="",
+        #     num_returns=num_returns,
+        #     concurrency_group_name="",
+        # )
         return ray_object_ref
 
 
