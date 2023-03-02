@@ -112,6 +112,8 @@ class InternalKv(AbstractInternalKv):
     def reset(self):
         return ray_internal_kv._internal_kv_reset()
 
+    def _ping(self):
+        return "pong"
 
 class ClientModeInternalKv(AbstractInternalKv):
     def __init__(self) -> None:
@@ -139,5 +141,14 @@ class ClientModeInternalKv(AbstractInternalKv):
         return ray.get(o)
 
 
-from ray._private.client_mode_hook import is_client_mode_enabled
-kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
+kv = None
+
+def _init_internal_kv():
+    from ray._private.client_mode_hook import is_client_mode_enabled
+    if is_client_mode_enabled:
+        kv_actor = ray.remote(InternalKv).options(name="_INTERNAL_KV_ACTOR").remote()
+        response = kv_actor._ping.remote()
+        ray.get(response)
+
+    global kv
+    kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()

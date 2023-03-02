@@ -161,7 +161,7 @@ def init(
         ), 'Cert or key are not in tls_config.'
     # A Ray private accessing, should be replaced in public API.
 
-    
+    compatible_utils._init_internal_kv()
     compatible_utils.kv.initialize()
     compatible_utils.kv.put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
     compatible_utils.kv.put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
