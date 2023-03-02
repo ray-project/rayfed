@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import abc
 import ray
 import fed._private.constants as fed_constants
 
+import ray.experimental.internal_kv as ray_internal_kv
+from ray._private.gcs_utils import GcsClient
 
 def _compare_version_strings(version1, version2):
     """
@@ -53,10 +56,88 @@ def init_ray(address: str = None, **kwargs):
         ray.init(address=address, **kwargs)
 
 
-def get_gcs_address_from_ray_worker():
+def _get_gcs_address_from_ray_worker():
     """A compatible API to get the gcs address from the ray worker module.
     """
     try:
         return ray._private.worker._global_node.gcs_address
     except AttributeError:
         return ray.worker._global_node.gcs_address
+
+
+
+class AbstractInternalKv(abc.ABC):
+    def __init__(self) -> None:
+        pass
+
+    @abc.abstractmethod
+    def initialize(self):
+        pass
+
+    @abc.abstractmethod
+    def put(self, k, v):
+        pass
+
+    @abc.abstractmethod
+    def get(self, k):
+        pass
+
+    @abc.abstractmethod
+    def delete(self, k):
+        pass
+
+    @abc.abstractmethod
+    def reset(self):
+        pass
+
+class InternalKv(AbstractInternalKv):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def initialize(self):
+        gcs_client = GcsClient(
+            address=_get_gcs_address_from_ray_worker(),
+            nums_reconnect_retry=10)
+        return ray_internal_kv._initialize_internal_kv(gcs_client)
+
+    def put(self, k, v):
+        return ray_internal_kv._internal_kv_put(k, v)
+
+    def get(self, k):
+        return ray_internal_kv._internal_kv_get(k)
+
+    def delete(self, k):
+        return ray_internal_kv._internal_kv_del(k)
+
+    def reset(self):
+        return ray_internal_kv._internal_kv_reset()
+
+
+class ClientModeInternalKv(AbstractInternalKv):
+    def __init__(self) -> None:
+        super().__init__()
+        self._internal_kv_actor = ray.get_actor("_INTERNAL_KV_ACTOR")
+
+    def initialize(self):
+        o = self._internal_kv_actor.initialize.remote()
+        return ray.get(o)
+
+    def put(self, k, v):
+        o = self._internal_kv_actor.put.remote(k, v)
+        return ray.get(o)
+
+    def get(self, k):
+        o = self._internal_kv_actor.get.remote(k)
+        return ray.get(o)
+
+    def delete(self, k):
+        o = self._internal_kv_actor.delete.remote(k)
+        return ray.get(o)
+
+    def reset(self):
+        o = self._internal_kv_actor.reset.remote()
+        return ray.get(o)
+
+
+from ray._private.client_mode_hook import is_client_mode_enabled
+kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
