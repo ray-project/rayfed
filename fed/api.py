@@ -1,4 +1,4 @@
-# Copyright 2022 The RayFed Team
+# Copyright 2023 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,9 +106,7 @@ def init(
                     "cert": "bob's server cert",
                     "key": "bob's server cert key",
                 }
-            
-            There are some known problems when there are more than two parties
-            and every party has different root ca. We're working on it.
+
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
         cross_silo_grpc_retry_policy: a dict descibes the retry policy for
