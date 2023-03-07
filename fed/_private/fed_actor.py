@@ -76,9 +76,14 @@ class FedActorHandle:
         logger.debug(
             f"Actor method call: {method_name}, num_returns: {num_returns}"
         )
-
-        ray_object_ref = ray.util.client.common.return_refs(
-            ray.util.client.ray.call_remote(self._actor_handle, *args, **kwargs))
+        ray_object_ref = self._actor_handle._actor_method_call(
+            method_name,
+            args=args,
+            kwargs=kwargs,
+            name="",
+            num_returns=num_returns,
+            concurrency_group_name="",
+        )
         return ray_object_ref
 
 
