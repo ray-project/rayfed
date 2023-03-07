@@ -49,7 +49,7 @@ cluster = {
 
 
 def run(party):
-    fed.init(address='ray://127.0.0.1:10001', cluster=cluster, party=party)
+    fed.init(address='local', cluster=cluster, party=party)
     print(f"Running the script in party {party}")
 
     ds1, ds2 = [123, 789]
@@ -78,5 +78,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    run('alice')
+    main()

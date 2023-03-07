@@ -67,6 +67,9 @@ def _get_gcs_address_from_ray_worker():
 
 
 class AbstractInternalKv(abc.ABC):
+    """ An abstract class that represents for bridging Ray internal kv in
+    both Ray client mode and non Ray client mode.
+    """
     def __init__(self) -> None:
         pass
 
@@ -91,6 +94,8 @@ class AbstractInternalKv(abc.ABC):
         pass
 
 class InternalKv(AbstractInternalKv):
+    """The internal kv class for non Ray client mode.
+    """
     def __init__(self) -> None:
         super().__init__()
 
@@ -116,6 +121,8 @@ class InternalKv(AbstractInternalKv):
         return "pong"
 
 class ClientModeInternalKv(AbstractInternalKv):
+    """The internal kv class for Ray client mode.
+    """
     def __init__(self) -> None:
         super().__init__()
         self._internal_kv_actor = ray.get_actor("_INTERNAL_KV_ACTOR")
@@ -144,6 +151,7 @@ class ClientModeInternalKv(AbstractInternalKv):
 kv = None
 
 def _init_internal_kv():
+    """An internal API that initialize the internal kv object."""
     from ray._private.client_mode_hook import is_client_mode_enabled
     if is_client_mode_enabled:
         kv_actor = ray.remote(InternalKv).options(name="_INTERNAL_KV_ACTOR").remote()
