@@ -16,4 +16,4 @@ jobs:
       - name: Install license-header-checker
         run: curl -s https://raw.githubusercontent.com/lluissm/license-header-checker/master/install.sh | bash
       - name: Run license check
-        run: ./bin/license-header-checker -a -r -i ./fed,./examples,./tests,./tool ./license_header.txt . go && [[ -z `git status -s` ]]
+        run: ./bin/license-header-checker -a -r ./license_header.txt . py && [[ -z `git status -s` ]]
