@@ -19,7 +19,6 @@ import ray
 import cloudpickle
 
 import fed._private.compatible_utils as compatible_utils
-import fed._private.compatible_utils as compatible_utils
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
 from fed.cleanup import wait_sending

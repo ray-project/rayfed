@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Union
 
 import cloudpickle
 import ray
-from ray._private.gcs_utils import GcsClient
 import fed.utils as fed_utils
 import fed._private.compatible_utils as compatible_utils
 
