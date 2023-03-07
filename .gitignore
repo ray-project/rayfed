@@ -134,3 +134,5 @@ dmypy.json
 # Vscode
 .vscode/
 
+# lincense checker binary
+bin/
