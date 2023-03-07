@@ -65,7 +65,6 @@ def _get_gcs_address_from_ray_worker():
         return ray.worker._global_node.gcs_address
 
 
-
 class AbstractInternalKv(abc.ABC):
     """ An abstract class that represents for bridging Ray internal kv in
     both Ray client mode and non Ray client mode.
@@ -93,6 +92,7 @@ class AbstractInternalKv(abc.ABC):
     def reset(self):
         pass
 
+
 class InternalKv(AbstractInternalKv):
     """The internal kv class for non Ray client mode.
     """
@@ -119,6 +119,7 @@ class InternalKv(AbstractInternalKv):
 
     def _ping(self):
         return "pong"
+
 
 class ClientModeInternalKv(AbstractInternalKv):
     """The internal kv class for Ray client mode.
