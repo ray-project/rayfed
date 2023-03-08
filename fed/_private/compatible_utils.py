@@ -150,9 +150,6 @@ class ClientModeInternalKv(AbstractInternalKv):
         return ray.get(o)
 
 
-kv = None
-
-
 def _init_internal_kv():
     """An internal API that initialize the internal kv object."""
     from ray._private.client_mode_hook import is_client_mode_enabled
@@ -160,6 +157,7 @@ def _init_internal_kv():
         kv_actor = ray.remote(InternalKv).options(name="_INTERNAL_KV_ACTOR").remote()
         response = kv_actor._ping.remote()
         ray.get(response)
+    return ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
 
-    global kv
-    kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
+
+kv = _init_internal_kv()
