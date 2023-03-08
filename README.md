@@ -3,15 +3,12 @@ A multiple parties joint, distributed execution engine based on Ray, to help bui
 
 ## Overview
 RayFed is a distributed computing framework for cross-parties federated learning.
-RayFed provides a unified programming pattern of federated learning, 你可以简单快速地构建出一个分布式的联邦学习程序。
+Built in the Ray ecosystem, RayFed provides a Ray native programming pattern for federated learning so that users can build a distributed program easily.
 
-构建于 Ray 生态中，RayFed 提供了简洁易懂的编程范式，让用户可以像编写单机程序一样的构建一个分布式程序。
+It provides users the role of "party", thus users can write code belonging to the specific party explicitly imposing more clear data perimeters. These codes will be restricted to execute within the party.
 
-
-它允许用户显示声明“机构”这一角色，并编写属于特定机构的代码，这些代码会被严格限定在机构内执行；
-借助于 Ray 提供的分布式编程范式，只需少量的代码更改就可以将你的单机程序扩展为分布式。因此使用 RayFed 就可以简单快速地构建一个跨机构的分布式程序。
-
-对于跨机构程序的控制，如资源分配、调度等，RayFed 引入了“多控制器”执行模式：代码在多方机构中的视图是完全相同的，并且在运行阶段允许任意一方进行控制，RayFed 会比对代码中所声明的执行机构与当前发出控制指令的机构是否相同来决定是否执行当前控制命令。
+As for the code execution, RayFed introduces the multi-controller architecture:
+The code view in each party is exactly the same, but the execution differs based on the declared party of code and the current party of executor. 
 
 
 
@@ -49,14 +46,71 @@ pip install -U rayfed
 
 ## Quick Start
 
-This example shows how to do aggregation across two participators.
+This example shows how to aggregate values across two participators.
 
-### Step 1: save the code.
-Save the code as a python file, e.g., test.py.
+### Step 1: Write Actor that Generate Value
+The `MyActor` increment its value by `num`. 
+This actor will be executed within the explicitly declared party.
 
 ```python
 import sys
+import fed
 
+@fed.remote
+class MyActor:
+    def __init__(self, value):
+        self.value = value
+
+    def inc(self, num):
+        self.value = self.value + num
+        return self.value
+```
+### Step 2: Define Aggregation Function
+The below function collects and aggragates values from two parties separately, and will also be executed within the declared party.
+
+```python
+@fed.remote
+def aggregate(val1, val2):
+    return val1 + val2
+```
+
+### Step 3: Create the actor and call methods in a specific party
+
+The creation code is similar with `Ray`, however, the difference is that in `RayFed` the actor must be explicitly created within a party:
+
+```python
+actor_alice = MyActor.party("alice").remote(1)
+actor_bob = MyActor.party("bob").remote(1)
+
+val_alice = actor_alice.inc.remote(1)
+val_bob = actor_bob.inc.remote(2)
+
+sum_val_obj = aggregate.party("bob").remote(val_alice, val_bob)
+```
+The above codes:
+1. Create two `MyActor`s separately in each party, i.e. 'alice' and 'bob';
+2. Increment by '1' in alice and '2' in 'bob';
+3. Execute the aggragation func in party 'bob'.
+
+### Step 4: Declare Cross-party Cluster & Init 
+```python
+def main(party):
+    cluster = {
+        'alice': {'address': '127.0.0.1:11010'},
+        'bob': {'address': '127.0.0.1:11011'},
+    }
+    fed.init(address='local', cluster=cluster, party=party)
+```
+This first declares a two-party cluster, whose addresses corresponding to '127.0.0.1:11010' in 'alice' and '127.0.0.1:11011' in 'bob'.
+And then, the `fed.init` create a cluster in the specified party.
+Note that `fed.init` should be called twice, passing in the different party each time.
+
+When executing codes in step 1~3, the 'alice' cluster will only execute functions whose "party" are also declared as 'alice'.
+
+### Put it together !
+Save below codes as `demo.py`: 
+```python
+import sys
 import fed
 
 
@@ -101,7 +155,7 @@ if __name__ == "__main__":
 
 ```
 
-### Step 2: run the code.
+### Run The Code.
 
 Open a terminal and run the code as `alice`. It's recommended to run the code with Ray TLS enabled (please refer to [Ray TLS](https://docs.ray.io/en/latest/ray-core/configure.html#tls-authentication))
 ```shell
@@ -122,6 +176,9 @@ python test.py bob
 ```
 
 Then you will get `The result in party alice is 5` on the first terminal screen and `The result in party bob is 5` on the second terminal screen.
+
+Figure shows the execution under the hood:
+![ppeH68x.png](https://s1.ax1x.com/2023/03/08/ppeH68x.png)
 
 ## Running untrusted codes
 As a general rule: Always execute untrusted codes inside a sandbox (e.g., [nsjail](https://github.com/google/nsjail)).
