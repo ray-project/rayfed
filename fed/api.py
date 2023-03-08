@@ -19,8 +19,6 @@ from typing import Any, Dict, List, Union
 
 import cloudpickle
 import ray
-import ray.experimental.internal_kv as internal_kv
-from ray._private.gcs_utils import GcsClient
 import fed.utils as fed_utils
 import fed._private.compatible_utils as compatible_utils
 
@@ -160,14 +158,12 @@ def init(
         ), 'Cert or key are not in tls_config.'
     # A Ray private accessing, should be replaced in public API.
 
-    gcs_client = GcsClient(
-        address=compatible_utils.get_gcs_address_from_ray_worker(),
-        nums_reconnect_retry=10)
-    internal_kv._initialize_internal_kv(gcs_client)
-    internal_kv._internal_kv_put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
-    internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
-    internal_kv._internal_kv_put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
-    internal_kv._internal_kv_put(
+    compatible_utils._init_internal_kv()
+    compatible_utils.kv.initialize()
+    compatible_utils.kv.put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
+    compatible_utils.kv.put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
+    compatible_utils.kv.put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
+    compatible_utils.kv.put(
         RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
         cloudpickle.dumps(cross_silo_serializing_allowed_list),
     )
@@ -207,11 +203,11 @@ def shutdown():
     Shutdown a RayFed client.
     """
     wait_sending()
-    internal_kv._internal_kv_del(RAYFED_CLUSTER_KEY)
-    internal_kv._internal_kv_del(RAYFED_PARTY_KEY)
-    internal_kv._internal_kv_del(RAYFED_TLS_CONFIG)
-    internal_kv._internal_kv_del(RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
-    internal_kv._internal_kv_reset()
+    compatible_utils.kv.delete(RAYFED_CLUSTER_KEY)
+    compatible_utils.kv.delete(RAYFED_PARTY_KEY)
+    compatible_utils.kv.delete(RAYFED_TLS_CONFIG)
+    compatible_utils.kv.delete(RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
+    compatible_utils.kv.reset()
     ray.shutdown()
     logger.info('Shutdowned ray.')
 
@@ -221,7 +217,7 @@ def get_cluster():
     Get the RayFed cluster configration.
     """
     # TODO(qwang): These getter could be cached in local.
-    serialized = internal_kv._internal_kv_get(RAYFED_CLUSTER_KEY)
+    serialized = compatible_utils.kv.get(RAYFED_CLUSTER_KEY)
     return cloudpickle.loads(serialized)
 
 
@@ -229,7 +225,7 @@ def get_party():
     """
     Get the current party name.
     """
-    serialized = internal_kv._internal_kv_get(RAYFED_PARTY_KEY)
+    serialized = compatible_utils.kv.get(RAYFED_PARTY_KEY)
     return cloudpickle.loads(serialized)
 
 
@@ -237,7 +233,7 @@ def get_tls():
     """
     Get the tls configurations on this party.
     """
-    serialized = internal_kv._internal_kv_get(RAYFED_TLS_CONFIG)
+    serialized = compatible_utils.kv.get(RAYFED_TLS_CONFIG)
     return cloudpickle.loads(serialized)
 
 

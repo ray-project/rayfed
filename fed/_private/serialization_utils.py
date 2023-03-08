@@ -15,7 +15,7 @@
 import io
 import cloudpickle
 
-import ray.experimental.internal_kv as internal_kv
+import fed._private.compatible_utils as compatible_utils
 
 _pickle_whitelist = None
 
@@ -63,7 +63,7 @@ def _apply_loads_function_with_whitelist():
     global _pickle_whitelist
 
     from fed._private.constants import RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST
-    serialized = internal_kv._internal_kv_get(
+    serialized = compatible_utils.kv.get(
         RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
     if serialized is None:
         return

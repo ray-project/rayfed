@@ -17,7 +17,7 @@ import pytest
 
 import ray
 import cloudpickle
-import ray.experimental.internal_kv as internal_kv
+
 import fed._private.compatible_utils as compatible_utils
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
@@ -40,7 +40,7 @@ def test_n_to_1_transport():
         "cert": os.path.join(cert_dir, "server.crt"),
         "key": os.path.join(cert_dir, "server.key"),
     }
-    internal_kv._internal_kv_put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
+    compatible_utils.kv.put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"
