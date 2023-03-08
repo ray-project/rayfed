@@ -90,7 +90,7 @@ sum_val_obj = aggregate.party("bob").remote(val_alice, val_bob)
 The above codes:
 1. Create two `MyActor`s separately in each party, i.e. 'alice' and 'bob';
 2. Increment by '1' in alice and '2' in 'bob';
-3. Execute the aggragation func in party 'bob'.
+3. Execute the aggregation function in party 'bob'.
 
 ### Step 4: Declare Cross-party Cluster & Init 
 ```python
