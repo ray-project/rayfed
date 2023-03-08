@@ -48,7 +48,7 @@ pip install -U rayfed
 
 This example shows how to aggregate values across two participators.
 
-### Step 1: Write Actor that Generate Value
+### Step 1: Write an Actor that Generates Value
 The `MyActor` increment its value by `num`. 
 This actor will be executed within the explicitly declared party.
 
