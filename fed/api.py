@@ -21,6 +21,7 @@ import cloudpickle
 import ray
 import fed.utils as fed_utils
 import fed._private.compatible_utils as compatible_utils
+import fed.config as fed_config
 
 from fed._private.constants import (
     KEY_OF_CLUSTER_CONFIG,
@@ -173,7 +174,7 @@ def init(
     job_config = {
         "": "",
     }
-    compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(job_config))
+    compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
     compatible_utils.kv.put(KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
 
     # Set logger.
@@ -184,7 +185,7 @@ def init(
         logging_level=logging_level,
         logging_format=RAYFED_LOG_FMT,
         date_format=RAYFED_DATE_FMT,
-        party_val=get_party(),
+        party_val=_get_party(),
     )
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
     # Start recv proxy
@@ -219,29 +220,26 @@ def shutdown():
     logger.info('Shutdowned ray.')
 
 
-def get_cluster():
+def _get_cluster():
     """
     Get the RayFed cluster configration.
     """
     # TODO(qwang): These getter could be cached in local.
-    serialized = compatible_utils.kv.get(RAYFED_CLUSTER_KEY)
-    return cloudpickle.loads(serialized)
+    return fed_config.get_cluster_config().cluster_addresses
 
 
-def get_party():
+def _get_party():
     """
-    Get the current party name.
+    A private util function to get the current party name.
     """
-    serialized = compatible_utils.kv.get(RAYFED_PARTY_KEY)
-    return cloudpickle.loads(serialized)
+    return fed_config.get_cluster_config().current_party
 
 
-def get_tls():
+def _get_tls():
     """
     Get the tls configurations on this party.
     """
-    serialized = compatible_utils.kv.get(RAYFED_TLS_CONFIG)
-    return cloudpickle.loads(serialized)
+    return fed_config.get_cluster_config().tls_config
 
 
 class FedRemoteFunction:
@@ -297,9 +295,9 @@ class FedRemoteClass:
         fed_class_task_id = get_global_context().next_seq_id()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
-            get_cluster(),
+            _get_cluster(),
             self._cls,
-            get_party(),
+            _get_party(),
             self._party,
             self._options,
         )
@@ -347,8 +345,8 @@ def get(
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
-    cluster = get_cluster()
-    current_party = get_party()
+    cluster = _get_cluster()
+    current_party = _get_party()
     is_individual_id = isinstance(fed_objects, FedObject)
     if is_individual_id:
         fed_objects = [fed_objects]
@@ -400,7 +398,7 @@ def get(
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):
-    current_party = get_party()
+    current_party = _get_party()
     if actor._node_party == current_party:
         handler = actor._actor_handle
         ray.kill(handler, no_restart=no_restart)

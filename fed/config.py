@@ -42,7 +42,7 @@ _cluster_config = None
 def get_cluster_config():
     """This function is not thread safe to use."""
     global _cluster_config
-    if _cluster_config is not None:
+    if _cluster_config is None:
         compatible_utils._init_internal_kv()
         compatible_utils.kv.initialize()
         raw_dict = compatible_utils.kv.get(fed_constants.KEY_OF_CLUSTER_CONFIG)

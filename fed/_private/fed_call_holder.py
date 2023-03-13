@@ -25,6 +25,8 @@ from fed.barriers import send
 from fed.fed_object import FedObject
 from fed.utils import resolve_dependencies
 
+import fed.config as fed_config
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +49,7 @@ class FedCallHolder:
         submit_ray_task_func,
         options={},
     ) -> None:
-        self._party = fed.get_party()
+        self._party = fed_config.get_cluster_config().current_party
         self._node_party = node_party
         self._options = options
         self._submit_ray_task_func = submit_ray_task_func

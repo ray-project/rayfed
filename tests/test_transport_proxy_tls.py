@@ -22,7 +22,7 @@ import fed._private.compatible_utils as compatible_utils
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
 from fed.cleanup import wait_sending
-from fed._private.constants import RAYFED_TLS_CONFIG
+from fed._private.constants import KEY_OF_TLS_CONFIG
 
 
 def test_n_to_1_transport():
@@ -40,7 +40,7 @@ def test_n_to_1_transport():
         "cert": os.path.join(cert_dir, "server.crt"),
         "key": os.path.join(cert_dir, "server.key"),
     }
-    compatible_utils.kv.put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
+    compatible_utils.kv.put(bytes(KEY_OF_TLS_CONFIG), cloudpickle.dumps(tls_config))
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"

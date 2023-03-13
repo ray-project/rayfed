@@ -16,6 +16,8 @@ import io
 import cloudpickle
 
 import fed._private.compatible_utils as compatible_utils
+import fed.config as fed_config
+
 
 _pickle_whitelist = None
 
@@ -62,13 +64,7 @@ def _restricted_loads(
 def _apply_loads_function_with_whitelist():
     global _pickle_whitelist
 
-    from fed._private.constants import RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST
-    serialized = compatible_utils.kv.get(
-        RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
-    if serialized is None:
-        return
-
-    _pickle_whitelist = cloudpickle.loads(serialized)
+    _pickle_whitelist = fed_config.get_cluster_config().serializing_allowed_list
     if _pickle_whitelist is None:
         return
 
