@@ -224,7 +224,6 @@ def _get_cluster():
     """
     Get the RayFed cluster configration.
     """
-    # TODO(qwang): These getter could be cached in local.
     return fed_config.get_cluster_config().cluster_addresses
 
 
