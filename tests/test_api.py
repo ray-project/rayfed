@@ -15,6 +15,7 @@
 import multiprocessing
 import pytest
 import fed
+import fed.config as fed_config
 
 
 def run():
@@ -23,8 +24,9 @@ def run():
         'bob': {'address': '127.0.0.1:11011'},
     }
     fed.init(address='local', cluster=cluster, party="alice")
-    assert fed.get_cluster() == cluster
-    assert fed.get_party() == "alice"
+    config = fed_config.get_cluster_config()
+    assert config.cluster_addresses == cluster
+    assert config.current_party == "alice"
     fed.shutdown()
 
 

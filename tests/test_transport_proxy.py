@@ -13,12 +13,21 @@
 # limitations under the License.
 
 import pytest
+import cloudpickle
 
 import ray
 
 from fed.barriers import RecverProxyActor, send, start_send_proxy
 from fed.cleanup import wait_sending
 import fed._private.compatible_utils as compatible_utils
+
+from fed._private.constants import (
+    KEY_OF_CLUSTER_CONFIG,
+    KEY_OF_CLUSTER_ADDRESSES,
+    KEY_OF_CURRENT_PARTY_NAME,
+    KEY_OF_TLS_CONFIG,
+    KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
+)
 
 
 def test_n_to_1_transport():
@@ -27,6 +36,15 @@ def test_n_to_1_transport():
     N receivers to `get_data` from Recver proxy at that time.
     """
     compatible_utils.init_ray(address='local')
+
+    cluster_config = {
+        KEY_OF_CLUSTER_ADDRESSES : "",
+        KEY_OF_CURRENT_PARTY_NAME: "",
+        KEY_OF_TLS_CONFIG: "",
+        KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
+    }
+    compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
+
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
     recver_proxy_actor = RecverProxyActor.options(
