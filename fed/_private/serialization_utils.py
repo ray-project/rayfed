@@ -69,7 +69,9 @@ def _apply_loads_function_with_whitelist():
 
     if "*" in _pickle_whitelist:
         _pickle_whitelist = None
+        return
+
     for module, attr_list in _pickle_whitelist.items():
-        if "*" in attr_list:
+        if attr_list is not None and "*" in attr_list:
             _pickle_whitelist[module] = None
     cloudpickle.loads = _restricted_loads
