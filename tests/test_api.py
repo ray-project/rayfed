@@ -16,7 +16,6 @@ import multiprocessing
 import pytest
 import fed
 import fed.config as fed_config
-import fed._private.constants as fed_constants
 
 
 def run():

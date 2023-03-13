@@ -15,7 +15,6 @@
 import io
 import cloudpickle
 
-import fed._private.compatible_utils as compatible_utils
 import fed.config as fed_config
 
 

@@ -10,21 +10,22 @@ import cloudpickle
 
 
 class ClusterConfig:
+    """A local cache of cluster configuration items."""
     def __init__(self, raw_bytes: bytes) -> None:
         self._data = cloudpickle.loads(raw_bytes)
 
     @property
     def cluster_addresses(self):
         return self._data[fed_constants.KEY_OF_CLUSTER_ADDRESSES]
-    
+
     @property
     def current_party(self):
         return self._data[fed_constants.KEY_OF_CURRENT_PARTY_NAME]
-    
+
     @property
     def tls_config(self):
         return self._data[fed_constants.KEY_OF_TLS_CONFIG]
-    
+
     @property
     def serializing_allowed_list(self):
         return self._data[fed_constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST]

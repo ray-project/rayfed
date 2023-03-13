@@ -23,7 +23,6 @@ from fed.barriers import RecverProxyActor, send, start_send_proxy
 from fed.cleanup import wait_sending
 from fed._private.constants import KEY_OF_TLS_CONFIG
 
-
 from fed._private.constants import (
     KEY_OF_CLUSTER_CONFIG,
     KEY_OF_CLUSTER_ADDRESSES,
@@ -31,6 +30,7 @@ from fed._private.constants import (
     KEY_OF_TLS_CONFIG,
     KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
 )
+
 
 def test_n_to_1_transport():
     """This case is used to test that we have N send_op barriers,
@@ -55,7 +55,6 @@ def test_n_to_1_transport():
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
     }
     compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
-
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"

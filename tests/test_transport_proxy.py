@@ -29,6 +29,7 @@ from fed._private.constants import (
     KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
 )
 
+
 def test_n_to_1_transport():
     """This case is used to test that we have N send_op barriers,
     sending data to the target recver proxy, and there also have
