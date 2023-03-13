@@ -23,12 +23,14 @@ import fed.utils as fed_utils
 import fed._private.compatible_utils as compatible_utils
 
 from fed._private.constants import (
-    RAYFED_CLUSTER_KEY,
+    KEY_OF_CLUSTER_CONFIG,
+    KEY_OF_JOB_CONFIG,
+    KEY_OF_CLUSTER_ADDRESSES,
+    KEY_OF_CURRENT_PARTY_NAME,
+    KEY_OF_TLS_CONFIG,
+    KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
     RAYFED_DATE_FMT,
     RAYFED_LOG_FMT,
-    RAYFED_PARTY_KEY,
-    RAYFED_TLS_CONFIG,
-    RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
 )
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
@@ -160,13 +162,20 @@ def init(
 
     compatible_utils._init_internal_kv()
     compatible_utils.kv.initialize()
-    compatible_utils.kv.put(RAYFED_CLUSTER_KEY, cloudpickle.dumps(cluster))
-    compatible_utils.kv.put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))
-    compatible_utils.kv.put(RAYFED_TLS_CONFIG, cloudpickle.dumps(tls_config))
-    compatible_utils.kv.put(
-        RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
-        cloudpickle.dumps(cross_silo_serializing_allowed_list),
-    )
+
+    cluster_config = {
+        KEY_OF_CLUSTER_ADDRESSES : cluster,
+        KEY_OF_CURRENT_PARTY_NAME: party,
+        KEY_OF_TLS_CONFIG: tls_config,
+        KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
+    }
+
+    job_config = {
+        "": "",
+    }
+    compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(job_config))
+    compatible_utils.kv.put(KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
+
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
     # after `ray.init` and
@@ -203,10 +212,8 @@ def shutdown():
     Shutdown a RayFed client.
     """
     wait_sending()
-    compatible_utils.kv.delete(RAYFED_CLUSTER_KEY)
-    compatible_utils.kv.delete(RAYFED_PARTY_KEY)
-    compatible_utils.kv.delete(RAYFED_TLS_CONFIG)
-    compatible_utils.kv.delete(RAYFED_CROSS_SILO_SERIALIZING_ALLOWED_LIST)
+    compatible_utils.kv.delete(KEY_OF_CLUSTER_CONFIG)
+    compatible_utils.kv.delete(KEY_OF_JOB_CONFIG)
     compatible_utils.kv.reset()
     ray.shutdown()
     logger.info('Shutdowned ray.')
