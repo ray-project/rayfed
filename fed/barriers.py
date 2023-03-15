@@ -21,6 +21,7 @@ import cloudpickle
 import grpc
 import ray
 
+import fed.config as fed_config
 import fed.utils as fed_utils
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
 from fed.cleanup import push_to_sending
@@ -124,6 +125,7 @@ async def send_data_grpc(
 ):
     tls_enabled = fed_utils.tls_enabled(tls_config)
     grpc_options = get_grpc_options(retry_policy=retry_policy)
+    cluster_config = fed_config.get_cluster_config()
     if tls_enabled:
         ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
         credentials = grpc.ssl_channel_credentials(
@@ -149,7 +151,7 @@ async def send_data_grpc(
                 downstream_seq_id=str(downstream_seq_id),
             )
             # wait for downstream's reply
-            response = await stub.SendData(request, timeout=60)
+            response = await stub.SendData(request, timeout=cluster_config.cross_silo_timeout)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id} result: '
                 '{response.result}.'
@@ -165,7 +167,7 @@ async def send_data_grpc(
                 downstream_seq_id=str(downstream_seq_id),
             )
             # wait for downstream's reply
-            response = await stub.SendData(request, timeout=60)
+            response = await stub.SendData(request, timeout=cluster_config.cross_silo_timeout)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id} result: '
                 '{response.result}.'
@@ -182,7 +184,6 @@ class SendProxyActor:
         tls_config: Dict = None,
         logging_level: str = None,
         retry_policy: Dict = None,
-        cross_silo_messages_max_size_in_bytes=None,
     ):
         self._stats = {"send_op_count": 0}
         self._cluster = cluster
@@ -191,7 +192,8 @@ class SendProxyActor:
         if logging_level:
             logger.setLevel(logging_level.upper())
         self.retry_policy = retry_policy
-        set_max_message_length(cross_silo_messages_max_size_in_bytes)
+        config = fed_config.get_cluster_config()
+        set_max_message_length(config.cross_silo_message_max_size)
 
     async def is_ready(self):
         return True
@@ -239,7 +241,6 @@ class RecverProxyActor:
         tls_config=None,
         logging_level: str = None,
         retry_policy: Dict = None,
-        cross_silo_messages_max_size_in_bytes: int = None,
     ):
         self._stats = {"receive_op_count": 0}
         self._listen_addr = listen_addr
@@ -248,7 +249,8 @@ class RecverProxyActor:
         if logging_level:
             logger.setLevel(logging_level.upper())
         self.retry_policy = retry_policy
-        set_max_message_length(cross_silo_messages_max_size_in_bytes)
+        config = fed_config.get_cluster_config()
+        set_max_message_length(config.cross_silo_messages_max_size)
         # Workaround the threading coordinations
 
         # All events for grpc waitting usage.

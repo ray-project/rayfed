@@ -30,6 +30,14 @@ class ClusterConfig:
     def serializing_allowed_list(self):
         return self._data[fed_constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST]
 
+    @property
+    def cross_silo_timeout(self):
+        return self._data[fed_constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS]
+
+    @property
+    def cross_silo_message_max_size(self):
+        return self._data[fed_constants.KEY_OF_CROSS_SILO_MESSAGE_MAX_SIZE_IN_BYTES]
+
 
 class JobConfig:
     def __init__(self) -> None:

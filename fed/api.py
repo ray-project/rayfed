@@ -30,6 +30,7 @@ from fed._private.constants import (
     KEY_OF_CURRENT_PARTY_NAME,
     KEY_OF_TLS_CONFIG,
     KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
+    KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS,
     RAYFED_DATE_FMT,
     RAYFED_LOG_FMT,
 )
@@ -55,6 +56,7 @@ def init(
     cross_silo_serializing_allowed_list: Dict = None,
     exit_on_failure_cross_silo_sending: bool = False,
     cross_silo_messages_max_size_in_bytes: int = None,
+    cross_silo_timeout_in_seconds: int = 60,
     **kwargs,
 ):
     """
@@ -137,6 +139,8 @@ def init(
         cross_silo_messages_max_size_in_bytes: The maximum length in bytes of
             cross-silo messages.
             If None, the default value of 500 MB is specified.
+        cross_silo_timeout_in_seconds: The timeout in seconds of a cross-silo RPC call.
+            It's 60 by default.
         kwargs: the args for ray.init().
 
     Examples:
@@ -169,6 +173,7 @@ def init(
         KEY_OF_CURRENT_PARTY_NAME: party,
         KEY_OF_TLS_CONFIG: tls_config,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
+        KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
     }
 
     job_config = {
@@ -195,7 +200,6 @@ def init(
         tls_config=tls_config,
         logging_level=logging_level,
         retry_policy=cross_silo_grpc_retry_policy,
-        cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
     start_send_proxy(
         cluster=cluster,
@@ -204,7 +208,6 @@ def init(
         logging_level=logging_level,
         retry_policy=cross_silo_grpc_retry_policy,
         max_retries=cross_silo_send_max_retries,
-        cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
 
 
