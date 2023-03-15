@@ -151,7 +151,8 @@ async def send_data_grpc(
                 downstream_seq_id=str(downstream_seq_id),
             )
             # wait for downstream's reply
-            response = await stub.SendData(request, timeout=cluster_config.cross_silo_timeout)
+            response = await stub.SendData(
+                request, timeout=cluster_config.cross_silo_timeout)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id} result: '
                 '{response.result}.'
@@ -167,7 +168,8 @@ async def send_data_grpc(
                 downstream_seq_id=str(downstream_seq_id),
             )
             # wait for downstream's reply
-            response = await stub.SendData(request, timeout=cluster_config.cross_silo_timeout)
+            response = await stub.SendData(
+                request, timeout=cluster_config.cross_silo_timeout)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id} result: '
                 '{response.result}.'
@@ -309,7 +311,6 @@ def start_recv_proxy(
     tls_config=None,
     logging_level=None,
     retry_policy=None,
-    cross_silo_messages_max_size_in_bytes=None,
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
@@ -326,7 +327,6 @@ def start_recv_proxy(
         tls_config=tls_config,
         logging_level=logging_level,
         retry_policy=retry_policy,
-        cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
@@ -343,7 +343,6 @@ def start_send_proxy(
     logging_level=None,
     retry_policy=None,
     max_retries=None,
-    cross_silo_messages_max_size_in_bytes=None,
 ):
     # Create RecevrProxyActor
     global _SEND_PROXY_ACTOR
@@ -364,7 +363,6 @@ def start_send_proxy(
         tls_config=tls_config,
         logging_level=logging_level,
         retry_policy=retry_policy,
-        cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote())
     logger.info("SendProxy was successfully created.")
