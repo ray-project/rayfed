@@ -248,8 +248,8 @@ class RecverProxyActor:
         self,
         listen_addr: str,
         party: str,
+        logging_level: str,
         tls_config=None,
-        logging_level: str = None,
         retry_policy: Dict = None,
         cross_silo_messages_max_size_in_bytes: int = None,
     ):
@@ -321,8 +321,8 @@ class RecverProxyActor:
 def start_recv_proxy(
     cluster: str,
     party: str,
+    logging_level:str,
     tls_config=None,
-    logging_level=None,
     retry_policy=None,
     cross_silo_messages_max_size_in_bytes=None,
 ):
@@ -354,8 +354,8 @@ _SEND_PROXY_ACTOR = None
 def start_send_proxy(
     cluster: Dict,
     party: str,
+    logging_level: str,
     tls_config: Dict = None,
-    logging_level=None,
     retry_policy=None,
     max_retries=None,
     cross_silo_messages_max_size_in_bytes=None,

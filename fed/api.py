@@ -192,16 +192,16 @@ def init(
     start_recv_proxy(
         cluster=cluster,
         party=party,
-        tls_config=tls_config,
         logging_level=logging_level,
+        tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
         cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
     start_send_proxy(
         cluster=cluster,
         party=party,
-        tls_config=tls_config,
         logging_level=logging_level,
+        tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
         max_retries=cross_silo_send_max_retries,
         cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
