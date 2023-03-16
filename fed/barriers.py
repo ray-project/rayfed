@@ -68,7 +68,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
-            f'Received a grpc data request from {upstream_seq_id} to'
+            f'Received a grpc data request from {upstream_seq_id} to '
             f'{downstream_seq_id}.'
         )
 
@@ -451,7 +451,7 @@ def _grpc_ping(party: str, dest: str, tls_config: Dict) -> bool:
 
 
 def ping_others(cluster: Dict[str, Dict], self_party: str, tls_config: Dict):
-    """Ping other parties until all are ready or timeout(3600s)."""
+    """Ping other parties until all are ready or timeout."""
     others = [party for party in cluster if not party == self_party]
     max_retries = 720
     while max_retries > 0 and others:
