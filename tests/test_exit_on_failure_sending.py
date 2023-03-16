@@ -72,7 +72,7 @@ def run(party, is_inner_party):
 
 
 @pytest.skip(
-    'FIXME(zhouaihui): ping others befere run fails this unittest.',
+    'FIXME(zhouaihui): ping others before running fails this unittest.',
     allow_module_level=True,
 )
 def test_exit_when_failure_on_sending():
