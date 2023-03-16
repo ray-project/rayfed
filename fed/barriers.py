@@ -15,6 +15,7 @@
 import asyncio
 import logging
 import threading
+import time
 from typing import Dict
 
 import cloudpickle
@@ -408,3 +409,57 @@ def recv(party: str, src_party: str, upstream_seq_id, curr_seq_id):
     assert party, 'Party can not be None.'
     receiver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
     return receiver_proxy.get_data.remote(src_party, upstream_seq_id, curr_seq_id)
+
+
+def _grpc_ping(party: str, dest: str, tls_config: Dict) -> bool:
+    try:
+        if tls_config:
+            ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
+            credentials = grpc.ssl_channel_credentials(
+                certificate_chain=cert_chain,
+                private_key=private_key,
+                root_certificates=ca_cert,
+            )
+
+            with grpc.aio.secure_channel(
+                dest,
+                credentials,
+            ) as channel:
+                stub = fed_pb2_grpc.GrpcServiceStub(channel)
+                request = fed_pb2.SendDataRequest(
+                    data=b'ping',
+                    upstream_seq_id='ping',
+                    downstream_seq_id='ping',
+                )
+                response = stub.SendData(request)
+        else:
+            with grpc.insecure_channel(dest) as channel:
+                stub = fed_pb2_grpc.GrpcServiceStub(channel)
+                request = fed_pb2.SendDataRequest(
+                    data=b'ping',
+                    upstream_seq_id='ping',
+                    downstream_seq_id='ping',
+                )
+                response = stub.SendData(request)
+        logger.info(
+            f'Ping {party} on {dest} successfully, the result: {response.result}.'
+        )
+        return True
+    except Exception as e:
+        logger.info(f'Failed to ping {party} on {dest}, error: {e}')
+        return False
+
+
+def ping_others(cluster: Dict[str, Dict], self_party: str, tls_config: Dict):
+    """Ping other parties until all are ready or timeout(3600s)."""
+    others = [party for party in cluster if not party == self_party]
+    max_retries = 720
+    while max_retries > 0 and others:
+        max_retries = max_retries - 1
+        others[:] = [
+            other
+            for other in others
+            if not _grpc_ping(other, cluster[other]['address'], tls_config)
+        ]
+        if others:
+            time.sleep(10)

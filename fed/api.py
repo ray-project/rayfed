@@ -19,24 +19,24 @@ from typing import Any, Dict, List, Union
 
 import cloudpickle
 import ray
-import fed.utils as fed_utils
+
 import fed._private.compatible_utils as compatible_utils
 import fed.config as fed_config
-
+import fed.utils as fed_utils
 from fed._private.constants import (
-    KEY_OF_CLUSTER_CONFIG,
-    KEY_OF_JOB_CONFIG,
     KEY_OF_CLUSTER_ADDRESSES,
-    KEY_OF_CURRENT_PARTY_NAME,
-    KEY_OF_TLS_CONFIG,
+    KEY_OF_CLUSTER_CONFIG,
     KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
+    KEY_OF_CURRENT_PARTY_NAME,
+    KEY_OF_JOB_CONFIG,
+    KEY_OF_TLS_CONFIG,
     RAYFED_DATE_FMT,
     RAYFED_LOG_FMT,
 )
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
-from fed.barriers import recv, send, start_recv_proxy, start_send_proxy
+from fed.barriers import ping_others, recv, send, start_recv_proxy, start_send_proxy
 from fed.cleanup import set_exit_on_failure_sending, wait_sending
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
@@ -207,6 +207,9 @@ def init(
         max_retries=cross_silo_send_max_retries,
         cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
+
+    # TODO(zhouaihui): can be removed after we have a better retry strategy.
+    ping_others(cluster=cluster, self_party=party, tls_config=tls_config)
 
 
 def shutdown():
