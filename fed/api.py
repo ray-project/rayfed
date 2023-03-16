@@ -310,8 +310,9 @@ class FedRemoteClass:
 # This is the decorator `@fed.remote`
 def remote(*args, **kwargs):
     def _make_fed_remote(function_or_class, **options):
-        if (inspect.isfunction(function_or_class)
-                or fed_utils.is_cython(function_or_class)):
+        if inspect.isfunction(function_or_class) or fed_utils.is_cython(
+            function_or_class
+        ):
             return FedRemoteFunction(function_or_class).options(**options)
 
         if inspect.isclass(function_or_class):
@@ -384,7 +385,10 @@ def get(
                 received_ray_object_ref = fed_object.get_ray_object_ref()
             else:
                 received_ray_object_ref = recv(
-                    current_party, fed_object.get_fed_task_id(), fake_fed_task_id
+                    current_party,
+                    fed_object.get_party(),
+                    fed_object.get_fed_task_id(),
+                    fake_fed_task_id,
                 )
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)

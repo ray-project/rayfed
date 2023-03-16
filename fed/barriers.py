@@ -22,9 +22,11 @@ import grpc
 import ray
 
 import fed.utils as fed_utils
+from fed._private.constants import RAYFED_DATE_FMT, RAYFED_LOG_FMT
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
 from fed.cleanup import push_to_sending
 from fed.grpc import fed_pb2, fed_pb2_grpc
+from fed.utils import setup_logger
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +67,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
-            f'Received a grpc data request from {upstream_seq_id} to '
-            '{downstream_seq_id}.'
+            f'Received a grpc data request from {upstream_seq_id} to {downstream_seq_id}.'
         )
 
         with self._lock:
@@ -165,7 +166,8 @@ async def send_data_grpc(
                 downstream_seq_id=str(downstream_seq_id),
             )
             # wait for downstream's reply
-            response = await stub.SendData(request, timeout=60)
+            # TODO(zhouaihui): make timeout configurable.
+            response = await stub.SendData(request, timeout=86400)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id} result: '
                 '{response.result}.'
@@ -184,12 +186,16 @@ class SendProxyActor:
         retry_policy: Dict = None,
         cross_silo_messages_max_size_in_bytes=None,
     ):
+        setup_logger(
+            logging_level=logging_level,
+            logging_format=RAYFED_LOG_FMT,
+            date_format=RAYFED_DATE_FMT,
+            party_val=party,
+        )
         self._stats = {"send_op_count": 0}
         self._cluster = cluster
         self._party = party
         self._tls_config = tls_config
-        if logging_level:
-            logger.setLevel(logging_level.upper())
         self.retry_policy = retry_policy
         set_max_message_length(cross_silo_messages_max_size_in_bytes)
 
@@ -207,20 +213,26 @@ class SendProxyActor:
         assert (
             dest_party in self._cluster
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
+        send_log_msg = (
+            f'data to seq_id {downstream_seq_id} of {dest_party} from {upstream_seq_id}'
+        )
         logger.debug(
-            f'Sending data to seq_id {downstream_seq_id} from {upstream_seq_id}'
-            f'with{"out" if not self._tls_config else ""} credentials.'
+            f'Sending {send_log_msg} with{"out" if not self._tls_config else ""} credentials.'
         )
         dest_addr = self._cluster[dest_party]['address']
-        response = await send_data_grpc(
-            dest=dest_addr,
-            data=data,
-            upstream_seq_id=upstream_seq_id,
-            downstream_seq_id=downstream_seq_id,
-            tls_config=self._tls_config,
-            retry_policy=self.retry_policy,
-        )
-        logger.debug(f"Sent. Response is {response}")
+        try:
+            response = await send_data_grpc(
+                dest=dest_addr,
+                data=data,
+                upstream_seq_id=upstream_seq_id,
+                downstream_seq_id=downstream_seq_id,
+                tls_config=self._tls_config,
+                retry_policy=self.retry_policy,
+            )
+        except Exception as e:
+            logger.error(f'Failed to {send_log_msg}, error: {e}')
+            return False
+        logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
         return True  # True indicates it's sent successfully.
 
     async def _get_stats(self):
@@ -241,12 +253,16 @@ class RecverProxyActor:
         retry_policy: Dict = None,
         cross_silo_messages_max_size_in_bytes: int = None,
     ):
+        setup_logger(
+            logging_level=logging_level,
+            logging_format=RAYFED_LOG_FMT,
+            date_format=RAYFED_DATE_FMT,
+            party_val=party,
+        )
         self._stats = {"receive_op_count": 0}
         self._listen_addr = listen_addr
         self._party = party
         self._tls_config = tls_config
-        if logging_level:
-            logger.setLevel(logging_level.upper())
         self.retry_policy = retry_policy
         set_max_message_length(cross_silo_messages_max_size_in_bytes)
         # Workaround the threading coordinations
@@ -270,9 +286,10 @@ class RecverProxyActor:
     async def is_ready(self):
         return True
 
-    async def get_data(self, upstream_seq_id, curr_seq_id):
+    async def get_data(self, src_aprty, upstream_seq_id, curr_seq_id):
         self._stats["receive_op_count"] += 1
-        logger.debug(f"Getting data for {curr_seq_id} from {upstream_seq_id}")
+        data_log_msg = f"data for {curr_seq_id} from {upstream_seq_id} of {src_aprty}"
+        logger.debug(f"Getting {data_log_msg}")
         with self._lock:
             if not key_exists_in_two_dim_dict(
                 self._events, upstream_seq_id, curr_seq_id
@@ -283,7 +300,7 @@ class RecverProxyActor:
 
         curr_event = get_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         await curr_event.wait()
-        logging.debug(f"Waited for {curr_seq_id}.")
+        logging.debug(f"Waited {data_log_msg}.")
         with self._lock:
             data = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
@@ -385,7 +402,7 @@ def send(
     return res
 
 
-def recv(party: str, upstream_seq_id, curr_seq_id):
+def recv(party: str, src_party: str, upstream_seq_id, curr_seq_id):
     assert party, 'Party can not be None.'
     receiver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
-    return receiver_proxy.get_data.remote(upstream_seq_id, curr_seq_id)
+    return receiver_proxy.get_data.remote(src_party, upstream_seq_id, curr_seq_id)
