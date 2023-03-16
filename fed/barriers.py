@@ -442,7 +442,7 @@ def _grpc_ping(party: str, dest: str, tls_config: Dict) -> bool:
                 )
                 response = stub.SendData(request)
         logger.info(
-            f'Ping {party} on {dest} successfully, the result: {response.result}.'
+            f'Succeeded to ping {party} on {dest}, the result: {response.result}.'
         )
         return True
     except Exception as e:
