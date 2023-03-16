@@ -165,7 +165,7 @@ def init(
     compatible_utils.kv.initialize()
 
     cluster_config = {
-        KEY_OF_CLUSTER_ADDRESSES : cluster,
+        KEY_OF_CLUSTER_ADDRESSES: cluster,
         KEY_OF_CURRENT_PARTY_NAME: party,
         KEY_OF_TLS_CONFIG: tls_config,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
@@ -187,21 +187,22 @@ def init(
         date_format=RAYFED_DATE_FMT,
         party_val=_get_party(),
     )
+    logger.info(f'Started rayfed with {cluster_config}')
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
         party=party,
-        tls_config=tls_config,
         logging_level=logging_level,
+        tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
         cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
     start_send_proxy(
         cluster=cluster,
         party=party,
-        tls_config=tls_config,
         logging_level=logging_level,
+        tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
         max_retries=cross_silo_send_max_retries,
         cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
@@ -310,8 +311,9 @@ class FedRemoteClass:
 # This is the decorator `@fed.remote`
 def remote(*args, **kwargs):
     def _make_fed_remote(function_or_class, **options):
-        if (inspect.isfunction(function_or_class)
-                or fed_utils.is_cython(function_or_class)):
+        if inspect.isfunction(function_or_class) or fed_utils.is_cython(
+            function_or_class
+        ):
             return FedRemoteFunction(function_or_class).options(**options)
 
         if inspect.isclass(function_or_class):
@@ -384,7 +386,10 @@ def get(
                 received_ray_object_ref = fed_object.get_ray_object_ref()
             else:
                 received_ray_object_ref = recv(
-                    current_party, fed_object.get_fed_task_id(), fake_fed_task_id
+                    current_party,
+                    fed_object.get_party(),
+                    fed_object.get_fed_task_id(),
+                    fake_fed_task_id,
                 )
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)

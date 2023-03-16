@@ -54,13 +54,14 @@ def _check_sending_objs():
         if isinstance(obj_ref, bool):
             break
         try:
-            ray.get(obj_ref)
+            res = ray.get(obj_ref)
         except Exception as e:
             logger.warn(f'Failed to send {obj_ref} with error: {e}')
-            if get_exit_when_failure_sending():
-                logger.warn('Signal self to exit.')
-                _signal_exit()
-                break
+            res = False
+        if not res and get_exit_when_failure_sending():
+            logger.warn('Signal self to exit.')
+            _signal_exit()
+            break
 
     logger.info('Check sending thread was exited.')
     global _check_send_thread
