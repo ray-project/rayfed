@@ -67,7 +67,8 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
-            f'Received a grpc data request from {upstream_seq_id} to {downstream_seq_id}.'
+            f'Received a grpc data request from {upstream_seq_id} to'
+            f'{downstream_seq_id}.'
         )
 
         with self._lock:
@@ -152,8 +153,8 @@ async def send_data_grpc(
             # wait for downstream's reply
             response = await stub.SendData(request, timeout=60)
             logger.debug(
-                f'Received data response from seq_id {downstream_seq_id} result: '
-                '{response.result}.'
+                f'Received data response from seq_id {downstream_seq_id}, '
+                f'result: {response.result}.'
             )
             return response.result
     else:
@@ -167,10 +168,10 @@ async def send_data_grpc(
             )
             # wait for downstream's reply
             # TODO(zhouaihui): make timeout configurable.
-            response = await stub.SendData(request, timeout=86400)
+            response = await stub.SendData(request, timeout=60)
             logger.debug(
-                f'Received data response from seq_id {downstream_seq_id} result: '
-                '{response.result}.'
+                f'Received data response from seq_id {downstream_seq_id} '
+                f'result: {response.result}.'
             )
             return response.result
 
@@ -217,7 +218,8 @@ class SendProxyActor:
             f'data to seq_id {downstream_seq_id} of {dest_party} from {upstream_seq_id}'
         )
         logger.debug(
-            f'Sending {send_log_msg} with{"out" if not self._tls_config else ""} credentials.'
+            f'Sending {send_log_msg} with{"out" if not self._tls_config else ""}'
+            ' credentials.'
         )
         dest_addr = self._cluster[dest_party]['address']
         try:
@@ -321,7 +323,7 @@ class RecverProxyActor:
 def start_recv_proxy(
     cluster: str,
     party: str,
-    logging_level:str,
+    logging_level: str,
     tls_config=None,
     retry_policy=None,
     cross_silo_messages_max_size_in_bytes=None,

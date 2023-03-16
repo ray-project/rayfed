@@ -165,7 +165,7 @@ def init(
     compatible_utils.kv.initialize()
 
     cluster_config = {
-        KEY_OF_CLUSTER_ADDRESSES : cluster,
+        KEY_OF_CLUSTER_ADDRESSES: cluster,
         KEY_OF_CURRENT_PARTY_NAME: party,
         KEY_OF_TLS_CONFIG: tls_config,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
@@ -187,6 +187,7 @@ def init(
         date_format=RAYFED_DATE_FMT,
         party_val=_get_party(),
     )
+    logger.info(f'Started rayfed with {cluster_config}')
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
     # Start recv proxy
     start_recv_proxy(
