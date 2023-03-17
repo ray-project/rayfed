@@ -446,7 +446,11 @@ def _grpc_ping(party: str, dest: str, tls_config: Dict) -> bool:
         )
         return True
     except Exception as e:
-        logger.info(f'Failed to ping {party} on {dest}, error: {e}')
+        logger.info(
+            f'Failed to ping {party} on {dest}, this could be normal, '
+            f'the possible reason is {party} has not yet started.'
+        )
+        logger.debug(f'Ping error: {e}')
         return False
 
 
