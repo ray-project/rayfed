@@ -18,6 +18,10 @@ import fed
 import ray
 
 
+@fed.remote
+def dummpy():
+    return 2
+
 def run(party):
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
@@ -27,18 +31,22 @@ def run(party):
         address='local',
         cluster=cluster,
         party=party,
-        cross_silo_messages_max_size_in_bytes=10,
+        cross_silo_messages_max_size_in_bytes=100,
     )
 
     def _assert_on_proxy(proxy_actor):
         options = ray.get(proxy_actor._get_grpc_options.remote())
         assert options[0][0] == "grpc.max_send_message_length"
-        assert options[0][1] == 10
+        assert options[0][1] == 100
 
     send_proxy = ray.get_actor("SendProxyActor")
     recver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
     _assert_on_proxy(send_proxy)
     _assert_on_proxy(recver_proxy)
+
+    a = dummpy.party('alice').remote()
+    b = dummpy.party('bob').remote()
+    fed.get([a, b])
 
     fed.shutdown()
 

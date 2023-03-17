@@ -21,7 +21,6 @@ import fed.config as fed_config
 def run():
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
-        'bob': {'address': '127.0.0.1:11011'},
     }
     fed.init(address='local', cluster=cluster, party="alice")
     config = fed_config.get_cluster_config()
