@@ -457,7 +457,7 @@ def _grpc_ping(party: str, dest: str, tls_config: Dict) -> bool:
 def ping_others(cluster: Dict[str, Dict], self_party: str, tls_config: Dict):
     """Ping other parties until all are ready or timeout."""
     others = [party for party in cluster if not party == self_party]
-    max_retries = 720
+    max_retries = 3600
     tried = 0
     while tried < max_retries and others:
         logger.info(
@@ -470,4 +470,4 @@ def ping_others(cluster: Dict[str, Dict], self_party: str, tls_config: Dict):
             if not _grpc_ping(other, cluster[other]['address'], tls_config)
         ]
         if others:
-            time.sleep(10)
+            time.sleep(2)
