@@ -454,7 +454,12 @@ def ping_others(cluster: Dict[str, Dict], self_party: str, tls_config: Dict):
     """Ping other parties until all are ready or timeout."""
     others = [party for party in cluster if not party == self_party]
     max_retries = 720
+    tried = 1
     while max_retries > 0 and others:
+        logger.info(
+            f'Try ping {others} at {tried} attemp, up to {max_retries} attemps.'
+        )
+        tried += 1
         max_retries = max_retries - 1
         others[:] = [
             other
