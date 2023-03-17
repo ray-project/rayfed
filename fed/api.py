@@ -55,6 +55,7 @@ def init(
     cross_silo_serializing_allowed_list: Dict = None,
     exit_on_failure_cross_silo_sending: bool = False,
     cross_silo_messages_max_size_in_bytes: int = None,
+    enable_waiting_for_other_parties_ready: bool = False,
     **kwargs,
 ):
     """
@@ -137,6 +138,8 @@ def init(
         cross_silo_messages_max_size_in_bytes: The maximum length in bytes of
             cross-silo messages.
             If None, the default value of 500 MB is specified.
+        enable_waiting_for_other_parties_ready: ping other parties until they
+            are all ready if True.
         kwargs: the args for ray.init().
 
     Examples:
@@ -208,8 +211,9 @@ def init(
         cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
 
-    # TODO(zhouaihui): can be removed after we have a better retry strategy.
-    ping_others(cluster=cluster, self_party=party, tls_config=tls_config)
+    if enable_waiting_for_other_parties_ready:
+        # TODO(zhouaihui): can be removed after we have a better retry strategy.
+        ping_others(cluster=cluster, self_party=party, tls_config=tls_config)
 
 
 def shutdown():

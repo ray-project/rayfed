@@ -71,10 +71,6 @@ def run(party, is_inner_party):
     time.sleep(86400)
 
 
-@pytest.skip(
-    'FIXME(zhouaihui): ping others before running fails this unittest.',
-    allow_module_level=True,
-)
 def test_exit_when_failure_on_sending():
     signal.signal(signal.SIGTERM, signal_handler)
     p_alice = multiprocessing.Process(target=run, args=('alice', True))
