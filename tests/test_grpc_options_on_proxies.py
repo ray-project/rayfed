@@ -22,6 +22,7 @@ import ray
 def dummpy():
     return 2
 
+
 def run(party):
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
