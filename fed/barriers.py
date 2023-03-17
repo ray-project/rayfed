@@ -15,6 +15,7 @@
 import asyncio
 import logging
 import threading
+import time
 from typing import Dict
 
 import cloudpickle
@@ -67,7 +68,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
-            f'Received a grpc data request from {upstream_seq_id} to'
+            f'Received a grpc data request from {upstream_seq_id} to '
             f'{downstream_seq_id}.'
         )
 
@@ -408,3 +409,65 @@ def recv(party: str, src_party: str, upstream_seq_id, curr_seq_id):
     assert party, 'Party can not be None.'
     receiver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
     return receiver_proxy.get_data.remote(src_party, upstream_seq_id, curr_seq_id)
+
+
+def _grpc_ping(party: str, dest: str, tls_config: Dict) -> bool:
+    try:
+        if tls_config:
+            ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
+            credentials = grpc.ssl_channel_credentials(
+                certificate_chain=cert_chain,
+                private_key=private_key,
+                root_certificates=ca_cert,
+            )
+
+            with grpc.secure_channel(
+                dest,
+                credentials,
+            ) as channel:
+                stub = fed_pb2_grpc.GrpcServiceStub(channel)
+                request = fed_pb2.SendDataRequest(
+                    data=b'ping',
+                    upstream_seq_id='ping',
+                    downstream_seq_id='ping',
+                )
+                response = stub.SendData(request)
+        else:
+            with grpc.insecure_channel(dest) as channel:
+                stub = fed_pb2_grpc.GrpcServiceStub(channel)
+                request = fed_pb2.SendDataRequest(
+                    data=b'ping',
+                    upstream_seq_id='ping',
+                    downstream_seq_id='ping',
+                )
+                response = stub.SendData(request)
+        logger.info(
+            f'Succeeded to ping {party} on {dest}, the result: {response.result}.'
+        )
+        return True
+    except Exception as e:
+        logger.info(
+            f'Failed to ping {party} on {dest}, this could be normal, '
+            f'the possible reason is {party} has not yet started.'
+        )
+        logger.debug(f'Ping error: {e}')
+        return False
+
+
+def ping_others(cluster: Dict[str, Dict], self_party: str, tls_config: Dict):
+    """Ping other parties until all are ready or timeout."""
+    others = [party for party in cluster if not party == self_party]
+    max_retries = 3600
+    tried = 0
+    while tried < max_retries and others:
+        logger.info(
+            f'Try ping {others} at {tried} attemp, up to {max_retries} attemps.'
+        )
+        tried += 1
+        others[:] = [
+            other
+            for other in others
+            if not _grpc_ping(other, cluster[other]['address'], tls_config)
+        ]
+        if others:
+            time.sleep(2)
