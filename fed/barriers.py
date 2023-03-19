@@ -202,7 +202,7 @@ class SendProxyActor:
         self._tls_config = tls_config
         self.retry_policy = retry_policy
         config = fed_config.get_cluster_config()
-        set_max_message_length(config.cross_silo_message_max_size)
+        set_max_message_length(config.cross_silo_messages_max_size)
 
     async def is_ready(self):
         return True
