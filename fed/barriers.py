@@ -219,7 +219,8 @@ class SendProxyActor:
             dest_party in self._cluster
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
         send_log_msg = (
-            f'send data to seq_id {downstream_seq_id} of {dest_party} from {upstream_seq_id}'
+            f'send data to seq_id {downstream_seq_id} of {dest_party} '
+            'from {upstream_seq_id}'
         )
         logger.debug(
             f'Sending {send_log_msg} with{"out" if not self._tls_config else ""}'
