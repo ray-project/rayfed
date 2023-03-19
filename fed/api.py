@@ -198,6 +198,7 @@ def init(
         date_format=RAYFED_DATE_FMT,
         party_val=_get_party(),
     )
+
     logger.info(f'Started rayfed with {cluster_config}')
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
     # Start recv proxy

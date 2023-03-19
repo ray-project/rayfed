@@ -20,6 +20,7 @@ import fed._private.compatible_utils as compatible_utils
 from fed._private.constants import (
     KEY_OF_CLUSTER_ADDRESSES,
     KEY_OF_CLUSTER_CONFIG,
+    KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES,
     KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
     KEY_OF_CURRENT_PARTY_NAME,
     KEY_OF_TLS_CONFIG,
@@ -39,6 +40,7 @@ def test_n_to_1_transport():
         KEY_OF_CLUSTER_ADDRESSES: "",
         KEY_OF_CURRENT_PARTY_NAME: "",
         KEY_OF_TLS_CONFIG: "",
+        KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: None,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
     }
     compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
