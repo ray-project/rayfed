@@ -45,7 +45,10 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                     received_ray_obj = arg.get_ray_object_ref()
                 else:
                     received_ray_obj = recv(
-                        current_party, arg.get_fed_task_id(), current_fed_task_id
+                        current_party,
+                        arg.get_party(),
+                        arg.get_fed_task_id(),
+                        current_fed_task_id,
                     )
                     arg._cache_ray_object_ref(received_ray_obj)
                 resolved.append(received_ray_obj)

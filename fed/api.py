@@ -19,15 +19,16 @@ from typing import Any, Dict, List, Union
 
 import cloudpickle
 import ray
-import fed.utils as fed_utils
+
 import fed._private.compatible_utils as compatible_utils
 import fed.config as fed_config
-
+import fed.utils as fed_utils
 from fed._private.constants import (
-    KEY_OF_CLUSTER_CONFIG,
-    KEY_OF_JOB_CONFIG,
     KEY_OF_CLUSTER_ADDRESSES,
+    KEY_OF_CLUSTER_CONFIG,
+    KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
     KEY_OF_CURRENT_PARTY_NAME,
+    KEY_OF_JOB_CONFIG,
     KEY_OF_TLS_CONFIG,
     KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
     KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS,
@@ -37,7 +38,7 @@ from fed._private.constants import (
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
-from fed.barriers import recv, send, start_recv_proxy, start_send_proxy
+from fed.barriers import ping_others, recv, send, start_recv_proxy, start_send_proxy
 from fed.cleanup import set_exit_on_failure_sending, wait_sending
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
@@ -57,6 +58,7 @@ def init(
     exit_on_failure_cross_silo_sending: bool = False,
     cross_silo_messages_max_size_in_bytes: int = None,
     cross_silo_timeout_in_seconds: int = 60,
+    enable_waiting_for_other_parties_ready: bool = False,
     **kwargs,
 ):
     """
@@ -141,6 +143,8 @@ def init(
             If None, the default value of 500 MB is specified.
         cross_silo_timeout_in_seconds: The timeout in seconds of a cross-silo RPC call.
             It's 60 by default.
+        enable_waiting_for_other_parties_ready: ping other parties until they
+            are all ready if True.
         kwargs: the args for ray.init().
 
     Examples:
@@ -169,7 +173,7 @@ def init(
     compatible_utils.kv.initialize()
 
     cluster_config = {
-        KEY_OF_CLUSTER_ADDRESSES : cluster,
+        KEY_OF_CLUSTER_ADDRESSES: cluster,
         KEY_OF_CURRENT_PARTY_NAME: party,
         KEY_OF_TLS_CONFIG: tls_config,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
@@ -192,23 +196,28 @@ def init(
         date_format=RAYFED_DATE_FMT,
         party_val=_get_party(),
     )
+    logger.info(f'Started rayfed with {cluster_config}')
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
         party=party,
-        tls_config=tls_config,
         logging_level=logging_level,
+        tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
     )
     start_send_proxy(
         cluster=cluster,
         party=party,
-        tls_config=tls_config,
         logging_level=logging_level,
+        tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
         max_retries=cross_silo_send_max_retries,
     )
+
+    if enable_waiting_for_other_parties_ready:
+        # TODO(zhouaihui): can be removed after we have a better retry strategy.
+        ping_others(cluster=cluster, self_party=party, tls_config=tls_config)
 
 
 def shutdown():
@@ -313,8 +322,9 @@ class FedRemoteClass:
 # This is the decorator `@fed.remote`
 def remote(*args, **kwargs):
     def _make_fed_remote(function_or_class, **options):
-        if (inspect.isfunction(function_or_class)
-                or fed_utils.is_cython(function_or_class)):
+        if inspect.isfunction(function_or_class) or fed_utils.is_cython(
+            function_or_class
+        ):
             return FedRemoteFunction(function_or_class).options(**options)
 
         if inspect.isclass(function_or_class):
@@ -387,7 +397,10 @@ def get(
                 received_ray_object_ref = fed_object.get_ray_object_ref()
             else:
                 received_ray_object_ref = recv(
-                    current_party, fed_object.get_fed_task_id(), fake_fed_task_id
+                    current_party,
+                    fed_object.get_party(),
+                    fed_object.get_fed_task_id(),
+                    fake_fed_task_id,
                 )
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)

@@ -52,7 +52,7 @@ class CleanCommand(setuptools.Command):
 
 setup(
     name='rayfed',
-    version='0.1.1a0',
+    version='0.1.1a2',
     license='Apache 2.0',
     description='A multiple parties joint, distributed execution engine based on Ray,'
                 'to help build your own federated learning frameworks in minutes.',

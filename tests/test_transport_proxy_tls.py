@@ -13,22 +13,21 @@
 # limitations under the License.
 
 import os
-import pytest
+
 import cloudpickle
+import pytest
 import ray
 
 import fed._private.compatible_utils as compatible_utils
-
-from fed.barriers import RecverProxyActor, send, start_send_proxy
-from fed.cleanup import wait_sending
-
 from fed._private.constants import (
-    KEY_OF_CLUSTER_CONFIG,
     KEY_OF_CLUSTER_ADDRESSES,
+    KEY_OF_CLUSTER_CONFIG,
+    KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
     KEY_OF_CURRENT_PARTY_NAME,
     KEY_OF_TLS_CONFIG,
-    KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
 )
+from fed.barriers import send, start_recv_proxy, start_send_proxy
+from fed.cleanup import wait_sending
 
 
 def test_n_to_1_transport():
@@ -48,7 +47,7 @@ def test_n_to_1_transport():
     }
 
     cluster_config = {
-        KEY_OF_CLUSTER_ADDRESSES : "",
+        KEY_OF_CLUSTER_ADDRESSES: "",
         KEY_OF_CURRENT_PARTY_NAME: "",
         KEY_OF_TLS_CONFIG: tls_config,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
@@ -57,26 +56,33 @@ def test_n_to_1_transport():
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"
-    recver_proxy_actor = RecverProxyActor.options(
-        name="RecverProxyActor-TEST", max_concurrency=2000
-    ).remote(SERVER_ADDRESS, "test_party", tls_config)
-    recver_proxy_actor.run_grpc_server.remote()
-    assert ray.get(recver_proxy_actor.is_ready.remote())
+    party = 'test_party'
+    cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
+    start_recv_proxy(
+        cluster_config,
+        party,
+        logging_level='info',
+        tls_config=tls_config,
+    )
     start_send_proxy(
-        {'test_party': {'address': SERVER_ADDRESS}}, 'test_party', tls_config
+        cluster_config,
+        party,
+        logging_level='info',
+        tls_config=tls_config,
     )
 
     sent_objs = []
     get_objs = []
+    recver_proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
     for i in range(NUM_DATA):
         sent_obj = send(
-            'test_party',
+            party,
             f"data-{i}",
             i,
             i + 1,
         )
         sent_objs.append(sent_obj)
-        get_obj = recver_proxy_actor.get_data.remote(i, i + 1)
+        get_obj = recver_proxy_actor.get_data.remote(party, i, i + 1)
         get_objs.append(get_obj)
     for result in ray.get(sent_objs):
         assert result
