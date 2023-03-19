@@ -177,7 +177,7 @@ def init(
         KEY_OF_CURRENT_PARTY_NAME: party,
         KEY_OF_TLS_CONFIG: tls_config,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
-        KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: 
+        KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
             cross_silo_messages_max_size_in_bytes,
         KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
     }
