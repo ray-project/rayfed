@@ -237,7 +237,7 @@ class SendProxyActor:
                 retry_policy=self.retry_policy,
             )
         except Exception as e:
-            logger.error(f'Failedxx to {send_log_msg}, error: {e}', e)
+            logger.error(f'Failed to {send_log_msg}, error: {e}')
             return False
         logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
         return True  # True indicates it's sent successfully.
