@@ -33,5 +33,5 @@ jobs:
     - name: Build and test
       run: |
            . py3/bin/activate
-           python3 setup.py install
+           pip install -e . -v
            sh test.sh
