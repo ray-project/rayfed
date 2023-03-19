@@ -219,7 +219,7 @@ class SendProxyActor:
             dest_party in self._cluster
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
         send_log_msg = (
-            f'data to seq_id {downstream_seq_id} of {dest_party} from {upstream_seq_id}'
+            f'send data to seq_id {downstream_seq_id} of {dest_party} from {upstream_seq_id}'
         )
         logger.debug(
             f'Sending {send_log_msg} with{"out" if not self._tls_config else ""}'
@@ -236,7 +236,7 @@ class SendProxyActor:
                 retry_policy=self.retry_policy,
             )
         except Exception as e:
-            logger.error(f'Failed to {send_log_msg}, error: {e}')
+            logger.error(f'Failedxx to {send_log_msg}, error: {e}', e)
             return False
         logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
         return True  # True indicates it's sent successfully.
