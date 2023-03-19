@@ -1,4 +1,4 @@
-name: test-on-ray2.0.0
+name: test on ray2.0.0
 
 on:
   push:
