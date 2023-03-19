@@ -36,7 +36,7 @@ class ClusterConfig:
 
     @property
     def cross_silo_messages_max_size(self):
-        return self._data[fed_constants.KEY_OF_CROSS_SILO_MESSAGE_MAX_SIZE_IN_BYTES]
+        return self._data[fed_constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES]
 
 
 class JobConfig:
