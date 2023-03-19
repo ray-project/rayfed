@@ -23,8 +23,10 @@ from fed._private.constants import (
     KEY_OF_CLUSTER_ADDRESSES,
     KEY_OF_CLUSTER_CONFIG,
     KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
+    KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES,
     KEY_OF_CURRENT_PARTY_NAME,
     KEY_OF_TLS_CONFIG,
+    KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS,
 )
 from fed.barriers import send, start_recv_proxy, start_send_proxy
 from fed.cleanup import wait_sending
@@ -50,7 +52,9 @@ def test_n_to_1_transport():
         KEY_OF_CLUSTER_ADDRESSES: "",
         KEY_OF_CURRENT_PARTY_NAME: "",
         KEY_OF_TLS_CONFIG: tls_config,
+        KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: None,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
+        KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
     }
     compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
 

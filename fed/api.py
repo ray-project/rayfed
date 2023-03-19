@@ -27,9 +27,11 @@ from fed._private.constants import (
     KEY_OF_CLUSTER_ADDRESSES,
     KEY_OF_CLUSTER_CONFIG,
     KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
+    KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES,
     KEY_OF_CURRENT_PARTY_NAME,
     KEY_OF_JOB_CONFIG,
     KEY_OF_TLS_CONFIG,
+    KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS,
     RAYFED_DATE_FMT,
     RAYFED_LOG_FMT,
 )
@@ -55,6 +57,7 @@ def init(
     cross_silo_serializing_allowed_list: Dict = None,
     exit_on_failure_cross_silo_sending: bool = False,
     cross_silo_messages_max_size_in_bytes: int = None,
+    cross_silo_timeout_in_seconds: int = 60,
     enable_waiting_for_other_parties_ready: bool = False,
     **kwargs,
 ):
@@ -138,6 +141,8 @@ def init(
         cross_silo_messages_max_size_in_bytes: The maximum length in bytes of
             cross-silo messages.
             If None, the default value of 500 MB is specified.
+        cross_silo_timeout_in_seconds: The timeout in seconds of a cross-silo RPC call.
+            It's 60 by default.
         enable_waiting_for_other_parties_ready: ping other parties until they
             are all ready if True.
         kwargs: the args for ray.init().
@@ -172,6 +177,9 @@ def init(
         KEY_OF_CURRENT_PARTY_NAME: party,
         KEY_OF_TLS_CONFIG: tls_config,
         KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
+        KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
+            cross_silo_messages_max_size_in_bytes,
+        KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
     }
 
     job_config = {
@@ -190,6 +198,7 @@ def init(
         date_format=RAYFED_DATE_FMT,
         party_val=_get_party(),
     )
+
     logger.info(f'Started rayfed with {cluster_config}')
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
     # Start recv proxy
@@ -199,7 +208,6 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
-        cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
     start_send_proxy(
         cluster=cluster,
@@ -208,7 +216,6 @@ def init(
         tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
         max_retries=cross_silo_send_max_retries,
-        cross_silo_messages_max_size_in_bytes=cross_silo_messages_max_size_in_bytes,
     )
 
     if enable_waiting_for_other_parties_ready:
