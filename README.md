@@ -1,5 +1,6 @@
 # RayFed
 ![docs building](https://readthedocs.org/projects/rayfed/badge/?version=latest) ![test on ray 2.0.0](https://github.com/ray-project/rayfed/actions/workflows/test_on_ray2.0.0.yml/badge.svg) ![test on ray 1.13.0](https://github.com/ray-project/rayfed/actions/workflows/test_on_ray1.13.0.yml/badge.svg)
+
 A multiple parties joint, distributed execution engine based on Ray, to help build your own federated learning frameworks in minutes.
 
 ## Overview
