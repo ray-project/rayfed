@@ -4,4 +4,4 @@ jaxlib>=0.3.0
 ray>=1.13.0
 cloudpickle
 pickle5==0.0.11; python_version < '3.8'
-protobuf>=3.9.2,<3.20
+protobuf
