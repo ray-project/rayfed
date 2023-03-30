@@ -399,7 +399,7 @@ def get(
             if fed_object.get_ray_object_ref() is not None:
                 received_ray_object_ref = fed_object.get_ray_object_ref()
             else:
-                received_ray_object_ref = recv(
+                received_ray_object_ref, meta_data = recv(
                     current_party,
                     fed_object.get_party(),
                     fed_object.get_fed_task_id(),

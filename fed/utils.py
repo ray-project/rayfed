@@ -44,7 +44,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                     # this party, so there is no need to receive it any longer.
                     received_ray_obj = arg.get_ray_object_ref()
                 else:
-                    received_ray_obj = recv(
+                    received_ray_obj, meta_data = recv(
                         current_party,
                         arg.get_party(),
                         arg.get_fed_task_id(),
@@ -141,3 +141,16 @@ def is_cython(obj):
     return check_cython(obj) or (
         hasattr(obj, "__func__") and check_cython(obj.__func__)
     )
+
+def dict2tuple(dic):
+    """
+    Convert a dictionary to a two-dimensional tuple, for example:
+    {'key': 'value'} => (('key', 'value'), ).
+    """
+    if (dic is None or isinstance(dic, tuple)):
+        return dic
+    elif (isinstance(dic, dict)):
+        return tuple((k, v) for k, v in dic.items())
+    else:
+        logger.warn(f"Unable to convert type {type(dic)} to tuple, skip converting {dic}.")
+        return dic

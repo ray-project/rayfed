@@ -26,7 +26,7 @@ from fed._private.constants import (
     KEY_OF_TLS_CONFIG,
     KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS,
 )
-from fed.barriers import send, start_recv_proxy, start_send_proxy
+from fed.barriers import send, recv, start_recv_proxy, start_send_proxy
 from fed.cleanup import wait_sending
 
 
@@ -70,7 +70,68 @@ def test_n_to_1_transport():
         assert result
 
     for i in range(NUM_DATA):
-        assert f"data-{i}" in ray.get(get_objs)
+        assert f"data-{i}" in map(lambda x: x[0], ray.get(get_objs))
+
+    wait_sending()
+    ray.shutdown()
+
+
+def test_send_with_meta():
+    """ This case is to test send & recv with meta-data. 
+    The meta-data can either be in the form of dict: {key: value},
+    or two dimensional tuple: ((key1, value1), (key2, value2)).
+    """
+    compatible_utils.init_ray(address='local')
+
+    cluster_config = {
+        KEY_OF_CLUSTER_ADDRESSES: "",
+        KEY_OF_CURRENT_PARTY_NAME: "",
+        KEY_OF_TLS_CONFIG: "",
+        KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: None,
+        KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
+        KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
+    }
+    compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
+
+    NUM_DATA = 10
+    SERVER_ADDRESS = "127.0.0.1:12344"
+    party = 'test_party'
+    cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
+    start_recv_proxy(
+        cluster_config,
+        party,
+        logging_level='debug',
+    )
+    start_send_proxy(cluster_config, party, logging_level='debug')
+
+    sent_objs = []
+    get_objs = []
+    sent_obj = send(party, f"test data", 0, 1, (("meta-key-0", "meta-value-0"), ))
+    sent_objs.append(sent_obj)
+    get_obj = recv(party, party, 0, 1)
+    get_objs.append(get_obj)
+
+    for result in ray.get(sent_objs):
+        assert result
+    data, recv_meta = ray.get(get_objs)[0]
+
+    assert "test data" == data
+    assert "meta-key-0" in recv_meta
+    assert "meta-value-0" in recv_meta['meta-key-0']
+    
+    # Test metadata in dict form
+    sent_obj = send(party, f"test data", 1, 2, {"meta-key-1": "meta-value-1"})
+    sent_objs.append(sent_obj)
+    get_obj = recv(party, party, 1, 2)
+    get_objs.append(get_obj)
+
+    for result in ray.get(sent_objs):
+        assert result
+    data, recv_meta = ray.get(get_objs)[1]
+
+    assert "test data" == data
+    assert "meta-key-1" in recv_meta
+    assert "meta-value-1" in recv_meta['meta-key-1']
 
     wait_sending()
     ray.shutdown()
