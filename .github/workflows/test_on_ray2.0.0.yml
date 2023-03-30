@@ -28,6 +28,8 @@ jobs:
             . py3/bin/activate
             which python
             pip install pytest torch cloudpickle cryptography
+            # The protobuf version is aligned to https://github.com/onnx/onnx/blob/main/requirements.txt#L2
+            pip install protobuf==3.20.2
             pip install ray==2.0.0
 
     - name: Build and test
