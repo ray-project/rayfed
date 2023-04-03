@@ -68,7 +68,6 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
     async def SendData(self, request, context):
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
-        metadata = dict(context.invocation_metadata())
         logger.debug(
             f'Received a grpc data request from {upstream_seq_id} to '
             f'{downstream_seq_id}.'

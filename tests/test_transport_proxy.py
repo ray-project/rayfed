@@ -22,8 +22,9 @@ import grpc
 import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed.grpc import fed_pb2, fed_pb2_grpc
-from fed.barriers import send, recv, start_recv_proxy, start_send_proxy, RecverProxyActor
+from fed.barriers import send, start_recv_proxy, start_send_proxy
 from fed.cleanup import wait_sending
+
 
 def test_n_to_1_transport():
     """This case is used to test that we have N send_op barriers,
@@ -40,7 +41,8 @@ def test_n_to_1_transport():
         constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
         constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
     }
-    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
+                            cloudpickle.dumps(cluster_config))
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
@@ -70,6 +72,7 @@ def test_n_to_1_transport():
     wait_sending()
     ray.shutdown()
 
+
 class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
     def __init__(self, all_events, all_data, party, lock):
         pass
@@ -94,6 +97,7 @@ async def _test_run_grpc_server(
     await server.start()
     await server.wait_for_termination()
 
+
 @ray.remote
 class TestRecverProxyActor:
     def __init__(
@@ -116,6 +120,7 @@ class TestRecverProxyActor:
     async def is_ready(self):
         return True
 
+
 def test_start_recv_proxy(
     cluster: str,
     party: str,
@@ -137,6 +142,7 @@ def test_start_recv_proxy(
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
 
+
 def test_send_grpc_with_meta():
     compatible_utils.init_ray(address='local')
     cluster_config = {
@@ -152,8 +158,10 @@ def test_send_grpc_with_meta():
             "key": "value"
         }
     }
-    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
-    compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
+    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
+                            cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG,
+                            cloudpickle.dumps(job_config))
 
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
@@ -161,10 +169,11 @@ def test_send_grpc_with_meta():
     test_start_recv_proxy(cluster_config, party, logging_level='info')
     start_send_proxy(cluster_config, party, logging_level='info')
     sent_objs = []
-    sent_obj = send(party, f"data", 0, 1)
+    sent_obj = send(party, "data", 0, 1)
     sent_objs.append(sent_obj)
     for result in ray.get(sent_objs):
         assert result
+
 
 if __name__ == "__main__":
     import sys

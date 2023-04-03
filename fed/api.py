@@ -166,7 +166,8 @@ def init(
         constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,
-        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
+        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST:
+            cross_silo_serializing_allowed_list,
         constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
             cross_silo_messages_max_size_in_bytes,
         constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
@@ -175,7 +176,8 @@ def init(
     job_config = {
        constants.KEY_OF_METADATA : metadata,
     }
-    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
+                            cloudpickle.dumps(cluster_config))
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.

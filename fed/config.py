@@ -42,7 +42,7 @@ class ClusterConfig:
 class JobConfig:
     def __init__(self, raw_bytes: bytes) -> None:
         self._data = cloudpickle.loads(raw_bytes)
-    
+
     @property
     def meta_data(self):
         return self._data[fed_constants.KEY_OF_METADATA]
@@ -52,6 +52,7 @@ class JobConfig:
 _cluster_config = None
 
 _job_config = None
+
 
 def get_cluster_config():
     """This function is not thread safe to use."""
