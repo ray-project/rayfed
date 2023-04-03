@@ -40,13 +40,18 @@ class ClusterConfig:
 
 
 class JobConfig:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, raw_bytes: bytes) -> None:
+        self._data = cloudpickle.loads(raw_bytes)
+    
+    @property
+    def meta_data(self):
+        return self._data[fed_constants.KEY_OF_METADATA]
 
 
 # A module level cache for the cluster configurations.
 _cluster_config = None
 
+_job_config = None
 
 def get_cluster_config():
     """This function is not thread safe to use."""
@@ -60,4 +65,11 @@ def get_cluster_config():
 
 
 def get_job_config():
-    raise NotImplementedError("This method is not implemented yet.")
+    """This config still acts like cluster config for now"""
+    global _job_config
+    if _job_config is None:
+        compatible_utils._init_internal_kv()
+        compatible_utils.kv.initialize()
+        raw_dict = compatible_utils.kv.get(fed_constants.KEY_OF_JOB_CONFIG)
+        _job_config = JobConfig(raw_dict)
+    return _job_config

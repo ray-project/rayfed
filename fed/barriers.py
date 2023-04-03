@@ -59,10 +59,9 @@ def pop_from_two_dim_dict(the_dict, key_a, key_b):
 
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
-    def __init__(self, all_events, all_data, all_meta_data, party, lock):
+    def __init__(self, all_events, all_data, party, lock):
         self._events = all_events
         self._all_data = all_data
-        self._all_meta_data = all_meta_data
         self._party = party
         self._lock = lock
 
@@ -79,9 +78,6 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
             add_two_dim_dict(
                 self._all_data, upstream_seq_id, downstream_seq_id, request.data
             )
-            add_two_dim_dict(
-                self._all_meta_data, upstream_seq_id, downstream_seq_id, metadata
-            )
             if not key_exists_in_two_dim_dict(
                 self._events, upstream_seq_id, downstream_seq_id
             ):
@@ -96,11 +92,11 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
 
 
 async def _run_grpc_server(
-    port, event, all_data, all_meta_data, party, lock, tls_config=None, grpc_options=None
+    port, event, all_data, party, lock, tls_config=None, grpc_options=None
 ):
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
-        SendDataService(event, all_data, all_meta_data, party, lock), server
+        SendDataService(event, all_data, party, lock), server
     )
 
     tls_enabled = fed_utils.tls_enabled(tls_config)
@@ -208,8 +204,9 @@ class SendProxyActor:
         self._party = party
         self._tls_config = tls_config
         self.retry_policy = retry_policy
-        config = fed_config.get_cluster_config()
-        set_max_message_length(config.cross_silo_messages_max_size)
+        self.metadata = fed_config.get_job_config().meta_data
+        cluster_config = fed_config.get_cluster_config()
+        set_max_message_length(cluster_config.cross_silo_messages_max_size)
 
     async def is_ready(self):
         return True
@@ -220,7 +217,6 @@ class SendProxyActor:
         data,
         upstream_seq_id,
         downstream_seq_id,
-        metadata=None
     ):
         self._stats["send_op_count"] += 1
         assert (
@@ -241,7 +237,7 @@ class SendProxyActor:
                 data=data,
                 upstream_seq_id=upstream_seq_id,
                 downstream_seq_id=downstream_seq_id,
-                metadata=metadata,
+                metadata=self.metadata,
                 tls_config=self._tls_config,
                 retry_policy=self.retry_policy,
             )
@@ -286,7 +282,6 @@ class RecverProxyActor:
         # All events for grpc waitting usage.
         self._events = {}  # map from (upstream_seq_id, downstream_seq_id) to event
         self._all_data = {}  # map from (upstream_seq_id, downstream_seq_id) to data
-        self._all_meta_data = {} # map from (upstream_seq_id, downstream_seq_id) to meta-data
         self._lock = threading.Lock()
 
     async def run_grpc_server(self):
@@ -294,7 +289,6 @@ class RecverProxyActor:
             self._listen_addr[self._listen_addr.index(':') + 1 :],
             self._events,
             self._all_data,
-            self._all_meta_data,
             self._party,
             self._lock,
             self._tls_config,
@@ -320,13 +314,12 @@ class RecverProxyActor:
         logging.debug(f"Waited {data_log_msg}.")
         with self._lock:
             data = pop_from_two_dim_dict(self._all_data, upstream_seq_id, curr_seq_id)
-            meta_data = pop_from_two_dim_dict(self._all_meta_data, upstream_seq_id, curr_seq_id)
             pop_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
 
         # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
         import fed._private.serialization_utils as fed_ser_utils
         fed_ser_utils._apply_loads_function_with_whitelist()
-        return cloudpickle.loads(data), meta_data
+        return cloudpickle.loads(data)
 
     async def _get_stats(self):
         return self._stats
@@ -403,7 +396,6 @@ def send(
     data,
     upstream_seq_id,
     downstream_seq_id,
-    metadata=None
 ):
     send_proxy = ray.get_actor("SendProxyActor")
     res = send_proxy.send.remote(
@@ -411,7 +403,6 @@ def send(
         data=data,
         upstream_seq_id=upstream_seq_id,
         downstream_seq_id=downstream_seq_id,
-        metadata=metadata
     )
     push_to_sending(res)
     return res

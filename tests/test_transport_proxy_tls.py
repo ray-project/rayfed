@@ -17,6 +17,7 @@ import os
 import cloudpickle
 import pytest
 import ray
+from unittest.mock import patch
 
 import fed._private.compatible_utils as compatible_utils
 from fed._private.constants import (
@@ -96,6 +97,7 @@ def test_n_to_1_transport():
 
     wait_sending()
     ray.shutdown()
+
 
 
 if __name__ == "__main__":
