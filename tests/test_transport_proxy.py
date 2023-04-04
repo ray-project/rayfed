@@ -174,6 +174,9 @@ def test_send_grpc_with_meta():
     for result in ray.get(sent_objs):
         assert result
 
+    wait_sending()
+    ray.shutdown()
+
 
 if __name__ == "__main__":
     import sys
