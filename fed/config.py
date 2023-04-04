@@ -41,7 +41,7 @@ class ClusterConfig:
 
 class JobConfig:
     def __init__(self, raw_bytes: bytes) -> None:
-        if(raw_bytes is None):
+        if raw_bytes is None:
             self._data = {}
         else:
             self._data = cloudpickle.loads(raw_bytes)
