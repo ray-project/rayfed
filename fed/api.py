@@ -48,7 +48,7 @@ def init(
     cross_silo_messages_max_size_in_bytes: int = None,
     cross_silo_timeout_in_seconds: int = 60,
     enable_waiting_for_other_parties_ready: bool = False,
-    metadata: Dict = None,
+    grpc_metadata: Dict = None,
     **kwargs,
 ):
     """
@@ -135,6 +135,8 @@ def init(
             It's 60 by default.
         enable_waiting_for_other_parties_ready: ping other parties until they
             are all ready if True.
+        grpc_metadata: optional; The metadata sent with the grpc request. This won't override
+            basic tcp headers, such as `user-agent`, but aggregate them together.
         kwargs: the args for ray.init().
 
     Examples:
@@ -174,7 +176,7 @@ def init(
     }
 
     job_config = {
-       constants.KEY_OF_METADATA : metadata,
+       constants.KEY_OF_GRPC_METADATA : grpc_metadata,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))

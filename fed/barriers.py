@@ -203,7 +203,7 @@ class SendProxyActor:
         self._party = party
         self._tls_config = tls_config
         self.retry_policy = retry_policy
-        self.metadata = fed_config.get_job_config().meta_data
+        self._grpc_metadata = fed_config.get_job_config().grpc_metadata
         cluster_config = fed_config.get_cluster_config()
         set_max_message_length(cluster_config.cross_silo_messages_max_size)
 
@@ -236,7 +236,7 @@ class SendProxyActor:
                 data=data,
                 upstream_seq_id=upstream_seq_id,
                 downstream_seq_id=downstream_seq_id,
-                metadata=self.metadata,
+                metadata=self._grpc_metadata,
                 tls_config=self._tls_config,
                 retry_policy=self.retry_policy,
             )

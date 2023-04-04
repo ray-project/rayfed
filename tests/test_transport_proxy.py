@@ -154,7 +154,7 @@ def test_send_grpc_with_meta():
         constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
     }
     job_config = {
-        constants.KEY_OF_METADATA: {
+        constants.KEY_OF_GRPC_METADATA: {
             "key": "value"
         }
     }
