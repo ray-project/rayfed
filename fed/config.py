@@ -41,11 +41,14 @@ class ClusterConfig:
 
 class JobConfig:
     def __init__(self, raw_bytes: bytes) -> None:
-        self._data = cloudpickle.loads(raw_bytes)
+        if(raw_bytes is None):
+            self._data = {}
+        else:
+            self._data = cloudpickle.loads(raw_bytes)
 
     @property
     def meta_data(self):
-        return self._data[fed_constants.KEY_OF_METADATA]
+        return self._data.get(fed_constants.KEY_OF_METADATA, {})
 
 
 # A module level cache for the cluster configurations.

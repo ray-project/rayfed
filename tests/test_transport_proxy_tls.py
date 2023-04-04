@@ -92,7 +92,7 @@ def test_n_to_1_transport():
         assert result
 
     for i in range(NUM_DATA):
-        assert f"data-{i}" in map(lambda x: x[0], ray.get(get_objs))
+        assert f"data-{i}" in ray.get(get_objs)
 
     wait_sending()
     ray.shutdown()

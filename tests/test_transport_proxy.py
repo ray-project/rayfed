@@ -67,7 +67,7 @@ def test_n_to_1_transport():
         assert result
 
     for i in range(NUM_DATA):
-        assert f"data-{i}" in map(lambda x: x[0], ray.get(get_objs))
+        assert f"data-{i}" in ray.get(get_objs)
 
     wait_sending()
     ray.shutdown()
@@ -121,7 +121,7 @@ class TestRecverProxyActor:
         return True
 
 
-def test_start_recv_proxy(
+def _test_start_recv_proxy(
     cluster: str,
     party: str,
     logging_level: str,
@@ -166,7 +166,7 @@ def test_send_grpc_with_meta():
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
     cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
-    test_start_recv_proxy(cluster_config, party, logging_level='info')
+    _test_start_recv_proxy(cluster_config, party, logging_level='info')
     start_send_proxy(cluster_config, party, logging_level='info')
     sent_objs = []
     sent_obj = send(party, "data", 0, 1)
