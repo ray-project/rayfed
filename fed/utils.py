@@ -44,7 +44,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                     # this party, so there is no need to receive it any longer.
                     received_ray_obj = arg.get_ray_object_ref()
                 else:
-                    received_ray_obj, meta_data = recv(
+                    received_ray_obj = recv(
                         current_party,
                         arg.get_party(),
                         arg.get_fed_task_id(),
