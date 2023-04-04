@@ -141,3 +141,18 @@ def is_cython(obj):
     return check_cython(obj) or (
         hasattr(obj, "__func__") and check_cython(obj.__func__)
     )
+
+
+def dict2tuple(dic):
+    """
+    Convert a dictionary to a two-dimensional tuple, for example:
+    {'key': 'value'} => (('key', 'value'), ).
+    """
+    if (dic is None or isinstance(dic, tuple)):
+        return dic
+    elif (isinstance(dic, dict)):
+        return tuple((k, v) for k, v in dic.items())
+    else:
+        logger.warn(f"Unable to convert type {type(dic)} to tuple"
+                    f"skip converting {dic}.")
+        return dic

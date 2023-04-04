@@ -23,18 +23,7 @@ import ray
 import fed._private.compatible_utils as compatible_utils
 import fed.config as fed_config
 import fed.utils as fed_utils
-from fed._private.constants import (
-    KEY_OF_CLUSTER_ADDRESSES,
-    KEY_OF_CLUSTER_CONFIG,
-    KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
-    KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES,
-    KEY_OF_CURRENT_PARTY_NAME,
-    KEY_OF_JOB_CONFIG,
-    KEY_OF_TLS_CONFIG,
-    KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS,
-    RAYFED_DATE_FMT,
-    RAYFED_LOG_FMT,
-)
+from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context
@@ -59,6 +48,7 @@ def init(
     cross_silo_messages_max_size_in_bytes: int = None,
     cross_silo_timeout_in_seconds: int = 60,
     enable_waiting_for_other_parties_ready: bool = False,
+    grpc_metadata: Dict = None,
     **kwargs,
 ):
     """
@@ -145,6 +135,8 @@ def init(
             It's 60 by default.
         enable_waiting_for_other_parties_ready: ping other parties until they
             are all ready if True.
+        grpc_metadata: optional; The metadata sent with the grpc request. This won't override
+            basic tcp headers, such as `user-agent`, but aggregate them together.
         kwargs: the args for ray.init().
 
     Examples:
@@ -173,29 +165,30 @@ def init(
     compatible_utils.kv.initialize()
 
     cluster_config = {
-        KEY_OF_CLUSTER_ADDRESSES: cluster,
-        KEY_OF_CURRENT_PARTY_NAME: party,
-        KEY_OF_TLS_CONFIG: tls_config,
-        KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: cross_silo_serializing_allowed_list,
-        KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
+        constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
+        constants.KEY_OF_CURRENT_PARTY_NAME: party,
+        constants.KEY_OF_TLS_CONFIG: tls_config,
+        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST:
+            cross_silo_serializing_allowed_list,
+        constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
             cross_silo_messages_max_size_in_bytes,
-        KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
+        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
     }
 
     job_config = {
-        "": "",
+       constants.KEY_OF_GRPC_METADATA : grpc_metadata,
     }
-    compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
-    compatible_utils.kv.put(KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
-
+    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
+                            cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
     # after `ray.init` and
     # `internal_kv._internal_kv_put(RAYFED_PARTY_KEY, cloudpickle.dumps(party))`
     setup_logger(
         logging_level=logging_level,
-        logging_format=RAYFED_LOG_FMT,
-        date_format=RAYFED_DATE_FMT,
+        logging_format=constants.RAYFED_LOG_FMT,
+        date_format=constants.RAYFED_DATE_FMT,
         party_val=_get_party(),
     )
 
@@ -228,8 +221,8 @@ def shutdown():
     Shutdown a RayFed client.
     """
     wait_sending()
-    compatible_utils.kv.delete(KEY_OF_CLUSTER_CONFIG)
-    compatible_utils.kv.delete(KEY_OF_JOB_CONFIG)
+    compatible_utils.kv.delete(constants.KEY_OF_CLUSTER_CONFIG)
+    compatible_utils.kv.delete(constants.KEY_OF_JOB_CONFIG)
     compatible_utils.kv.reset()
     ray.shutdown()
     logger.info('Shutdowned ray.')
