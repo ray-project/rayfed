@@ -15,13 +15,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install bazel
+    - name: Install basic dependencies
       run:  |
             apt-get update
             apt-get install -yq wget gcc g++ python3.9 zlib1g-dev zip libuv1.dev
             apt-get install -yq pip
 
-    - name: Install dependencies
+    - name: Install python dependencies
       run:  |
             python3 -m pip install virtualenv
             python3 -m virtualenv -p python3 py3
