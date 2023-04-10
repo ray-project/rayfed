@@ -13,9 +13,21 @@
 # limitations under the License.
 
 import os
+from datetime import datetime
 
 import setuptools
 from setuptools import find_packages, setup
+
+# Package and version.
+BASE_VERSION = "0.1.0"
+build_mode = os.getenv("RAYFED_BUILD_MODE", "")
+package_name = os.getenv("RAYFED_PACKAGE_NAME", "rayfed")
+
+if build_mode == "nightly":
+    VERSION = BASE_VERSION + datetime.today().strftime("b%Y%m%d.dev0")
+    package_name = "rayfed-nightly"
+else:
+    VERSION = BASE_VERSION + ".dev0"
 
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
@@ -51,8 +63,8 @@ class CleanCommand(setuptools.Command):
 
 
 setup(
-    name='rayfed',
-    version='0.1.1a3',
+    name=package_name,
+    version=VERSION,
     license='Apache 2.0',
     description='A multiple parties joint, distributed execution engine based on Ray,'
                 'to help build your own federated learning frameworks in minutes.',
