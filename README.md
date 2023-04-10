@@ -48,6 +48,11 @@ Install it from pypi.
 pip install -U rayfed
 ```
 
+Install the nightly released version from pypi.
+
+```shell
+pip install -U rayfed-nightly
+```
 ## Quick Start
 
 This example shows how to aggregate values across two participators.
