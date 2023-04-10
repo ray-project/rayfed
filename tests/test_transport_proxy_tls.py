@@ -19,15 +19,7 @@ import pytest
 import ray
 
 import fed._private.compatible_utils as compatible_utils
-from fed._private.constants import (
-    KEY_OF_CLUSTER_ADDRESSES,
-    KEY_OF_CLUSTER_CONFIG,
-    KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST,
-    KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES,
-    KEY_OF_CURRENT_PARTY_NAME,
-    KEY_OF_TLS_CONFIG,
-    KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS,
-)
+from fed._private import constants
 from fed.barriers import send, start_recv_proxy, start_send_proxy
 from fed.cleanup import wait_sending
 
@@ -49,14 +41,15 @@ def test_n_to_1_transport():
     }
 
     cluster_config = {
-        KEY_OF_CLUSTER_ADDRESSES: "",
-        KEY_OF_CURRENT_PARTY_NAME: "",
-        KEY_OF_TLS_CONFIG: tls_config,
-        KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: None,
-        KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
-        KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
+        constants.KEY_OF_CLUSTER_ADDRESSES: "",
+        constants.KEY_OF_CURRENT_PARTY_NAME: "",
+        constants.KEY_OF_TLS_CONFIG: tls_config,
+        constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: None,
+        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
+        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
     }
-    compatible_utils.kv.put(KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
+                            cloudpickle.dumps(cluster_config))
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"

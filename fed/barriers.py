@@ -123,12 +123,14 @@ async def send_data_grpc(
     data,
     upstream_seq_id,
     downstream_seq_id,
+    metadata=None,
     tls_config=None,
     retry_policy=None,
 ):
     tls_enabled = fed_utils.tls_enabled(tls_config)
     grpc_options = get_grpc_options(retry_policy=retry_policy)
     cluster_config = fed_config.get_cluster_config()
+    metadata = fed_utils.dict2tuple(metadata)
     if tls_enabled:
         ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
         credentials = grpc.ssl_channel_credentials(
@@ -155,7 +157,7 @@ async def send_data_grpc(
             )
             # wait for downstream's reply
             response = await stub.SendData(
-                request, timeout=cluster_config.cross_silo_timeout)
+                request, metadata=metadata, timeout=cluster_config.cross_silo_timeout)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id}, '
                 f'result: {response.result}.'
@@ -172,7 +174,7 @@ async def send_data_grpc(
             )
             # wait for downstream's reply
             response = await stub.SendData(
-                request, timeout=cluster_config.cross_silo_timeout)
+                request, metadata=metadata, timeout=cluster_config.cross_silo_timeout)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id} '
                 f'result: {response.result}.'
@@ -201,8 +203,9 @@ class SendProxyActor:
         self._party = party
         self._tls_config = tls_config
         self.retry_policy = retry_policy
-        config = fed_config.get_cluster_config()
-        set_max_message_length(config.cross_silo_messages_max_size)
+        self._grpc_metadata = fed_config.get_job_config().grpc_metadata
+        cluster_config = fed_config.get_cluster_config()
+        set_max_message_length(cluster_config.cross_silo_messages_max_size)
 
     async def is_ready(self):
         return True
@@ -220,7 +223,7 @@ class SendProxyActor:
         ), f'Failed to find {dest_party} in cluster {self._cluster}.'
         send_log_msg = (
             f'send data to seq_id {downstream_seq_id} of {dest_party} '
-            'from {upstream_seq_id}'
+            f'from {upstream_seq_id}'
         )
         logger.debug(
             f'Sending {send_log_msg} with{"out" if not self._tls_config else ""}'
@@ -233,6 +236,7 @@ class SendProxyActor:
                 data=data,
                 upstream_seq_id=upstream_seq_id,
                 downstream_seq_id=downstream_seq_id,
+                metadata=self._grpc_metadata,
                 tls_config=self._tls_config,
                 retry_policy=self.retry_policy,
             )
@@ -304,7 +308,6 @@ class RecverProxyActor:
                 add_two_dim_dict(
                     self._events, upstream_seq_id, curr_seq_id, asyncio.Event()
                 )
-
         curr_event = get_from_two_dim_dict(self._events, upstream_seq_id, curr_seq_id)
         await curr_event.wait()
         logging.debug(f"Waited {data_log_msg}.")
@@ -314,7 +317,6 @@ class RecverProxyActor:
 
         # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
         import fed._private.serialization_utils as fed_ser_utils
-
         fed_ser_utils._apply_loads_function_with_whitelist()
         return cloudpickle.loads(data)
 
