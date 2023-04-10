@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import fed_pb2 as fed__pb2
+import fed.grpc.fed_pb2 as fed__pb2
 
 
 class GrpcServiceStub(object):
