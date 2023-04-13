@@ -1,6 +1,4 @@
 ## setup.py read_requirements
-jax>=0.3.0
-jaxlib>=0.3.0
 ray>=1.13.0
 cloudpickle
 pickle5==0.0.11; python_version < '3.8'

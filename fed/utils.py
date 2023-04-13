@@ -14,18 +14,56 @@
 
 import logging
 
-import jax
 import ray
 
+from typing import Any, Tuple, List
 from fed.fed_object import FedObject
 
 logger = logging.getLogger(__name__)
 
 
+def tree_flatten(tree: Any) -> Tuple[List, Any]:
+    leaves = []
+    if isinstance(tree, tuple):
+        for subtrees in tree:
+            leaves_, tree = tree_flatten(subtrees)
+            leaves.extend(leaves_)
+    elif isinstance(tree, list):
+        for subtrees in tree:
+            leaves_, tree = tree_flatten(subtrees)
+            leaves.extend(leaves_)
+    elif hasattr(tree, 'shape') and hasattr(tree, 'dtype'):
+        leaves.append(tree.ravel())
+    else:
+        leaves.append(tree)
+    return leaves, tree
+
+
+def unflatten(flattened: List, tree: Any) -> Tuple[Any, List]:
+    if isinstance(tree, tuple):
+        subtrees = []
+        for subtree in tree:
+            values, flattened = unflatten(flattened, subtree)
+            subtrees.append(values)
+        return tuple(subtrees), flattened
+    elif isinstance(tree, list):
+        subtrees = []
+        for subtree in tree:
+            values, flattened = unflatten(flattened, subtree)
+            subtrees.append(values)
+        return subtrees, flattened
+    elif hasattr(tree, 'shape') and hasattr(tree, 'dtype'):
+        size = int(tree.size)
+        values = flattened[:size].reshape(tree.shape).astype(tree.dtype)
+        return values, flattened[size:]
+    else:
+        return flattened[0], flattened[1:]
+
+
 def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
     from fed.barriers import recv
 
-    flattened_args, tree = jax.tree_util.tree_flatten((args, kwargs))
+    flattened_args, tree = tree_flatten((args, kwargs))
     indexes = []
     resolved = []
     for idx, arg in enumerate(flattened_args):
@@ -56,7 +94,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
         for idx, actual_val in zip(indexes, resolved):
             flattened_args[idx] = actual_val
 
-    resolved_args, resolved_kwargs = jax.tree_util.tree_unflatten(tree, flattened_args)
+    resolved_args, resolved_kwargs = tree_unflatten(tree, flattened_args)
     return resolved_args, resolved_kwargs
 
 
