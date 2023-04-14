@@ -94,7 +94,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
         for idx, actual_val in zip(indexes, resolved):
             flattened_args[idx] = actual_val
 
-    resolved_args, resolved_kwargs = tree_unflatten(tree, flattened_args)
+    resolved_args, resolved_kwargs = unflatten(tree, flattened_args)
     return resolved_args, resolved_kwargs
 
 
