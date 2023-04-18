@@ -80,17 +80,17 @@ def unflatten(flattened_objs: List, tree_def: PyTreeDef):
     return result
 
 
-# print("flattening...")
-# o1 = (1, 2, [3, 4], {5: 6})
-# li, t = tree_flatten(o1)
-# print(t.num_leaves)
-# print(li)
+print("flattening...")
+o1 = (1, 2, [3, 4], {5: 6})
+li, t = flatten(o1)
+print(t.num_leaves)
+print(li)
 
-# li[0] = "hello_1"
+li[0] = "hello_1"
 
-# print("unflattening...")
-# res = unflatten(t, li)
-# print(res)
+print("unflattening...")
+res = unflatten(li, t)
+print(res)
 
 
 # print("flattening...")
