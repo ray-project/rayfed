@@ -55,6 +55,17 @@ def tree_flatten(o: Any):
     tree_def = _build_tree(o, flattened_objs)
     return flattened_objs, tree_def
 
+
+def _build_object(current_tree_def: PyTreeDef, flattened_objs, result):
+
+
+def tree_unflatten(flattened_objs: List, tree_def: PyTreeDef):
+    # we should clone flattened_objs ?
+    result = []
+
+
+
+
 o1 = [1, 2, [3, 4], 5]
 li, t = tree_flatten(o1)
 print(t.num_leaves)
