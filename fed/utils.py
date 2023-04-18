@@ -16,26 +16,16 @@ import logging
 
 import fed
 import ray
-from typing import Any, Tuple, Union, Deque, List
 
-import collections
-from typing import Any, Tuple, List
 from fed.fed_object import FedObject
 
 logger = logging.getLogger(__name__)
-
-from typing import Any, List, Tuple, Union
-import collections.abc
-
-
 
 
 def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
     from fed.barriers import recv
 
-    print(f"before {current_party}============={(args, kwargs)}")
     flattened_args, tree = fed.tree_util.tree_flatten((args, kwargs))
-    print(f"after {current_party}=============flattened_args={flattened_args}")
     indexes = []
     resolved = []
     for idx, arg in enumerate(flattened_args):
@@ -67,7 +57,6 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
             flattened_args[idx] = actual_val
 
     resolved_args, resolved_kwargs = fed.tree_util.unflatten(tree, flattened_args)
-    print(f"after {current_party}=============resolved_args={(resolved_args, resolved_kwargs)}")
     return resolved_args, resolved_kwargs
 
 

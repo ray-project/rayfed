@@ -68,7 +68,6 @@ def run(party):
     latest_weights = fed.get(
         [alice_model.get_weights.remote(), bob_model.get_weights.remote()]
     )
-    print(f"===========latest_weights={latest_weights}")
     assert latest_weights == [9, 9]
     fed.shutdown()
 
