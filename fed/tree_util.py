@@ -62,7 +62,8 @@ def _build_object(tree_def: PyTreeDef, flattened_objs, result):
     if tree_def._type == "list":
         return [_build_object(child, flattened_objs, result) for child in tree_def._childern]
     if tree_def._type == "tuple":
-        return (_build_object(child, flattened_objs, result) for child in tree_def._childern)
+        li = [_build_object(child, flattened_objs, result) for child in tree_def._childern]
+        return tuple(li)
     if tree_def._type == "dict":
         d = {}
         for child in tree_def._childern:
@@ -77,6 +78,20 @@ def unflatten(tree_def: PyTreeDef, flattened_objs: List):
     # we should clone flattened_objs ?
     result = _build_object(tree_def, flattened_objs, "")
     return result
+
+
+print("flattening...")
+o1 = (1, 2, [3, 4], {5: 6})
+li, t = tree_flatten(o1)
+print(t.num_leaves)
+print(li)
+
+li[0] = "hello_1"
+
+print("unflattening...")
+res = unflatten(t, li)
+print(res)
+
 
 # print("flattening...")
 # o1 = [1, 2, [3, 4, [5, [6]]], 7, {8: 9}]
