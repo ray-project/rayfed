@@ -11,7 +11,8 @@ from typing import List, Any, Tuple, Dict
 
 
 class PyTreeDef: # should be renamed to PyTreeNode
-    def __init__(self, o: Any, childern: list, is_leaf: bool) -> None:
+    def __init__(self, o: Any, childern: list, is_leaf: bool, the_type) -> None:
+        self._type = the_type
         self._is_leaf = is_leaf is not None and is_leaf
         self._childern = childern or ()
         self._o = o
@@ -37,9 +38,8 @@ class PyTreeDef: # should be renamed to PyTreeNode
 
 def _build_tree(o: Any, leaf_objs: List):
     if isinstance(o, List):
-        children_objs = o[1:]
-        children = [_build_tree(o, leaf_objs) for o in children_objs]
-        return PyTreeDef(o, children, False)
+        children = [_build_tree(child, leaf_objs) for child in o]
+        return PyTreeDef(o, children, False, "list")
     elif isinstance(o, Tuple):
         raise KeyError("")
     elif isinstance(o, Dict):
@@ -47,7 +47,7 @@ def _build_tree(o: Any, leaf_objs: List):
     else:
         # treat as leaf.
         leaf_objs.append(o)
-        return PyTreeDef(o, None, True)
+        return PyTreeDef(o, None, True, "primitive")
 
 
 def tree_flatten(o: Any):
@@ -56,20 +56,25 @@ def tree_flatten(o: Any):
     return flattened_objs, tree_def
 
 
-def _build_object(current_tree_def: PyTreeDef, flattened_objs, result):
-
+def _build_object(tree_def: PyTreeDef, flattened_objs, result):
+    if tree_def._type == "list":
+        return [_build_object(child, flattened_objs, result) for child in tree_def._childern]
+    elif tree_def._type == "primitive":
+        return tree_def._o
+    else:
+        raise KeyError("")
 
 def tree_unflatten(flattened_objs: List, tree_def: PyTreeDef):
     # we should clone flattened_objs ?
-    result = []
+    result = _build_object(tree_def, flattened_objs, "")
+    return result
 
-
-
-
-o1 = [1, 2, [3, 4], 5]
+print("flattening...")
+o1 = [1, 2, [3, 4, [5, [6]]], 7]
 li, t = tree_flatten(o1)
 print(t.num_leaves)
 print(li)
 
-# for child in t._childern:
-#     print(child._o)
+print("unflattening...")
+res = tree_unflatten(li, t)
+print(res)
