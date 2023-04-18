@@ -60,7 +60,7 @@ def _build_object(tree_def: PyTreeDef, flattened_objs, result):
     if tree_def._type == "list":
         return [_build_object(child, flattened_objs, result) for child in tree_def._childern]
     elif tree_def._type == "primitive":
-        return tree_def._o
+        return flattened_objs.pop(0)
     else:
         raise KeyError("")
 
@@ -74,6 +74,8 @@ o1 = [1, 2, [3, 4, [5, [6]]], 7]
 li, t = tree_flatten(o1)
 print(t.num_leaves)
 print(li)
+
+li[0] = "hello_1"
 
 print("unflattening...")
 res = tree_unflatten(li, t)
