@@ -15,7 +15,6 @@ class PyTreeDef: # should be renamed to PyTreeNode
         self._type = the_type
         self._is_leaf = is_leaf is not None and is_leaf
         self._childern = childern or ()
-        self._o = o
 
     @property
     def num_nodes(self):
