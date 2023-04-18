@@ -52,7 +52,7 @@ def _build_tree(o: Any, leaf_objs: List, dict_key=None):
         return PyTreeDef(o, None, True, "primitive", dict_key)
 
 
-def tree_flatten(o: Any):
+def flatten(o: Any):
     flattened_objs = []
     tree_def = _build_tree(o, flattened_objs)
     return flattened_objs, tree_def
@@ -74,23 +74,23 @@ def _build_object(tree_def: PyTreeDef, flattened_objs, result):
     else:
         raise KeyError("")
 
-def unflatten(tree_def: PyTreeDef, flattened_objs: List):
+def unflatten(flattened_objs: List, tree_def: PyTreeDef):
     # we should clone flattened_objs ?
     result = _build_object(tree_def, flattened_objs, "")
     return result
 
 
-print("flattening...")
-o1 = (1, 2, [3, 4], {5: 6})
-li, t = tree_flatten(o1)
-print(t.num_leaves)
-print(li)
+# print("flattening...")
+# o1 = (1, 2, [3, 4], {5: 6})
+# li, t = tree_flatten(o1)
+# print(t.num_leaves)
+# print(li)
 
-li[0] = "hello_1"
+# li[0] = "hello_1"
 
-print("unflattening...")
-res = unflatten(t, li)
-print(res)
+# print("unflattening...")
+# res = unflatten(t, li)
+# print(res)
 
 
 # print("flattening...")
