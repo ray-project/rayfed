@@ -11,10 +11,11 @@ from typing import List, Any, Tuple, Dict
 
 
 class PyTreeDef: # should be renamed to PyTreeNode
-    def __init__(self, o: Any, childern: list, is_leaf: bool, the_type) -> None:
+    def __init__(self, o: Any, childern: list, is_leaf: bool, the_type, dict_key=None) -> None:
         self._type = the_type
         self._is_leaf = is_leaf is not None and is_leaf
         self._childern = childern or ()
+        self._dict_key = dict_key
 
     @property
     def num_nodes(self):
@@ -35,18 +36,20 @@ class PyTreeDef: # should be renamed to PyTreeNode
             return sum(child.num_leaves for child in self._childern)
     
 
-def _build_tree(o: Any, leaf_objs: List):
+def _build_tree(o: Any, leaf_objs: List, dict_key=None):
     if isinstance(o, List):
         children = [_build_tree(child, leaf_objs) for child in o]
-        return PyTreeDef(o, children, False, "list")
+        return PyTreeDef(o, children, False, "list", dict_key)
     elif isinstance(o, Tuple):
-        raise KeyError("")
+        children = [_build_tree(child, leaf_objs) for child in o]
+        return PyTreeDef(o, children, False, "tuple", dict_key)
     elif isinstance(o, Dict):
-        raise KeyError("")
+        children = [_build_tree(value, leaf_objs, key) for key, value in o.items()]
+        return PyTreeDef(o, children, False, "dict", dict_key)
     else:
         # treat as leaf.
         leaf_objs.append(o)
-        return PyTreeDef(o, None, True, "primitive")
+        return PyTreeDef(o, None, True, "primitive", dict_key)
 
 
 def tree_flatten(o: Any):
@@ -54,28 +57,35 @@ def tree_flatten(o: Any):
     tree_def = _build_tree(o, flattened_objs)
     return flattened_objs, tree_def
 
-
+  
 def _build_object(tree_def: PyTreeDef, flattened_objs, result):
     if tree_def._type == "list":
         return [_build_object(child, flattened_objs, result) for child in tree_def._childern]
+    if tree_def._type == "tuple":
+        return (_build_object(child, flattened_objs, result) for child in tree_def._childern)
+    if tree_def._type == "dict":
+        d = {}
+        for child in tree_def._childern:
+            d[child._dict_key] = _build_object(child, flattened_objs, result) 
+        return d
     elif tree_def._type == "primitive":
         return flattened_objs.pop(0)
     else:
         raise KeyError("")
 
-def tree_unflatten(flattened_objs: List, tree_def: PyTreeDef):
+def unflatten(tree_def: PyTreeDef, flattened_objs: List):
     # we should clone flattened_objs ?
     result = _build_object(tree_def, flattened_objs, "")
     return result
 
-print("flattening...")
-o1 = [1, 2, [3, 4, [5, [6]]], 7]
-li, t = tree_flatten(o1)
-print(t.num_leaves)
-print(li)
+# print("flattening...")
+# o1 = [1, 2, [3, 4, [5, [6]]], 7, {8: 9}]
+# li, t = tree_flatten(o1)
+# print(t.num_leaves)
+# print(li)
 
-li[0] = "hello_1"
+# li[0] = "hello_1"
 
-print("unflattening...")
-res = tree_unflatten(li, t)
-print(res)
+# print("unflattening...")
+# res = unflatten(t, li)
+# print(res)
