@@ -46,7 +46,7 @@ def test_flatten_complext_nested_container():
     assert o == res
 
 def test_flatten_and_replace_element():
-    o = [1, 2, (3, 4), [5, {"b", 6}, 7], 8]
+    o = [1, 2, (3, 4), [5, {"b": 6}, 7], 8]
     flattened, tree_def = tree_utils.flatten(o)
     flattened[0] = "hello"
     flattened[5] = b"world"
@@ -59,9 +59,8 @@ def test_flatten_and_replace_element():
     assert res[0] == "hello"
     assert res[1] == 2
     assert res[2] == (3, 4)
-    assert res[3] == [5, {"b": b"world"}]
-    assert res[4] == 7
-    assert res[5] == 8
+    assert res[3] == [5, {"b": b"world"}, 7]
+    assert res[4] == 8
 
 
 if __name__ == "__main__":

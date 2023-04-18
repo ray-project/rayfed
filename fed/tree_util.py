@@ -57,7 +57,7 @@ def flatten(o: Any):
     tree_def = _build_tree(o, flattened_objs)
     return flattened_objs, tree_def
 
-  
+
 def _build_object(tree_def: PyTreeDef, flattened_objs, result):
     if tree_def._type == "list":
         return [_build_object(child, flattened_objs, result) for child in tree_def._childern]
@@ -81,12 +81,11 @@ def unflatten(flattened_objs: List, tree_def: PyTreeDef):
 
 
 print("flattening...")
-o1 = (1, 2, [3, 4], {5: 6})
+o1 = [1, 2, (3, 4), [5, {"b", 6}, 7], 8]
+
 li, t = flatten(o1)
 print(t.num_leaves)
 print(li)
-
-li[0] = "hello_1"
 
 print("unflattening...")
 res = unflatten(li, t)
