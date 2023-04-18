@@ -1,111 +1,81 @@
-from typing import Any, Callable, List, Tuple, Union
-from dataclasses import dataclass
+from typing import List, Any, Tuple, Dict
 
-from typing import Any, Callable, List, Optional, Tuple
-from typing import Any, Tuple, List
-from typing import Any, Callable
-from typing import Any, Callable, List, Optional, Tuple, Iterable
-
-
-class PyTreeDef:
-    def __init__(self, num_leaves: int, children: Tuple['PyTreeDef', ...] = None):
-        self.num_leaves = num_leaves
-        self.children = children or ()
-
-    def __getitem__(self, index: int) -> 'PyTreeDef':
-        return self.children[index]
-
-    def __len__(self) -> int:
-        return len(self.children)
-
-    def __repr__(self) -> str:
-        return f"PyTreeDef(num_leaves={self.num_leaves}, children={self.children})"
-
-    def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, PyTreeDef):
-            return False
-        return self.num_leaves == other.num_leaves and self.children == other.children
+# [1, 2, (3, 4), {"a", "b"}]
+# flattened: [1, 2, 3, 4, "b"]
+#
+#     1
+# /   |   \
+# 2   3   "b"
+#     |
+#     4
 
 
-@dataclass
-class PyTreeNode:
-  value: Union["PyTreeDef", "Leaf"]
-  children: List["PyTreeNode"]
+class PyTreeDef: # should be renamed to PyTreeNode
+    def __init__(self, o: Any, childern: list, is_leaf: bool, the_type) -> None:
+        self._type = the_type
+        self._is_leaf = is_leaf is not None and is_leaf
+        self._childern = childern or ()
 
+    @property
+    def num_nodes(self):
+        """
+        Gets the number of nodes in the PyTree.
+        """
+        return len(self._childern)
 
-Leaf = Any
+    @property
+    def num_leaves(self):
+        """
+        Gets the number of leaves in the PyTree.
+        """
+        num = 0
+        if self._is_leaf:
+            return 1
+        else:
+            return sum(child.num_leaves for child in self._childern)
+    
 
-
-
-def tree_flatten(tree: Any,
-                 is_leaf: Optional[Callable[[Any], bool]] = None
-                 ) -> Tuple[List[Leaf], PyTreeDef]:
-  """Flattens a pytree.
-  The flattening order (i.e. the order of elements in the output list)
-  is deterministic, corresponding to a left-to-right depth-first tree
-  traversal.
-  Args:
-    tree: a pytree to flatten.
-    is_leaf: an optionally specified function that will be called at each
-      flattening step. It should return a boolean, with true stopping the
-      traversal and the whole subtree being treated as a leaf, and false
-      indicating the flattening should traverse the current object.
-  Returns:
-    A pair where the first element is a list of leaf values and the second
-    element is a treedef representing the structure of the flattened tree.
-  """
-  if is_leaf is None:
-    is_leaf = lambda x: not isinstance(x, tuple)
-
-  def build_node(x):
-    if is_leaf(x):
-      return PyTreeNode(x, [])
+def _build_tree(o: Any, leaf_objs: List):
+    if isinstance(o, List):
+        children = [_build_tree(child, leaf_objs) for child in o]
+        return PyTreeDef(o, children, False, "list")
+    elif isinstance(o, Tuple):
+        raise KeyError("")
+    elif isinstance(o, Dict):
+        raise KeyError("")
     else:
-      children = [build_node(y) for y in x]
-      value = PyTreeDef(len(children), [c.value for c in children])
-      return PyTreeNode(value, children)
+        # treat as leaf.
+        leaf_objs.append(o)
+        return PyTreeDef(o, None, True, "primitive")
 
-  root = build_node(tree)
 
-  def dfs(node, leaves):
-    if isinstance(node.value, PyTreeDef):
-      for child in node.children:
-        dfs(child, leaves)
+def tree_flatten(o: Any):
+    flattened_objs = []
+    tree_def = _build_tree(o, flattened_objs)
+    return flattened_objs, tree_def
+
+
+def _build_object(tree_def: PyTreeDef, flattened_objs, result):
+    if tree_def._type == "list":
+        return [_build_object(child, flattened_objs, result) for child in tree_def._childern]
+    elif tree_def._type == "primitive":
+        return flattened_objs.pop(0)
     else:
-      leaves.append(node.value)
+        raise KeyError("")
 
-  leaves = []
-  dfs(root, leaves)
-  return leaves, root.value
+def tree_unflatten(flattened_objs: List, tree_def: PyTreeDef):
+    # we should clone flattened_objs ?
+    result = _build_object(tree_def, flattened_objs, "")
+    return result
 
+print("flattening...")
+o1 = [1, 2, [3, 4, [5, [6]]], 7]
+li, t = tree_flatten(o1)
+print(t.num_leaves)
+print(li)
 
-def unflatten(treedef: PyTreeDef, leaves: Iterable[Leaf]) -> Any:
-  """Reconstructs a pytree from the treedef and the leaves.
-  The inverse of :func:`tree_flatten`.
-  Args:
-    treedef: the treedef to reconstruct
-    leaves: the iterable of leaves to use for reconstruction. The iterable
-      must match the leaves of the treedef.
-  Returns:
-    The reconstructed pytree, containing the ``leaves`` placed in the structure
-    described by ``treedef``.
-  """
-  def build_node(value):
-    if isinstance(value, Leaf):
-      return PyTreeNode(value, [])
-    else:
-      children = [build_node(v) for v in value.children]
-      return PyTreeNode(children, value)
+li[0] = "hello_1"
 
-  root = build_node(treedef)
-  iterator = iter(leaves)
-
-  def dfs(node):
-    if isinstance(node.value, PyTreeDef):
-      for child in node.children:
-        dfs(child)
-    else:
-      node.value = next(iterator)
-
-  dfs(root)
-  return root.value
+print("unflattening...")
+res = tree_unflatten(li, t)
+print(res)
