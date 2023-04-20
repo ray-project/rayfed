@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
     from fed.barriers import recv
 
-    flattened_args, tree = fed.tree_util.flatten((args, kwargs))
+    flattened_args, tree = fed.tree_util.tree_flatten((args, kwargs))
     indexes = []
     resolved = []
     for idx, arg in enumerate(flattened_args):
@@ -56,7 +56,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
         for idx, actual_val in zip(indexes, resolved):
             flattened_args[idx] = actual_val
 
-    resolved_args, resolved_kwargs = fed.tree_util.unflatten(flattened_args, tree)
+    resolved_args, resolved_kwargs = fed.tree_util.tree_unflatten(flattened_args, tree)
     return resolved_args, resolved_kwargs
 
 
