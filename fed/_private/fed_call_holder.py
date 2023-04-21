@@ -17,13 +17,11 @@ import logging
 # Set config in the very beginning to avoid being overwritten by other packages.
 logging.basicConfig(level=logging.INFO)
 
-import jax
-
 from fed._private.global_context import get_global_context
 from fed.barriers import send
 from fed.fed_object import FedObject
 from fed.utils import resolve_dependencies
-
+from fed.tree_util import tree_flatten
 import fed.config as fed_config
 
 logger = logging.getLogger(__name__)
@@ -74,7 +72,7 @@ class FedCallHolder:
             else:
                 return FedObject(self._node_party, fed_task_id, ray_obj_ref)
         else:
-            flattened_args, _ = jax.tree_util.tree_flatten((args, kwargs))
+            flattened_args, _ = tree_flatten((args, kwargs))
             for arg in flattened_args:
                 # TODO(qwang): We still need to cosider kwargs and a deeply object_ref
                 # in this party.
