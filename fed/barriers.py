@@ -366,7 +366,7 @@ def start_send_proxy(
     retry_policy=None,
     max_retries=None,
 ):
-    # Create RecevrProxyActor
+    # Create SendProxyActor
     global _SEND_PROXY_ACTOR
     if max_retries is not None:
         _SEND_PROXY_ACTOR = SendProxyActor.options(
