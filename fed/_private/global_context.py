@@ -31,6 +31,7 @@ def get_global_context():
         _global_context = GlobalContext()
     return _global_context
 
+
 def clear_global_context():
     global _global_context
     _global_context = None
