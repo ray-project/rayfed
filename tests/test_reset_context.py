@@ -49,7 +49,7 @@ def run(party):
 
     actor = A.party('alice').remote(10)
     alice_fed_obj = actor.get.remote()
-    alice_second_fed_obj_id = alice_fed_obj.get_fed_task_id() 
+    alice_second_fed_obj_id = alice_fed_obj.get_fed_task_id()
     assert fed.get(alice_fed_obj) == 10
     assert alice_first_fed_obj_id == alice_second_fed_obj_id
 
