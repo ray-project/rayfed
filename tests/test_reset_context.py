@@ -19,7 +19,7 @@ class A:
 
 
 def run(party):
-    fed.init(   
+    fed.init(
         address='local',
         cluster=cluster,
         party=party)
