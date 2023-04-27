@@ -178,6 +178,41 @@ def test_send_grpc_with_meta():
     ray.shutdown()
 
 
+def test_send_grpc_with_party_specific_meta():
+    compatible_utils.init_ray(address='local')
+    cluster_config = {
+        constants.KEY_OF_CLUSTER_ADDRESSES: "",
+        constants.KEY_OF_CURRENT_PARTY_NAME: "",
+        constants.KEY_OF_TLS_CONFIG: "",
+        constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: None,
+        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
+        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
+    }
+    job_config = {
+        constants.KEY_OF_GRPC_METADATA: {
+            "key": "value"
+        }
+    }
+    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
+                            cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG,
+                            cloudpickle.dumps(job_config))
+
+    SERVER_ADDRESS = "127.0.0.1:12344"
+    party = 'test_party'
+    cluster_config = {'test_party': {'address': SERVER_ADDRESS, 'grpc_metadata': (('token', 'test-party-token'),)}}
+    _test_start_recv_proxy(cluster_config, party, logging_level='info')
+    start_send_proxy(cluster_config, party, logging_level='info')
+    sent_objs = []
+    sent_obj = send(party, "data", 0, 1)
+    sent_objs.append(sent_obj)
+    for result in ray.get(sent_objs):
+        assert result
+
+    wait_sending()
+    ray.shutdown()
+
+
 if __name__ == "__main__":
     import sys
 

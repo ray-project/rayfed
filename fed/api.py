@@ -67,21 +67,27 @@ def init(
                         'address': '127.0.0.1:10001',
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
-                        'listen_addr': '0.0.0.0:10001'
+                        'listen_addr': '0.0.0.0:10001',
+                        # (Optional) The party specific metadata sent with the grpc request
+                        'grpc_metadata': (('token', 'alice-token'),),
                     },
                     'bob': {
                         # The address for other parties.
                         'address': '127.0.0.1:10002',
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
-                        'listen_addr': '0.0.0.0:10002'
+                        'listen_addr': '0.0.0.0:10002',
+                        # (Optional) The party specific metadata sent with the grpc request
+                        'grpc_metadata': (('token', 'bob-token'),),
                     },
                     'carol': {
                         # The address for other parties.
                         'address': '127.0.0.1:10003',
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
-                        'listen_addr': '0.0.0.0:10003'
+                        'listen_addr': '0.0.0.0:10003',
+                        # (Optional) The party specific metadata sent with the grpc request
+                        'grpc_metadata': (('token', 'carol-token'),),
                     },
                 }
         party: optional; self party.
@@ -165,6 +171,7 @@ def init(
     compatible_utils.kv.initialize()
 
     cluster_config = {
+        # TODO: this store party specific conf, not only addresses, give it a better name?
         constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,

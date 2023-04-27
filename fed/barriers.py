@@ -230,13 +230,17 @@ class SendProxyActor:
             ' credentials.'
         )
         dest_addr = self._cluster[dest_party]['address']
+        dest_party_grpc_metadata = dict(self._cluster[dest_party].get('grpc_metadata', {}))
+        global_grpc_metadata = dict(self._grpc_metadata)
+        # merge grpc metadata
+        grpc_metadata = {**global_grpc_metadata, **dest_party_grpc_metadata}
         try:
             response = await send_data_grpc(
                 dest=dest_addr,
                 data=data,
                 upstream_seq_id=upstream_seq_id,
                 downstream_seq_id=downstream_seq_id,
-                metadata=self._grpc_metadata,
+                metadata=grpc_metadata,
                 tls_config=self._tls_config,
                 retry_policy=self.retry_policy,
             )
