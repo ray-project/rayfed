@@ -171,7 +171,8 @@ def init(
     compatible_utils.kv.initialize()
 
     cluster_config = {
-        # TODO: this store party specific conf, not only addresses, give it a better name?
+        # TODO: this store party specific conf, not only addresses, 
+        # give it a better name?
         constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,

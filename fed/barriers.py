@@ -230,7 +230,9 @@ class SendProxyActor:
             ' credentials.'
         )
         dest_addr = self._cluster[dest_party]['address']
-        dest_party_grpc_metadata = dict(self._cluster[dest_party].get('grpc_metadata', {}))
+        dest_party_grpc_metadata = dict(
+            self._cluster[dest_party].get('grpc_metadata', {})
+        )
         global_grpc_metadata = dict(self._grpc_metadata)
         # merge grpc metadata
         grpc_metadata = {**global_grpc_metadata, **dest_party_grpc_metadata}

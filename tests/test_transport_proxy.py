@@ -200,9 +200,14 @@ def test_send_grpc_with_party_specific_meta():
 
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
-    cluster_config = {'test_party': {'address': SERVER_ADDRESS, 'grpc_metadata': (('token', 'test-party-token'),)}}
-    _test_start_recv_proxy(cluster_config, party, logging_level='info')
-    start_send_proxy(cluster_config, party, logging_level='info')
+    cluster_parties_config = {
+        'test_party': {
+            'address': SERVER_ADDRESS,
+            'grpc_metadata': (('token', 'test-party-token'),)
+        }
+    }
+    _test_start_recv_proxy(cluster_parties_config, party, logging_level='info')
+    start_send_proxy(cluster_parties_config, party, logging_level='info')
     sent_objs = []
     sent_obj = send(party, "data", 0, 1)
     sent_objs.append(sent_obj)
