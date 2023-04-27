@@ -74,24 +74,26 @@ def test_n_to_1_transport():
 
 
 class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
-    def __init__(self, all_events, all_data, party, lock):
-        pass
+    def __init__(self, all_events, all_data, party, lock, expected_metadata):
+        self.expected_metadata = expected_metadata or {}
 
     async def SendData(self, request, context):
         metadata = dict(context.invocation_metadata())
-        assert 'key' in metadata
-        assert 'value' == metadata['key']
+        for k, v in self.expected_metadata.items():
+            assert k in metadata
+            assert v == metadata[k]
         event = asyncio.Event()
         event.set()
         return fed_pb2.SendDataResponse(result="OK")
 
 
 async def _test_run_grpc_server(
-    port, event, all_data, party, lock, tls_config=None, grpc_options=None
+    port, event, all_data, party, lock, tls_config=None, grpc_options=None,
+    expected_metadata=None
 ):
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
-        TestSendDataService(event, all_data, party, lock), server
+        TestSendDataService(event, all_data, party, lock, expected_metadata), server
     )
     server.add_insecure_port(f'[::]:{port}')
     await server.start()
@@ -104,9 +106,11 @@ class TestRecverProxyActor:
         self,
         listen_addr: str,
         party: str,
+        expected_metadata: dict,
     ):
         self._listen_addr = listen_addr
         self._party = party
+        self._expected_metadata = expected_metadata
 
     async def run_grpc_server(self):
         return await _test_run_grpc_server(
@@ -115,6 +119,7 @@ class TestRecverProxyActor:
             None,
             self._party,
             None,
+            expected_metadata=self._expected_metadata,
         )
 
     async def is_ready(self):
@@ -125,6 +130,7 @@ def _test_start_recv_proxy(
     cluster: str,
     party: str,
     logging_level: str,
+    expected_metadata: dict,
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
@@ -138,6 +144,7 @@ def _test_start_recv_proxy(
     ).remote(
         listen_addr=listen_addr,
         party=party,
+        expected_metadata=expected_metadata,
     )
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote())
@@ -166,7 +173,10 @@ def test_send_grpc_with_meta():
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
     cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
-    _test_start_recv_proxy(cluster_config, party, logging_level='info')
+    _test_start_recv_proxy(
+        cluster_config, party, logging_level='info',
+        expected_metadata={"key": "value"},
+    )
     start_send_proxy(cluster_config, party, logging_level='info')
     sent_objs = []
     sent_obj = send(party, "data", 0, 1)
@@ -206,7 +216,10 @@ def test_send_grpc_with_party_specific_meta():
             'grpc_metadata': (('token', 'test-party-token'),)
         }
     }
-    _test_start_recv_proxy(cluster_parties_config, party, logging_level='info')
+    _test_start_recv_proxy(
+        cluster_parties_config, party, logging_level='info',
+        expected_metadata={"key": "value", "token": "test-party-token"},
+    )
     start_send_proxy(cluster_parties_config, party, logging_level='info')
     sent_objs = []
     sent_obj = send(party, "data", 0, 1)

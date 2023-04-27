@@ -233,7 +233,9 @@ class SendProxyActor:
         dest_party_grpc_metadata = dict(
             self._cluster[dest_party].get('grpc_metadata', {})
         )
-        global_grpc_metadata = dict(self._grpc_metadata)
+        global_grpc_metadata = (
+            dict(self._grpc_metadata) if self._grpc_metadata is not None else {}
+        )
         # merge grpc metadata
         grpc_metadata = {**global_grpc_metadata, **dest_party_grpc_metadata}
         try:
