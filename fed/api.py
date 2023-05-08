@@ -219,7 +219,7 @@ def init(
 
     if enable_waiting_for_other_parties_ready:
         # TODO(zhouaihui): can be removed after we have a better retry strategy.
-        ping_others(cluster=cluster, self_party=party, tls_config=tls_config)
+        ping_others(cluster=cluster, self_party=party, max_retries=3600)
 
 
 def shutdown():
