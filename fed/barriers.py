@@ -420,6 +420,7 @@ def recv(party: str, src_party: str, upstream_seq_id, curr_seq_id):
     receiver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
     return receiver_proxy.get_data.remote(src_party, upstream_seq_id, curr_seq_id)
 
+
 def ping_others(cluster: Dict[str, Dict], self_party: str, max_retries=3600):
     """Ping other parties until all are ready or timeout."""
     others = [party for party in cluster if not party == self_party]
@@ -430,7 +431,7 @@ def ping_others(cluster: Dict[str, Dict], self_party: str, max_retries=3600):
             f'Try ping {others} at {tried} attemp, up to {max_retries} attemps.'
         )
         tried += 1
-        _party_ping_obj = {} # {$party_name: $ObjectRef}
+        _party_ping_obj = {}  # {$party_name: $ObjectRef}
         # Batch ping all the other parties
         for other in others:
             _party_ping_obj[other] = send(other, b'data', 'ping', 'ping')
@@ -443,5 +444,6 @@ def ping_others(cluster: Dict[str, Dict], self_party: str, max_retries=3600):
         if others:
             time.sleep(2)
     if others:
-        raise RuntimeError(f"Failed to wait for party: {others} to start, abort executing.")
+        raise RuntimeError(f"Failed to wait for parties: {others} to start, "
+                           "abort `fed.init`.")
     return True

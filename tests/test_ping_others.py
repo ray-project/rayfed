@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import pytest
 import multiprocessing
 import fed
@@ -28,14 +27,13 @@ cluster = {
 def test_ping_non_started_party():
     def run(party):
         fed.init(address='local', cluster=cluster, party=party)
-        if(party == 'alice'):
+        if (party == 'alice'):
             with pytest.raises(RuntimeError):
                 ping_others(cluster, party, 5)
 
         fed.shutdown()
 
     p_alice = multiprocessing.Process(target=run, args=('alice',))
-    p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
     p_alice.join()
 
@@ -43,9 +41,9 @@ def test_ping_non_started_party():
 def test_ping_started_party():
     def run(party):
         fed.init(address='local', cluster=cluster, party=party)
-        if(party == 'alice'):
+        if (party == 'alice'):
             ping_success = ping_others(cluster, party, 5)
-            assert ping_success == True
+            assert ping_success is True
 
         fed.shutdown()
 
@@ -56,6 +54,7 @@ def test_ping_started_party():
     p_alice.join()
     p_bob.join()
     assert p_alice.exitcode == 0 and p_bob.exitcode == 0
+
 
 if __name__ == "__main__":
     import sys
