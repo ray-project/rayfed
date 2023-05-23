@@ -236,7 +236,7 @@ class SendProxyActor:
         )
         dest_addr = self._cluster[dest_party]['address']
         dest_party_grpc_config = self.setup_dest_party_grpc_config()
-        
+
         try:
             response = await send_data_grpc(
                 dest=dest_addr,
@@ -263,13 +263,15 @@ class SendProxyActor:
             self._cluster[dest_party].get('grpc_metadata', {})
         )
         # merge grpc metadata
-        dest_party_grpc_config['grpc_metadata'] = {**global_grpc_metadata, **dest_party_grpc_metadata}
+        dest_party_grpc_config['grpc_metadata'] = {
+            **global_grpc_metadata, **dest_party_grpc_metadata}
 
         global_grpc_options = get_grpc_options(self.retry_policy)
         dest_party_grpc_options = dict(
             self._cluster[dest_party].get('grpc_options', [])
         )
-        dest_party_grpc_config['grpc_options'] = {**global_grpc_options, **dest_party_grpc_options}
+        dest_party_grpc_config['grpc_options'] = {
+            **global_grpc_options, **dest_party_grpc_options}
         return dest_party_grpc_options
 
     async def _get_stats(self):
@@ -365,7 +367,8 @@ def start_recv_proxy(
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
-    party_addr = cluster[party] # TODO: This is not just addr, but a party dict, whose fields include 'address'
+    # NOTE(NKcqx): This is not just addr, but a party dict containing 'address'
+    party_addr = cluster[party]
     listen_addr = party_addr.get('listen_addr', None)
     if not listen_addr:
         listen_addr = party_addr['address']
