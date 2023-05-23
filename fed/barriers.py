@@ -126,9 +126,14 @@ async def send_data_grpc(
     metadata=None,
     tls_config=None,
     retry_policy=None,
+    grpc_options=None
 ):
+    if grpc_options is None:
+        grpc_options = get_grpc_options(retry_policy=retry_policy)
+    else:
+        grpc_options = fed_utils.dict2tuple(grpc_options)
+
     tls_enabled = fed_utils.tls_enabled(tls_config)
-    grpc_options = get_grpc_options(retry_policy=retry_policy)
     cluster_config = fed_config.get_cluster_config()
     metadata = fed_utils.dict2tuple(metadata)
     if tls_enabled:
@@ -230,23 +235,18 @@ class SendProxyActor:
             ' credentials.'
         )
         dest_addr = self._cluster[dest_party]['address']
-        dest_party_grpc_metadata = dict(
-            self._cluster[dest_party].get('grpc_metadata', {})
-        )
-        global_grpc_metadata = (
-            dict(self._grpc_metadata) if self._grpc_metadata is not None else {}
-        )
-        # merge grpc metadata
-        grpc_metadata = {**global_grpc_metadata, **dest_party_grpc_metadata}
+        dest_party_grpc_config = self.setup_dest_party_grpc_config()
+        
         try:
             response = await send_data_grpc(
                 dest=dest_addr,
                 data=data,
                 upstream_seq_id=upstream_seq_id,
                 downstream_seq_id=downstream_seq_id,
-                metadata=grpc_metadata,
+                metadata=dest_party_grpc_config["grpc_metadata"],
                 tls_config=self._tls_config,
                 retry_policy=self.retry_policy,
+                grpc_options=dest_party_grpc_config["grpc_options"]
             )
         except Exception as e:
             logger.error(f'Failed to {send_log_msg}, error: {e}')
@@ -254,11 +254,32 @@ class SendProxyActor:
         logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
         return True  # True indicates it's sent successfully.
 
+    def setup_dest_party_grpc_config(self, dest_party):
+        dest_party_grpc_config = {}
+        global_grpc_metadata = (
+            dict(self._grpc_metadata) if self._grpc_metadata is not None else {}
+        )
+        dest_party_grpc_metadata = dict(
+            self._cluster[dest_party].get('grpc_metadata', {})
+        )
+        # merge grpc metadata
+        dest_party_grpc_config['grpc_metadata'] = {**global_grpc_metadata, **dest_party_grpc_metadata}
+
+        global_grpc_options = get_grpc_options(self.retry_policy)
+        dest_party_grpc_options = dict(
+            self._cluster[dest_party].get('grpc_options', [])
+        )
+        dest_party_grpc_config['grpc_options'] = {**global_grpc_options, **dest_party_grpc_options}
+        return dest_party_grpc_options
+
     async def _get_stats(self):
         return self._stats
 
     async def _get_grpc_options(self):
         return get_grpc_options()
+
+    async def _get_cluster_info(self):
+        return self._cluster
 
 
 @ray.remote
@@ -344,7 +365,7 @@ def start_recv_proxy(
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
-    party_addr = cluster[party]
+    party_addr = cluster[party] # TODO: This is not just addr, but a party dict, whose fields include 'address'
     listen_addr = party_addr.get('listen_addr', None)
     if not listen_addr:
         listen_addr = party_addr['address']
