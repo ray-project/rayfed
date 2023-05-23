@@ -37,13 +37,13 @@ def party_specific_grpc_options(party):
         assert cluster_info['alice']['grpc_channel_option'] is not None
         alice_channel_options = cluster_info['alice']['grpc_channel_option']
         assert ('grpc.default_authority', 'alice') in alice_channel_options
-        assert ('grpc.max_send_message_length', 51 * 1024 * 1024) in alice_channel_options #noqa
+        assert ('grpc.max_send_message_length', 51 * 1024 * 1024) in alice_channel_options # noqa
 
         assert cluster_info['bob'] is not None
         assert cluster_info['bob']['grpc_channel_option'] is not None
         bob_channel_options = cluster_info['bob']['grpc_channel_option']
         assert ('grpc.default_authority', 'bob') in bob_channel_options
-        assert ('grpc.max_send_message_length', 50 * 1024 * 1024) in bob_channel_options #noqa
+        assert ('grpc.max_send_message_length', 50 * 1024 * 1024) in bob_channel_options # noqa
 
     send_proxy = ray.get_actor("SendProxyActor")
     _assert_on_proxy(send_proxy)
