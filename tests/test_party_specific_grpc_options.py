@@ -9,7 +9,7 @@ def dummpy():
     return 2
 
 
-def party_specific_grpc_options(party):
+def party_grpc_options(party):
     cluster = {
         'alice': {
             'address': '127.0.0.1:11010',
@@ -56,8 +56,8 @@ def party_specific_grpc_options(party):
 
 
 def test_party_specific_grpc_options():
-    p_alice = multiprocessing.Process(target=party_specific_grpc_options, args=('alice',))
-    p_bob = multiprocessing.Process(target=party_specific_grpc_options, args=('bob',))
+    p_alice = multiprocessing.Process(target=party_grpc_options, args=('alice',))
+    p_bob = multiprocessing.Process(target=party_grpc_options, args=('bob',))
     p_alice.start()
     p_bob.start()
     p_alice.join()
