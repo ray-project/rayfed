@@ -268,7 +268,7 @@ class SendProxyActor:
 
         global_grpc_options = get_grpc_options(self.retry_policy)
         dest_party_grpc_options = dict(
-            self._cluster[dest_party].get('grpc_options', [])
+            self._cluster[dest_party].get('grpc_options', {})
         )
         dest_party_grpc_config['grpc_options'] = {
             **global_grpc_options, **dest_party_grpc_options}
