@@ -128,10 +128,8 @@ async def send_data_grpc(
     retry_policy=None,
     grpc_options=None
 ):
-    if grpc_options is None:
-        grpc_options = get_grpc_options(retry_policy=retry_policy)
-    else:
-        grpc_options = fed_utils.dict2tuple(grpc_options)
+    grpc_options = get_grpc_options(retry_policy=retry_policy) if \
+                    grpc_options is None else fed_utils.dict2tuple(grpc_options)
 
     tls_enabled = fed_utils.tls_enabled(tls_config)
     cluster_config = fed_config.get_cluster_config()
@@ -235,7 +233,7 @@ class SendProxyActor:
             ' credentials.'
         )
         dest_addr = self._cluster[dest_party]['address']
-        dest_party_grpc_config = self.setup_dest_party_grpc_config()
+        dest_party_grpc_config = self.setup_grpc_config(dest_party)
 
         try:
             response = await send_data_grpc(
@@ -254,7 +252,7 @@ class SendProxyActor:
         logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
         return True  # True indicates it's sent successfully.
 
-    def setup_dest_party_grpc_config(self, dest_party):
+    def setup_grpc_config(self, dest_party):
         dest_party_grpc_config = {}
         global_grpc_metadata = (
             dict(self._grpc_metadata) if self._grpc_metadata is not None else {}
@@ -266,7 +264,7 @@ class SendProxyActor:
         dest_party_grpc_config['grpc_metadata'] = {
             **global_grpc_metadata, **dest_party_grpc_metadata}
 
-        global_grpc_options = get_grpc_options(self.retry_policy)
+        global_grpc_options = dict(get_grpc_options(self.retry_policy))
         dest_party_grpc_options = dict(
             self._cluster[dest_party].get('grpc_options', {})
         )
