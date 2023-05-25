@@ -105,12 +105,12 @@ The above codes:
 ```python
 def main(party):
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
+        'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
     fed.init(address='local', cluster=cluster, party=party)
 ```
-This first declares a two-party cluster, whose addresses corresponding to '127.0.0.1:11010' in 'alice' and '127.0.0.1:11011' in 'bob'.
+This first declares a two-party cluster, whose addresses corresponding to '127.0.0.1:11012' in 'alice' and '127.0.0.1:11011' in 'bob'.
 And then, the `fed.init` create a cluster in the specified party.
 Note that `fed.init` should be called twice, passing in the different party each time.
 
@@ -140,7 +140,7 @@ def aggregate(val1, val2):
 
 def main(party):
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
+        'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
     fed.init(address='local', cluster=cluster, party=party)

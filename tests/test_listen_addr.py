@@ -34,7 +34,7 @@ class My:
 
 def run(party, is_inner_party):
     cluster = {
-        'alice': {'address': '127.0.0.1:11010', 'listen_addr': '0.0.0.0:11010'},
+        'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:11012'},
         'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
     }
     fed.init(address='local', cluster=cluster, party=party)

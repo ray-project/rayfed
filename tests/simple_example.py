@@ -43,7 +43,7 @@ def agg_fn(obj1, obj2):
 
 
 cluster = {
-    'alice': {'address': '127.0.0.1:11010'},
+    'alice': {'address': '127.0.0.1:11012'},
     'bob': {'address': '127.0.0.1:11011'},
 }
 

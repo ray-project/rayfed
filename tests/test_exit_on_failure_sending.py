@@ -44,7 +44,7 @@ class My:
 
 def run(party, is_inner_party):
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
+        'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
     retry_policy = {

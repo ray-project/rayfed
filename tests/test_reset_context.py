@@ -4,7 +4,7 @@ import fed._private.compatible_utils as compatible_utils
 import pytest
 
 cluster = {
-    'alice': {'address': '127.0.0.1:11010'},
+    'alice': {'address': '127.0.0.1:11012'},
     'bob': {'address': '127.0.0.1:11011'},
 }
 

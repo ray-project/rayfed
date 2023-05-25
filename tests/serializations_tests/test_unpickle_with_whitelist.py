@@ -38,7 +38,7 @@ def pass_arg(d):
 
 def run(party):
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
+        'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
     allowed_list = {

@@ -37,7 +37,7 @@ def bar(li):
 
 def run(party):
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
+        'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
     fed.init(address='local', cluster=cluster, party=party)

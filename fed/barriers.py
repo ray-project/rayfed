@@ -99,16 +99,23 @@ async def _run_grpc_server(
     )
 
     tls_enabled = fed_utils.tls_enabled(tls_config)
-    if tls_enabled:
-        ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
-        server_credentials = grpc.ssl_server_credentials(
-            [(private_key, cert_chain)],
-            root_certificates=ca_cert,
-            require_client_auth=ca_cert is not None,
-        )
-        server.add_secure_port(f'[::]:{port}', server_credentials)
-    else:
-        server.add_insecure_port(f'[::]:{port}')
+    try:
+        if tls_enabled:
+            ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
+            server_credentials = grpc.ssl_server_credentials(
+                [(private_key, cert_chain)],
+                root_certificates=ca_cert,
+                require_client_auth=ca_cert is not None,
+            )
+            server.add_secure_port(f'[::]:{port}', server_credentials)
+        else:
+            server.add_insecure_port(f'[::]:{port}')
+    except RuntimeError as err:
+        err_msg = f'Grpc server failed to listen to port: {port}' \
+                  f' Try another port by setting `listen_addr` into `cluster` config' \
+                  f' when calling `fed.init`. Grpc error msg: {err}'
+        logger.error(err_msg)
+        raise RuntimeError(err_msg)
 
     await server.start()
     logger.info(
@@ -358,7 +365,11 @@ def start_recv_proxy(
         logging_level=logging_level,
         retry_policy=retry_policy,
     )
-    recver_proxy_actor.run_grpc_server.remote()
+    try:
+        recver_proxy_actor.run_grpc_server.remote()
+    except RuntimeError as err:
+        logger.info(f"Catched actor error, ret: {ray.get(res)} ==== msg{err}")
+        raise RuntimeError(err)
     assert ray.get(recver_proxy_actor.is_ready.remote())
     logger.info("RecverProxy was successfully created.")
 
