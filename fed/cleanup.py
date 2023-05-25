@@ -45,8 +45,7 @@ def _check_sending_objs():
         os.kill(os.getpid(), signal.SIGTERM)
 
     global _sending_obj_refs_q
-    if not _sending_obj_refs_q:
-        _sending_obj_refs_q = deque()
+    assert _sending_obj_refs_q is not None
     while True:
         try:
             obj_ref = _sending_obj_refs_q.popleft()
@@ -82,6 +81,10 @@ _monitor_thread = None
 
 
 def _start_check_sending():
+    global _sending_obj_refs_q
+    if not _sending_obj_refs_q:
+        _sending_obj_refs_q = deque()
+
     global _check_send_thread
     if not _check_send_thread:
         _check_send_thread = threading.Thread(target=_check_sending_objs)
