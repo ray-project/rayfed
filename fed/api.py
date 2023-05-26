@@ -70,7 +70,7 @@ def init(
                         'listen_addr': '0.0.0.0:10001',
                         # (Optional) The party specific metadata sent with the grpc request
                         'grpc_metadata': (('token', 'alice-token'),),
-                        'grpc_channel_option': [
+                        'grpc_options': [
                             ('grpc.default_authority', 'alice'),
                             ('grpc.max_send_message_length', 50 * 1024 * 1024)
                         ]

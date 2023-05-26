@@ -24,7 +24,7 @@ import ray
 
 import fed.config as fed_config
 import fed.utils as fed_utils
-from fed._private.constants import RAYFED_DATE_FMT, RAYFED_LOG_FMT
+from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
 from fed.cleanup import push_to_sending
 from fed.grpc import fed_pb2, fed_pb2_grpc
@@ -197,8 +197,8 @@ class SendProxyActor:
     ):
         setup_logger(
             logging_level=logging_level,
-            logging_format=RAYFED_LOG_FMT,
-            date_format=RAYFED_DATE_FMT,
+            logging_format=constants.RAYFED_LOG_FMT,
+            date_format=constants.RAYFED_DATE_FMT,
             party_val=party,
         )
         self._stats = {"send_op_count": 0}
@@ -234,17 +234,16 @@ class SendProxyActor:
         )
         dest_addr = self._cluster[dest_party]['address']
         dest_party_grpc_config = self.setup_grpc_config(dest_party)
-
         try:
             response = await send_data_grpc(
                 dest=dest_addr,
                 data=data,
                 upstream_seq_id=upstream_seq_id,
                 downstream_seq_id=downstream_seq_id,
-                metadata=dest_party_grpc_config["grpc_metadata"],
+                metadata=dest_party_grpc_config['grpc_metadata'],
                 tls_config=self._tls_config,
                 retry_policy=self.retry_policy,
-                grpc_options=dest_party_grpc_config["grpc_options"]
+                grpc_options=dest_party_grpc_config['grpc_options']
             )
         except Exception as e:
             logger.error(f'Failed to {send_log_msg}, error: {e}')
@@ -270,7 +269,7 @@ class SendProxyActor:
         )
         dest_party_grpc_config['grpc_options'] = {
             **global_grpc_options, **dest_party_grpc_options}
-        return dest_party_grpc_options
+        return dest_party_grpc_config
 
     async def _get_stats(self):
         return self._stats
@@ -294,8 +293,8 @@ class RecverProxyActor:
     ):
         setup_logger(
             logging_level=logging_level,
-            logging_format=RAYFED_LOG_FMT,
-            date_format=RAYFED_DATE_FMT,
+            logging_format=constants.RAYFED_LOG_FMT,
+            date_format=constants.RAYFED_DATE_FMT,
             party_val=party,
         )
         self._stats = {"receive_op_count": 0}
