@@ -17,7 +17,6 @@ import pytest
 import fed
 import ray
 
-from fed._private import constants
 
 @fed.remote
 def dummpy():
