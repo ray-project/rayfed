@@ -145,11 +145,7 @@ async def send_data_grpc(
         async with grpc.aio.secure_channel(
             dest,
             credentials,
-            options=grpc_options
-            + [
-                # ('grpc.ssl_target_name_override', "rayfed"),
-                # ("grpc.default_authority", "rayfed"),
-            ],
+            options=grpc_options,
         ) as channel:
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
