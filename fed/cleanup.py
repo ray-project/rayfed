@@ -23,7 +23,7 @@ import ray
 
 logger = logging.getLogger(__name__)
 
-_sending_obj_refs_q = deque()
+_sending_obj_refs_q = None
 
 _check_send_thread = None
 
@@ -45,6 +45,8 @@ def _check_sending_objs():
         os.kill(os.getpid(), signal.SIGTERM)
 
     global _sending_obj_refs_q
+    if not _sending_obj_refs_q:
+        _sending_obj_refs_q = deque()
     while True:
         try:
             obj_ref = _sending_obj_refs_q.popleft()
@@ -66,6 +68,8 @@ def _check_sending_objs():
     logger.info('Check sending thread was exited.')
     global _check_send_thread
     _check_send_thread = None
+    logger.info('Clearing sending queue.')
+    _sending_obj_refs_q = None
 
 
 def _main_thread_monitor():
