@@ -105,10 +105,9 @@ def push_to_sending(obj_ref: ray.ObjectRef):
 
 
 def notify_to_exit():
-    global _sending_obj_refs_q
-    if _sending_obj_refs_q is not None:
-        _sending_obj_refs_q.append(True)
-        logger.info('Notify check sending thread to exit.')
+    # Sending the termination signal
+    push_to_sending(True)
+    logger.info('Notify check sending thread to exit.')
 
 
 def wait_sending():
