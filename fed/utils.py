@@ -182,8 +182,8 @@ def validate_address(address: str) -> None:
         return
 
     error_msg = ("The address format is invalid. It should be in one of the following formats:\n" # noqa
-                "1. `local` for starting a new cluster, or `localhost` for connecting a local cluster." # noqa
-                "2. 'ip:port' format, where the IP needs to follow the IP address specifications and the port is a number.\n" # noqa
-                "3. 'hostname:port' format, where the hostname is a string and the port is a number.\n" # noqa
-                "4. An HTTPS or HTTP link starting with 'https://' or 'http://'.") # noqa
+                "- `local` for starting a new cluster, or `localhost` for connecting a local cluster.\n" # noqa
+                "- 'ip:port' format, where the IP needs to follow the IP address specifications and the port is a number.\n" # noqa
+                "- 'hostname:port' format, where the hostname is a string and the port is a number.\n" # noqa
+                "- An HTTPS or HTTP link starting with 'https://' or 'http://'.") # noqa
     raise ValueError(error_msg)
