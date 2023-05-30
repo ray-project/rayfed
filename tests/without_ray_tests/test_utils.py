@@ -37,8 +37,8 @@ def test_validate_address(input_address, is_valid_address):
         try:
             fed.utils.validate_address(input_address)
             assert False
-        except ValueError as _:
-            pass
+        except Exception as e:
+            assert isinstance(e, ValueError)
 
 
 if __name__ == "__main__":
