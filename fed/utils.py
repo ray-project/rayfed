@@ -163,7 +163,7 @@ def validate_address(address: str) -> None:
         raise ValueError("The address shouldn't be None.")
 
     # The specific case for `local` or `localhost`.
-    if address is 'local' or address is 'localhost'
+    if address == 'local' or address == 'localhost':
         return
 
     # Rule 1: "ip:port" format

@@ -15,7 +15,6 @@
 
 import pytest
 
-from typing import Any, Union, List, Tuple, Dict
 import fed
 
 
@@ -24,6 +23,8 @@ import fed
     ("sa127032as:80", True),
     ("https://www.example.com", True),
     ("http://www.example.com", True),
+    ("local", True),
+    ("localhost", True),
     (None, False),
     ("invalid_string", False),
     ("http", False),
@@ -36,7 +37,7 @@ def test_validate_address(input_address, is_valid_address):
         try:
             fed.utils.validate_address(input_address)
             assert False
-        except ValueError as e:
+        except ValueError as _:
             pass
 
 
