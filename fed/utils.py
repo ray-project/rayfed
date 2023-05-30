@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import logging
+import re
 
 import fed
 import ray
@@ -156,3 +157,33 @@ def dict2tuple(dic):
         logger.warn(f"Unable to convert type {type(dic)} to tuple"
                     f"skip converting {dic}.")
         return dic
+
+def validate_address(address: str) -> None:
+    if address is None:
+        raise ValueError("The address shouldn't be None.")
+
+    # The specific case for `local` or `localhost`.
+    if address is 'local' or address is 'localhost'
+        return
+
+    # Rule 1: "ip:port" format
+    ip_port_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$'
+    if re.match(ip_port_pattern, address):
+        return
+
+    # Rule 2: "hostname:port" format
+    hostname_port_pattern = r'^[a-zA-Z0-9.-]+:\d+$'
+    if re.match(hostname_port_pattern, address):
+        return
+
+    # Rule 3: https or http link
+    link_pattern = r'^(https?://).*'
+    if re.match(link_pattern, address):
+        return
+
+    error_msg = ("The address format is invalid. It should be in one of the following formats:\n" # noqa
+                "1. `local` for starting a new cluster, or `localhost` for connecting a local cluster." # noqa
+                "2. 'ip:port' format, where the IP needs to follow the IP address specifications and the port is a number.\n" # noqa
+                "3. 'hostname:port' format, where the hostname is a string and the port is a number.\n" # noqa
+                "4. An HTTPS or HTTP link starting with 'https://' or 'http://'.") # noqa
+    raise ValueError(error_msg)
