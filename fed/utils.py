@@ -158,6 +158,7 @@ def dict2tuple(dic):
                     f"skip converting {dic}.")
         return dic
 
+
 def validate_address(address: str) -> None:
     if address is None:
         raise ValueError("The address shouldn't be None.")
