@@ -163,6 +163,9 @@ def init(
     assert party, "Party should be provided."
     assert party in cluster, f"Party {party} is not in cluster {cluster}."
 
+    fed_utils.validate_address(address)
+    fed_utils.validate_cluster_info(cluster)
+
     compatible_utils.init_ray(address=address, **kwargs)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
@@ -170,7 +173,6 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
     # A Ray private accessing, should be replaced in public API.
-
     compatible_utils._init_internal_kv()
     compatible_utils.kv.initialize()
 
