@@ -47,6 +47,7 @@ def _check_sending_objs():
     global _sending_obj_refs_q
     if not _sending_obj_refs_q:
         _sending_obj_refs_q = deque()
+
     while True:
         try:
             obj_ref = _sending_obj_refs_q.popleft()
@@ -82,6 +83,10 @@ _monitor_thread = None
 
 
 def _start_check_sending():
+    global _sending_obj_refs_q
+    if not _sending_obj_refs_q:
+        _sending_obj_refs_q = deque()
+
     global _check_send_thread
     if not _check_send_thread:
         _check_send_thread = threading.Thread(target=_check_sending_objs)
@@ -102,8 +107,8 @@ def push_to_sending(obj_ref: ray.ObjectRef):
 
 
 def notify_to_exit():
-    global _sending_obj_refs_q
-    _sending_obj_refs_q.append(True)
+    # Sending the termination signal
+    push_to_sending(True)
     logger.info('Notify check sending thread to exit.')
 
 
