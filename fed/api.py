@@ -160,6 +160,8 @@ def init(
     assert party in cluster, f"Party {party} is not in cluster {cluster}."
 
     fed_utils.validate_address(address)
+    fed_utils.validate_cluster_info(cluster)
+
     compatible_utils.init_ray(address=address, **kwargs)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:

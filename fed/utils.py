@@ -188,3 +188,11 @@ def validate_address(address: str) -> None:
                 "- 'hostname:port' format, where the hostname is a string and the port is a number.\n" # noqa
                 "- An HTTPS or HTTP link starting with 'https://' or 'http://'.") # noqa
     raise ValueError(error_msg)
+
+
+def validate_cluster_info(cluster: dict):
+    """
+    Validate whether the cluster information is in correct forms.
+    """
+    for _, info in cluster.items():
+        validate_address(info['address'])
