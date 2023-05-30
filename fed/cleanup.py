@@ -45,7 +45,9 @@ def _check_sending_objs():
         os.kill(os.getpid(), signal.SIGTERM)
 
     global _sending_obj_refs_q
-    assert _sending_obj_refs_q is not None
+    if not _sending_obj_refs_q:
+        _sending_obj_refs_q = deque()
+
     while True:
         try:
             obj_ref = _sending_obj_refs_q.popleft()
