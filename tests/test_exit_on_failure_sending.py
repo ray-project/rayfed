@@ -46,6 +46,8 @@ class My:
 
 
 def run(party, is_inner_party):
+    signal.signal(signal.SIGTERM, signal_handler)
+
     compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
@@ -75,7 +77,6 @@ def run(party, is_inner_party):
 
 
 def test_exit_when_failure_on_sending():
-    signal.signal(signal.SIGTERM, signal_handler)
     p_alice = multiprocessing.Process(target=run, args=('alice', True))
     p_alice.start()
     p_alice.join()
