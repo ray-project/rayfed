@@ -21,6 +21,7 @@ import fed._private.compatible_utils as compatible_utils
 
 import signal
 
+import os
 import sys
 
 
@@ -28,7 +29,7 @@ def signal_handler(sig, frame):
     if sig == signal.SIGTERM.value:
         fed.shutdown()
         ray.shutdown()
-        sys.exit(0)
+        os._exit(0)
 
 
 @fed.remote
@@ -77,7 +78,6 @@ def run(party, is_inner_party):
 
 
 def test_exit_when_failure_on_sending():
-    signal.signal(signal.SIGTERM, signal_handler)
     p_alice = multiprocessing.Process(target=run, args=('alice', True))
     p_alice.start()
     p_alice.join()
