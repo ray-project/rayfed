@@ -15,8 +15,9 @@
 import multiprocessing
 
 import pytest
-import ray
 import fed
+import ray
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -30,7 +31,7 @@ def g(x, index):
 
 
 def run(party):
-    ray.init(address='local')
+    compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -47,12 +48,10 @@ def run(party):
     assert c == "hello2"
 
     if party == "bob":
-        import ray
         proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["receive_op_count"] == 1
     if party == "alice":
-        import ray
         proxy_actor = ray.get_actor("SendProxyActor")
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["send_op_count"] == 1

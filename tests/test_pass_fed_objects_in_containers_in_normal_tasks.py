@@ -18,6 +18,7 @@ import pytest
 
 import ray
 import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -37,7 +38,7 @@ def bar(li):
 
 
 def run(party):
-    ray.init(address='local')
+    compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},

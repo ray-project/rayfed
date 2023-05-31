@@ -19,6 +19,7 @@ import pytest
 
 import ray
 import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -37,7 +38,7 @@ def add(x, y):
 
 
 def _run(party: str):
-    ray.init(address='local')
+    compatible_utils.init_ray(address='local')
     cert_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"
     )

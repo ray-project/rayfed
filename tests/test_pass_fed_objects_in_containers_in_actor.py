@@ -18,6 +18,7 @@ import pytest
 
 import ray
 import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -43,7 +44,7 @@ cluster = {
 
 
 def run(party):
-    ray.init(address='local')
+    compatible_utils.init_ray(address='local')
     fed.init(cluster=cluster, party=party)
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()

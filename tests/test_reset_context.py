@@ -20,7 +20,7 @@ class A:
 
 
 def run(party):
-    ray.init(address='local')
+    compatible_utils.init_ray(address='local')
     fed.init(
         cluster=cluster,
         party=party)
@@ -44,7 +44,7 @@ def run(party):
         # `AttributeError`
         compatible_utils.kv.put("key2", "val2")
 
-    ray.init(address='local')
+    compatible_utils.init_ray(address='local')
     fed.init(
         cluster=cluster,
         party=party)

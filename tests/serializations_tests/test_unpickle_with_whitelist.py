@@ -15,6 +15,7 @@
 import pytest
 import fed
 import ray
+import fed._private.compatible_utils as compatible_utils
 import multiprocessing
 import numpy
 
@@ -38,7 +39,7 @@ def pass_arg(d):
 
 
 def run(party):
-    ray.init(address='local')
+    compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
