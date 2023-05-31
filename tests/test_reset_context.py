@@ -1,5 +1,6 @@
 import multiprocessing
 import fed
+import ray
 import fed._private.compatible_utils as compatible_utils
 import pytest
 
@@ -19,8 +20,8 @@ class A:
 
 
 def run(party):
+    ray.init(address='local')
     fed.init(
-        address='local',
         cluster=cluster,
         party=party)
 
@@ -37,13 +38,14 @@ def run(party):
     assert compatible_utils.kv.put("key", "val") is False
     assert compatible_utils.kv.get("key") == b"val"
     fed.shutdown()
+    ray.shutdown()
     with pytest.raises(AttributeError):
         # `internal_kv` should be reset, putting to which should raise
         # `AttributeError`
         compatible_utils.kv.put("key2", "val2")
 
+    ray.init(address='local')
     fed.init(
-        address='local',
         cluster=cluster,
         party=party)
 
@@ -64,6 +66,7 @@ def run(party):
     assert compatible_utils.kv.get("key") == b"val"
 
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_reset_context():

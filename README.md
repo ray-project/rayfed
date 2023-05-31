@@ -63,6 +63,7 @@ This actor will be executed within the explicitly declared party.
 
 ```python
 import sys
+import ray
 import fed
 
 @fed.remote
@@ -104,11 +105,13 @@ The above codes:
 ### Step 4: Declare Cross-party Cluster & Init 
 ```python
 def main(party):
+    ray.init(address='local')
+
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    fed.init(address='local', cluster=cluster, party=party)
+    fed.init(cluster=cluster, party=party)
 ```
 This first declares a two-party cluster, whose addresses corresponding to '127.0.0.1:11010' in 'alice' and '127.0.0.1:11011' in 'bob'.
 And then, the `fed.init` create a cluster in the specified party.
@@ -120,6 +123,7 @@ When executing codes in step 1~3, the 'alice' cluster will only execute function
 Save below codes as `demo.py`: 
 ```python
 import sys
+import ray
 import fed
 
 
@@ -139,11 +143,13 @@ def aggregate(val1, val2):
 
 
 def main(party):
+    ray.init(address='local')
+
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    fed.init(address='local', cluster=cluster, party=party)
+    fed.init(cluster=cluster, party=party)
 
     actor_alice = MyActor.party("alice").remote(1)
     actor_bob = MyActor.party("bob").remote(1)
@@ -156,6 +162,7 @@ def main(party):
     print(f"The result in party {party} is {result}")
 
     fed.shutdown()
+    ray.shutdown()
 
 
 if __name__ == "__main__":

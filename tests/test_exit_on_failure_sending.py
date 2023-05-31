@@ -15,6 +15,7 @@
 import multiprocessing
 
 import pytest
+import ray
 import fed
 
 import signal
@@ -25,6 +26,7 @@ import sys
 def signal_handler(sig, frame):
     if sig == signal.SIGTERM.value:
         fed.shutdown()
+        ray.shutdown()
         sys.exit(0)
 
 
@@ -43,6 +45,7 @@ class My:
 
 
 def run(party, is_inner_party):
+    ray.init(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -55,7 +58,6 @@ def run(party, is_inner_party):
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
     fed.init(
-        address='local',
         cluster=cluster,
         party=party,
         logging_level='debug',

@@ -17,6 +17,7 @@ import os
 
 import pytest
 
+import ray
 import fed
 
 
@@ -36,6 +37,7 @@ def add(x, y):
 
 
 def _run(party: str):
+    ray.init(address='local')
     cert_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"
     )
@@ -49,7 +51,7 @@ def _run(party: str):
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    fed.init(address='local', cluster=cluster, party=party, tls_config=cert_config)
+    fed.init(cluster=cluster, party=party, tls_config=cert_config)
 
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()
@@ -58,6 +60,7 @@ def _run(party: str):
     o = add.party("alice").remote(x, y)
     assert fed.get(o) == 30
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_enable_tls_across_parties():

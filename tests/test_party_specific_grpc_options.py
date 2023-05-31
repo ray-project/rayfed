@@ -10,6 +10,7 @@ def dummpy():
 
 
 def party_grpc_options(party):
+    ray.init(address='local')
     cluster = {
         'alice': {
             'address': '127.0.0.1:11010',
@@ -25,7 +26,6 @@ def party_grpc_options(party):
             ]},
     }
     fed.init(
-        address='local',
         cluster=cluster,
         party=party,
         cross_silo_messages_max_size_in_bytes=100
@@ -53,6 +53,7 @@ def party_grpc_options(party):
     fed.get([a, b])
 
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_party_specific_grpc_options():

@@ -15,6 +15,7 @@
 import pytest
 import multiprocessing
 import fed
+import ray
 from fed.barriers import ping_others
 
 
@@ -26,12 +27,14 @@ cluster = {
 
 def test_ping_non_started_party():
     def run(party):
-        fed.init(address='local', cluster=cluster, party=party)
+        ray.init(address='local')
+        fed.init(cluster=cluster, party=party)
         if (party == 'alice'):
             with pytest.raises(RuntimeError):
                 ping_others(cluster, party, 5)
 
         fed.shutdown()
+        ray.shutdown()
 
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_alice.start()
@@ -40,12 +43,14 @@ def test_ping_non_started_party():
 
 def test_ping_started_party():
     def run(party):
-        fed.init(address='local', cluster=cluster, party=party)
+        ray.init(address='local')
+        fed.init(cluster=cluster, party=party)
         if (party == 'alice'):
             ping_success = ping_others(cluster, party, 5)
             assert ping_success is True
 
         fed.shutdown()
+        ray.shutdown()
 
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))

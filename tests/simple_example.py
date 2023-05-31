@@ -49,7 +49,8 @@ cluster = {
 
 
 def run(party):
-    fed.init(address='local', cluster=cluster, party=party)
+    ray.init(address='local')
+    fed.init(cluster=cluster, party=party)
     print(f"Running the script in party {party}")
 
     ds1, ds2 = [123, 789]
@@ -66,6 +67,7 @@ def run(party):
     result = fed.get(obj)
     print(f"The result in party {party} is :{result}")
     fed.shutdown()
+    ray.shutdown()
 
 
 def main():

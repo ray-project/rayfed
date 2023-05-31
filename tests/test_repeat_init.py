@@ -18,6 +18,7 @@ import multiprocessing
 import pytest
 import time
 import fed
+import ray
 
 from fed.cleanup import _start_check_sending, push_to_sending
 
@@ -47,7 +48,8 @@ cluster = {
 def run(party):
     def _run():
         assert fed.cleanup._sending_obj_refs_q is None
-        fed.init(address='local', cluster=cluster, party=party)
+        ray.init(address='local')
+        fed.init(cluster=cluster, party=party)
         _start_check_sending()
         time.sleep(0.5)
         assert fed.cleanup._sending_obj_refs_q is not None
@@ -67,6 +69,7 @@ def run(party):
         assert result
 
         fed.shutdown()
+        ray.shutdown()
         assert fed.cleanup._sending_obj_refs_q is None
 
     _run()

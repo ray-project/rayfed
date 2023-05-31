@@ -14,6 +14,7 @@
 
 import pytest
 import fed
+import ray
 import multiprocessing
 import numpy
 
@@ -37,6 +38,7 @@ def pass_arg(d):
 
 
 def run(party):
+    ray.init(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
@@ -46,7 +48,6 @@ def run(party):
                 "numpy": ["dtype"],
     }
     fed.init(
-        address='local',
         cluster=cluster,
         party=party,
         cross_silo_serializing_allowed_list=allowed_list)
@@ -71,6 +72,7 @@ def run(party):
 
         time.sleep(10)
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_restricted_loads():
