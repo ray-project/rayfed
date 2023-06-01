@@ -15,7 +15,9 @@
 import multiprocessing
 
 import pytest
+import ray
 import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -33,11 +35,12 @@ class My:
 
 
 def run(party, is_inner_party):
+    compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010', 'listen_addr': '0.0.0.0:11010'},
         'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
     }
-    fed.init(address='local', cluster=cluster, party=party)
+    fed.init(cluster=cluster, party=party)
 
     o = f.party("alice").remote()
     actor_location = "alice" if is_inner_party else "bob"
@@ -50,6 +53,7 @@ def run(party, is_inner_party):
 
     time.sleep(5)
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_listen_addr():

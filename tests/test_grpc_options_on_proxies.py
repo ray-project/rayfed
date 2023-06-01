@@ -15,6 +15,7 @@
 import multiprocessing
 import pytest
 import fed
+import fed._private.compatible_utils as compatible_utils
 import ray
 
 
@@ -24,12 +25,12 @@ def dummpy():
 
 
 def run(party):
+    compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
     fed.init(
-        address='local',
         cluster=cluster,
         party=party,
         cross_silo_messages_max_size_in_bytes=100,
@@ -50,6 +51,7 @@ def run(party):
     fed.get([a, b])
 
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_grpc_max_size():

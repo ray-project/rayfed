@@ -15,18 +15,22 @@
 import multiprocessing
 import pytest
 import fed
+import fed._private.compatible_utils as compatible_utils
+import ray
 import fed.config as fed_config
 
 
 def run():
+    compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11010'},
     }
-    fed.init(address='local', cluster=cluster, party="alice")
+    fed.init(cluster=cluster, party="alice")
     config = fed_config.get_cluster_config()
     assert config.cluster_addresses == cluster
     assert config.current_party == "alice"
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_fed_apis():

@@ -36,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 
 def init(
-    address: str = None,
     cluster: Dict = None,
     party: str = None,
     tls_config: Dict = None,
@@ -52,12 +51,9 @@ def init(
     **kwargs,
 ):
     """
-    Initialize a RayFed client. It connects an exist or starts a new local
-        cluster.
+    Initialize a RayFed client.
 
     Args:
-        address: optional; the address of Ray Cluster, same as `address` of
-            `ray.init`.
         cluster: optional; a dict describes the cluster config. E.g.
 
             .. code:: python
@@ -147,26 +143,25 @@ def init(
             are all ready if True.
         grpc_metadata: optional; The metadata sent with the grpc request. This won't override
             basic tcp headers, such as `user-agent`, but aggregate them together.
-        kwargs: the args for ray.init().
 
     Examples:
         >>> import fed
+        >>> import ray
+        >>> ray.init(address='local')
         >>> cluster = {
         >>>    'alice': {'address': '127.0.0.1:10001'},
         >>>    'bob': {'address': '127.0.0.1:10002'},
         >>>    'carol': {'address': '127.0.0.1:10003'},
         >>> }
         >>> # Start as alice.
-        >>> fed.init(address='local', cluster=cluster, self_party='alice')
+        >>> fed.init(cluster=cluster, self_party='alice')
     """
     assert cluster, "Cluster should be provided."
     assert party, "Party should be provided."
     assert party in cluster, f"Party {party} is not in cluster {cluster}."
 
-    fed_utils.validate_address(address)
     fed_utils.validate_cluster_info(cluster)
 
-    compatible_utils.init_ray(address=address, **kwargs)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
@@ -237,7 +232,6 @@ def shutdown():
     compatible_utils.kv.delete(constants.KEY_OF_JOB_CONFIG)
     compatible_utils.kv.reset()
     clear_global_context()
-    ray.shutdown()
     logger.info('Shutdowned rayfed.')
 
 
