@@ -20,6 +20,7 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
+
 def test_setup_proxy_success():
     def run(party):
         compatible_utils.init_ray(address='local', resources={"127.0.0.1": 2})
@@ -77,13 +78,13 @@ def test_setup_proxy_failed():
         send_proxy_options = {
             "name": "MySendProxy",
             "resources": {
-                "127.0.0.2": 1 # Insufficient resource
+                "127.0.0.2": 1  # Insufficient resource
             }
         }
         recv_proxy_options = {
             "name": f"MyRecvProxy-{party}",
             "resources": {
-                "127.0.0.2": 1 # Insufficient resource
+                "127.0.0.2": 1  # Insufficient resource
             }
         }
         with pytest.raises(ray.exceptions.GetTimeoutError):
@@ -107,6 +108,7 @@ def test_setup_proxy_failed():
     p_alice.join()
     p_bob.join()
     assert p_alice.exitcode == 0 and p_bob.exitcode == 0
+
 
 if __name__ == "__main__":
     import sys

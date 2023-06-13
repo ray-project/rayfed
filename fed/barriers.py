@@ -350,10 +350,12 @@ class RecverProxyActor:
     async def _get_grpc_options(self):
         return get_grpc_options()
 
+
 _DEFAULT_RECV_PROXY_OPTIONS = {
     "max_concurrency": 1000,
 }
 _RECV_PROXY_ACTOR_NAME = None
+
 
 def start_recv_proxy(
     cluster: str,
@@ -402,6 +404,7 @@ _DEFAULT_SEND_PROXY_OPTIONS = {
     "max_concurrency": 1000,
 }
 _SEND_PROXY_ACTOR_NAME = None
+
 
 def start_send_proxy(
     cluster: Dict,
