@@ -363,7 +363,7 @@ def start_recv_proxy(
     logging_level: str,
     tls_config=None,
     retry_policy=None,
-    actor_options={}
+    actor_options=None
 ):
     global _RECV_PROXY_ACTOR_NAME
 
@@ -376,8 +376,9 @@ def start_recv_proxy(
         listen_addr = party_addr['address']
 
     # Overide the default options
-    actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **actor_options}
-    if hasattr(actor_options, "name"):
+    actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **actor_options} \
+        if actor_options is not None else _DEFAULT_RECV_PROXY_OPTIONS
+    if not hasattr(actor_options, "name"):
         # Assign a default name
         actor_options["name"] = f"RecverProxyActor-{party}"
     logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
@@ -419,8 +420,8 @@ def start_send_proxy(
     global _SEND_PROXY_ACTOR_NAME
 
     # Overide the default options
-    actor_options = {**_DEFAULT_SEND_PROXY_OPTIONS, **actor_options}
-
+    actor_options = {**_DEFAULT_SEND_PROXY_OPTIONS, **actor_options} \
+        if actor_options is not None else _DEFAULT_SEND_PROXY_OPTIONS
     logger.debug(f"Start SendProxyActor with options: {actor_options}")
     _SEND_PROXY_ACTOR = SendProxyActor.options(**actor_options)
 
