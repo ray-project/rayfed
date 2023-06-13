@@ -350,6 +350,10 @@ class RecverProxyActor:
     async def _get_grpc_options(self):
         return get_grpc_options()
 
+_DEFAULT_RECV_PROXY_OPTIONS = {
+    "max_concurrency": 1000,
+}
+_RECV_PROXY_ACTOR_NAME = None
 
 def start_recv_proxy(
     cluster: str,
@@ -357,7 +361,10 @@ def start_recv_proxy(
     logging_level: str,
     tls_config=None,
     retry_policy=None,
+    actor_options={}
 ):
+    global _RECV_PROXY_ACTOR_NAME
+
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
     # NOTE(NKcqx): This is not just addr, but a party dict containing 'address'
@@ -366,8 +373,16 @@ def start_recv_proxy(
     if not listen_addr:
         listen_addr = party_addr['address']
 
+    # Overide the default options
+    actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **actor_options}
+    if hasattr(actor_options, "name"):
+        # Assign a default name
+        actor_options["name"] = f"RecverProxyActor-{party}"
+    logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
+    print(f"Starting RecvProxyActor with options: {actor_options}")
+
     recver_proxy_actor = RecverProxyActor.options(
-        name=f"RecverProxyActor-{party}", max_concurrency=1000
+        **actor_options
     ).remote(
         listen_addr=listen_addr,
         party=party,
@@ -376,12 +391,17 @@ def start_recv_proxy(
         retry_policy=retry_policy,
     )
     recver_proxy_actor.run_grpc_server.remote()
-    assert ray.get(recver_proxy_actor.is_ready.remote())
+    assert ray.get(recver_proxy_actor.is_ready.remote(), timeout=60)
+    _RECV_PROXY_ACTOR_NAME = actor_options.get("name")
     logger.info("RecverProxy was successfully created.")
 
 
 _SEND_PROXY_ACTOR = None
-
+_DEFAULT_SEND_PROXY_OPTIONS = {
+    "name": "SendProxyActor",
+    "max_concurrency": 1000,
+}
+_SEND_PROXY_ACTOR_NAME = None
 
 def start_send_proxy(
     cluster: Dict,
@@ -389,21 +409,18 @@ def start_send_proxy(
     logging_level: str,
     tls_config: Dict = None,
     retry_policy=None,
-    max_retries=None,
+    actor_options={}
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR
-    if max_retries is not None:
-        _SEND_PROXY_ACTOR = SendProxyActor.options(
-            name="SendProxyActor",
-            max_concurrency=1000,
-            max_task_retries=max_retries,
-            max_restarts=1,
-        )
-    else:
-        _SEND_PROXY_ACTOR = SendProxyActor.options(
-            name="SendProxyActor", max_concurrency=1000
-        )
+    global _SEND_PROXY_ACTOR_NAME
+
+    # Overide the default options
+    actor_options = {**_DEFAULT_SEND_PROXY_OPTIONS, **actor_options}
+
+    logger.debug(f"Start SendProxyActor with options: {actor_options}")
+    _SEND_PROXY_ACTOR = SendProxyActor.options(**actor_options)
+
     _SEND_PROXY_ACTOR = _SEND_PROXY_ACTOR.remote(
         cluster=cluster,
         party=party,
@@ -411,8 +428,9 @@ def start_send_proxy(
         logging_level=logging_level,
         retry_policy=retry_policy,
     )
-    assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote())
-    logger.info("SendProxy was successfully created.")
+    assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=60)
+    _SEND_PROXY_ACTOR_NAME = actor_options.get("name")
+    logger.info(f"SendProxy was successfully created, name: {_SEND_PROXY_ACTOR_NAME}")
 
 
 def send(
@@ -421,7 +439,9 @@ def send(
     upstream_seq_id,
     downstream_seq_id,
 ):
-    send_proxy = ray.get_actor("SendProxyActor")
+    global _SEND_PROXY_ACTOR_NAME
+
+    send_proxy = ray.get_actor(_SEND_PROXY_ACTOR_NAME)
     res = send_proxy.send.remote(
         dest_party=dest_party,
         data=data,

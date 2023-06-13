@@ -41,8 +41,9 @@ def init(
     tls_config: Dict = None,
     logging_level: str = 'info',
     cross_silo_grpc_retry_policy: Dict = None,
-    cross_silo_send_max_retries: int = None,
     cross_silo_serializing_allowed_list: Dict = None,
+    cross_silo_send_options: Dict = None,
+    cross_silo_recv_options: Dict = None,
     exit_on_failure_cross_silo_sending: bool = False,
     cross_silo_messages_max_size_in_bytes: int = None,
     cross_silo_timeout_in_seconds: int = 60,
@@ -127,7 +128,6 @@ def init(
                         "UNAVAILABLE"
                     ]
                 }
-        cross_silo_send_max_retries: the max retries for sending data cross silo.
         cross_silo_serializing_allowed_list: The package or class list allowed for
             serializing(deserializating) cross silos. It's used for avoiding pickle
             deserializing execution attack when crossing solis.
@@ -208,6 +208,7 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
+        actor_options=cross_silo_recv_options
     )
     start_send_proxy(
         cluster=cluster,
@@ -215,7 +216,7 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
-        max_retries=cross_silo_send_max_retries,
+        actor_options=cross_silo_send_options
     )
 
     if enable_waiting_for_other_parties_ready:
