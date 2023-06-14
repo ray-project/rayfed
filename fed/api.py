@@ -131,6 +131,14 @@ def init(
         cross_silo_serializing_allowed_list: The package or class list allowed for
             serializing(deserializating) cross silos. It's used for avoiding pickle
             deserializing execution attack when crossing solis.
+        cross_silo_send_options: A subset of Ray ActorClass.options for the sending proxy actor.
+            Option details see: "https://docs.ray.io/en/latest/ray-core/api/doc/ray.actor.ActorClass.options.html". # noqa
+            Not all options can be modified, supported options are: [`resources`, `num_cpus`, 
+            `num_gpus`, `memory`, `object_store_memory`, `max_task_retries`, `max_restarts`, `_metadata`]
+        cross_silo_recv_options: A subset of Ray ActorClass.options for the receiver proxy actor.
+            Option details see: "https://docs.ray.io/en/latest/ray-core/api/doc/ray.actor.ActorClass.options.html". # noqa
+            Not all options can be modified, supported options are: [`resources`, `num_cpus`, 
+            `num_gpus`, `memory`, `object_store_memory`, `max_task_retries`, `max_restarts`, `_metadata`]
         exit_on_failure_cross_silo_sending: whether exit when failure on
             cross-silo sending. If True, a SIGTERM will be signaled to self
             if failed to sending cross-silo data.

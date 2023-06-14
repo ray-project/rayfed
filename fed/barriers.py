@@ -190,6 +190,8 @@ async def send_data_grpc(
 
 @dataclass
 class ProxyActorOptions:
+    '''A subset of Ray ActorClass.options that are expose to API users 
+    '''
     resources: dict = None
     num_cpus: float = None
     num_gpus: float = None
