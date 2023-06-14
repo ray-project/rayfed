@@ -59,6 +59,8 @@ def pop_from_two_dim_dict(the_dict, key_a, key_b):
     return the_dict[key_a].pop(key_b)
 
 def filter_supported_options(actor_options):
+    if actor_options is None:
+        return None
     option_cls = ProxyActorOptions(**{k: v for k, v in actor_options.items() \
                              if k in [f.name for f in fields(ProxyActorOptions)]})
     supported_options = asdict(option_cls, dict_factory=
@@ -400,7 +402,7 @@ def start_recv_proxy(
         logger.warning(f"Detect unsupported actor options, ignoring options: {ignored_options}")
 
     actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **filterd_actor_options} \
-        if actor_options is not None else _DEFAULT_RECV_PROXY_OPTIONS
+        if filterd_actor_options is not None else _DEFAULT_RECV_PROXY_OPTIONS
 
     logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
 
@@ -436,9 +438,14 @@ def start_send_proxy(
     global _SEND_PROXY_ACTOR
 
     # Overide the default options
-    actor_options = filter_supported_options(actor_options)
-    actor_options = {**_DEFAULT_SEND_PROXY_OPTIONS, **actor_options} \
-        if actor_options is not None else _DEFAULT_SEND_PROXY_OPTIONS
+    filterd_actor_options = filter_supported_options(actor_options)
+    if filterd_actor_options != actor_options:
+        # Find filtered options and report because user may ask why some options are not working
+        ignored_options = set(filterd_actor_options.keys()) ^ set(actor_options.keys())
+        logger.warning(f"Detect unsupported actor options, ignoring options: {ignored_options}")
+
+    actor_options = {**_DEFAULT_SEND_PROXY_OPTIONS, **filterd_actor_options} \
+        if filterd_actor_options is not None else _DEFAULT_SEND_PROXY_OPTIONS
     logger.debug(f"Start SendProxyActor with options: {actor_options}")
     _SEND_PROXY_ACTOR = SendProxyActor.options(
         name="SendProxyActor", **actor_options)
@@ -460,9 +467,7 @@ def send(
     upstream_seq_id,
     downstream_seq_id,
 ):
-    global _SEND_PROXY_ACTOR_NAME
-
-    send_proxy = ray.get_actor(_SEND_PROXY_ACTOR_NAME)
+    send_proxy = ray.get_actor("SendProxyActor")
     res = send_proxy.send.remote(
         dest_party=dest_party,
         data=data,
