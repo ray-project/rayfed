@@ -378,7 +378,7 @@ def start_recv_proxy(
     # Overide the default options
     actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **actor_options} \
         if actor_options is not None else _DEFAULT_RECV_PROXY_OPTIONS
-    if not hasattr(actor_options, "name"):
+    if "name" not in actor_options:
         # Assign a default name
         actor_options["name"] = f"RecverProxyActor-{party}"
     logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
@@ -396,7 +396,7 @@ def start_recv_proxy(
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote(), timeout=60)
     _RECV_PROXY_ACTOR_NAME = actor_options.get("name")
-    logger.info("RecverProxy was successfully created.")
+    logger.info(f"RecverProxy was successfully created, name: {_RECV_PROXY_ACTOR_NAME}")
 
 
 _SEND_PROXY_ACTOR = None

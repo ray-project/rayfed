@@ -35,7 +35,7 @@ def test_setup_proxy_success():
             }
         }
         recv_proxy_options = {
-            "name": f"MyRecvProxy-{party}",
+            "name": f"MyRecverProxy-{party}",
             "resources": {
                 "127.0.0.1": 1
             }
@@ -50,8 +50,8 @@ def test_setup_proxy_success():
         assert ray.get_actor("MySendProxy") is not None
         assert fed.barriers._SEND_PROXY_ACTOR_NAME == "MySendProxy"
 
-        assert ray.get_actor(f"MyRecvProxy-{party}") is not None
-        assert fed.barriers._RECV_PROXY_ACTOR_NAME == f"MyRecvProxy-{party}"
+        assert ray.get_actor(f"MyRecverProxy-{party}") is not None
+        assert fed.barriers._RECV_PROXY_ACTOR_NAME == f"MyRecverProxy-{party}"
 
         fed.shutdown()
         ray.shutdown()
