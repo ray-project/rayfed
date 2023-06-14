@@ -17,6 +17,7 @@ import logging
 import threading
 import time
 from typing import Dict
+from dataclasses import dataclass, asdict, fields
 
 import cloudpickle
 import grpc
@@ -56,6 +57,13 @@ def get_from_two_dim_dict(the_dict, key_a, key_b):
 def pop_from_two_dim_dict(the_dict, key_a, key_b):
     key_a, key_b = str(key_a), str(key_b)
     return the_dict[key_a].pop(key_b)
+
+def filter_supported_options(actor_options):
+    option_cls = ProxyActorOptions(**{k: v for k, v in actor_options.items() \
+                             if k in [f.name for f in fields(ProxyActorOptions)]})
+    supported_options = asdict(option_cls, dict_factory=
+                               lambda x: {k: v for (k, v) in x if v is not None})
+    return supported_options
 
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
@@ -180,6 +188,16 @@ async def send_data_grpc(
             )
             return response.result
 
+@dataclass
+class ProxyActorOptions:
+    resources: dict = None
+    num_cpus: float = None
+    num_gpus: float = None
+    memory: int = None
+    object_store_memory: int = None
+    max_task_retries: int = None
+    max_restarts: int = None
+    _metadata: dict = None
 
 @ray.remote
 class SendProxyActor:
@@ -354,7 +372,6 @@ class RecverProxyActor:
 _DEFAULT_RECV_PROXY_OPTIONS = {
     "max_concurrency": 1000,
 }
-_RECV_PROXY_ACTOR_NAME = None
 
 
 def start_recv_proxy(
@@ -365,7 +382,6 @@ def start_recv_proxy(
     retry_policy=None,
     actor_options=None
 ):
-    global _RECV_PROXY_ACTOR_NAME
 
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
@@ -376,16 +392,18 @@ def start_recv_proxy(
         listen_addr = party_addr['address']
 
     # Overide the default options
-    actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **actor_options} \
+    filterd_actor_options = filter_supported_options(actor_options)
+    if filterd_actor_options != actor_options:
+        ignored_options = set(filterd_actor_options.keys()) ^ set(actor_options.keys())
+        logger.warning(f"Detect unsupported actor options, ignoring options: {ignored_options}")
+
+    actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **filterd_actor_options} \
         if actor_options is not None else _DEFAULT_RECV_PROXY_OPTIONS
-    if "name" not in actor_options:
-        # Assign a default name
-        actor_options["name"] = f"RecverProxyActor-{party}"
+
     logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
-    print(f"Starting RecvProxyActor with options: {actor_options}")
 
     recver_proxy_actor = RecverProxyActor.options(
-        **actor_options
+        name=f"RecverProxyActor-{party}", **actor_options
     ).remote(
         listen_addr=listen_addr,
         party=party,
@@ -395,16 +413,13 @@ def start_recv_proxy(
     )
     recver_proxy_actor.run_grpc_server.remote()
     assert ray.get(recver_proxy_actor.is_ready.remote(), timeout=60)
-    _RECV_PROXY_ACTOR_NAME = actor_options.get("name")
-    logger.info(f"RecverProxy was successfully created, name: {_RECV_PROXY_ACTOR_NAME}")
+    logger.info(f"RecverProxy was successfully created.")
 
 
 _SEND_PROXY_ACTOR = None
 _DEFAULT_SEND_PROXY_OPTIONS = {
-    "name": "SendProxyActor",
     "max_concurrency": 1000,
 }
-_SEND_PROXY_ACTOR_NAME = None
 
 
 def start_send_proxy(
@@ -417,13 +432,14 @@ def start_send_proxy(
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR
-    global _SEND_PROXY_ACTOR_NAME
 
     # Overide the default options
+    actor_options = filter_supported_options(actor_options)
     actor_options = {**_DEFAULT_SEND_PROXY_OPTIONS, **actor_options} \
         if actor_options is not None else _DEFAULT_SEND_PROXY_OPTIONS
     logger.debug(f"Start SendProxyActor with options: {actor_options}")
-    _SEND_PROXY_ACTOR = SendProxyActor.options(**actor_options)
+    _SEND_PROXY_ACTOR = SendProxyActor.options(
+        name="SendProxyActor", **actor_options)
 
     _SEND_PROXY_ACTOR = _SEND_PROXY_ACTOR.remote(
         cluster=cluster,
@@ -433,8 +449,7 @@ def start_send_proxy(
         retry_policy=retry_policy,
     )
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=60)
-    _SEND_PROXY_ACTOR_NAME = actor_options.get("name")
-    logger.info(f"SendProxy was successfully created, name: {_SEND_PROXY_ACTOR_NAME}")
+    logger.info(f"SendProxy was successfully created.")
 
 
 def send(

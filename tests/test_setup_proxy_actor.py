@@ -19,6 +19,26 @@ import pytest
 import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
+from fed.barriers import filter_supported_options
+
+
+def test_filter_actor_options():
+    user_actor_options = {
+        "name": "MyName", # invalid
+        "resources": {
+            "127.0.0.1": 1
+        },
+        "memory": 100 * 1024,
+        "unknown": "str"
+    }
+    res_options = filter_supported_options(user_actor_options)
+
+    assert "name" not in res_options
+    assert "unknown" not in res_options
+    assert "memory" in res_options
+    assert res_options["memory"] == 100 * 1024
+    assert "resources" in res_options
+    assert res_options["resources"]["127.0.0.1"] == 1
 
 
 def test_setup_proxy_success():
@@ -29,13 +49,12 @@ def test_setup_proxy_success():
             'bob': {'address': '127.0.0.1:11011'},
         }
         send_proxy_options = {
-            "name": "MySendProxy",
+            "name": "CustomeName",  # Unsupported options, should be ignored
             "resources": {
                 "127.0.0.1": 1
             }
         }
         recv_proxy_options = {
-            "name": f"MyRecverProxy-{party}",
             "resources": {
                 "127.0.0.1": 1
             }
@@ -47,11 +66,9 @@ def test_setup_proxy_success():
             cross_silo_recv_options=recv_proxy_options
         )
 
-        assert ray.get_actor("MySendProxy") is not None
-        assert fed.barriers._SEND_PROXY_ACTOR_NAME == "MySendProxy"
-
-        assert ray.get_actor(f"MyRecverProxy-{party}") is not None
-        assert fed.barriers._RECV_PROXY_ACTOR_NAME == f"MyRecverProxy-{party}"
+        # Their names should be the default value instead of user's declarations
+        assert ray.get_actor("SendProxyActor") is not None
+        assert ray.get_actor(f"RecverProxyActor-{party}") is not None
 
         fed.shutdown()
         ray.shutdown()
@@ -79,13 +96,15 @@ def test_setup_proxy_failed():
             "name": "MySendProxy",
             "resources": {
                 "127.0.0.2": 1  # Insufficient resource
-            }
+            },
+            "unknown_field": "str"
         }
         recv_proxy_options = {
             "name": f"MyRecvProxy-{party}",
             "resources": {
                 "127.0.0.2": 1  # Insufficient resource
-            }
+            },
+            "unknown_field": "str"
         }
         with pytest.raises(ray.exceptions.GetTimeoutError):
             fed.init(
