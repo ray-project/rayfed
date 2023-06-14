@@ -24,7 +24,7 @@ from fed.barriers import filter_supported_options
 
 def test_filter_actor_options():
     user_actor_options = {
-        "name": "MyName", # invalid
+        "name": "MyName",  # invalid
         "resources": {
             "127.0.0.1": 1
         },
