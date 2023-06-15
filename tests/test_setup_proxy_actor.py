@@ -111,7 +111,8 @@ def test_setup_proxy_failed():
                 cluster=cluster,
                 party=party,
                 cross_silo_send_options=send_proxy_options,
-                cross_silo_recv_options=recv_proxy_options
+                cross_silo_recv_options=recv_proxy_options,
+                cross_silo_timeout_in_seconds=10
             )
 
         fed.shutdown()

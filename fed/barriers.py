@@ -28,6 +28,7 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
 from fed.cleanup import push_to_sending
+from fed.config import get_cluster_config
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.utils import setup_logger
 
@@ -58,13 +59,16 @@ def pop_from_two_dim_dict(the_dict, key_a, key_b):
     key_a, key_b = str(key_a), str(key_b)
     return the_dict[key_a].pop(key_b)
 
+
 def filter_supported_options(actor_options):
     if actor_options is None:
         return None
-    option_cls = ProxyActorOptions(**{k: v for k, v in actor_options.items() \
-                             if k in [f.name for f in fields(ProxyActorOptions)]})
-    supported_options = asdict(option_cls, dict_factory=
-                               lambda x: {k: v for (k, v) in x if v is not None})
+    option_cls = ProxyActorOptions(
+        **{k: v for k, v in actor_options.items()
+           if k in [f.name for f in fields(ProxyActorOptions)]})
+    supported_options = asdict(
+        option_cls,
+        dict_factory=lambda x: {k: v for (k, v) in x if v is not None})
     return supported_options
 
 
@@ -190,9 +194,10 @@ async def send_data_grpc(
             )
             return response.result
 
+
 @dataclass
 class ProxyActorOptions:
-    '''A subset of Ray ActorClass.options that are expose to API users 
+    '''A subset of Ray ActorClass.options that are expose to API users
     '''
     resources: dict = None
     num_cpus: float = None
@@ -202,6 +207,7 @@ class ProxyActorOptions:
     max_task_retries: int = None
     max_restarts: int = None
     _metadata: dict = None
+
 
 @ray.remote
 class SendProxyActor:
@@ -399,7 +405,8 @@ def start_recv_proxy(
     filterd_actor_options = filter_supported_options(actor_options)
     if filterd_actor_options != actor_options:
         ignored_options = set(filterd_actor_options.keys()) ^ set(actor_options.keys())
-        logger.warning(f"Detect unsupported actor options, ignoring options: {ignored_options}")
+        logger.warning("Detect unsupported actor options, "
+                       f"ignoring options: {ignored_options}")
 
     actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **filterd_actor_options} \
         if filterd_actor_options is not None else _DEFAULT_RECV_PROXY_OPTIONS
@@ -416,8 +423,9 @@ def start_recv_proxy(
         retry_policy=retry_policy,
     )
     recver_proxy_actor.run_grpc_server.remote()
-    assert ray.get(recver_proxy_actor.is_ready.remote(), timeout=60)
-    logger.info(f"RecverProxy was successfully created.")
+    timeout = get_cluster_config().cross_silo_timeout
+    assert ray.get(recver_proxy_actor.is_ready.remote(), timeout=timeout)
+    logger.info("RecverProxy was successfully created.")
 
 
 _SEND_PROXY_ACTOR = None
@@ -440,9 +448,11 @@ def start_send_proxy(
     # Overide the default options
     filterd_actor_options = filter_supported_options(actor_options)
     if filterd_actor_options != actor_options:
-        # Find filtered options and report because user may ask why some options are not working
+        # Find filtered options and report them because user may wonder
+        # why some options are not working
         ignored_options = set(filterd_actor_options.keys()) ^ set(actor_options.keys())
-        logger.warning(f"Detect unsupported actor options, ignoring options: {ignored_options}")
+        logger.warning("Detect unsupported actor options, "
+                       f"ignoring options: {ignored_options}")
 
     actor_options = {**_DEFAULT_SEND_PROXY_OPTIONS, **filterd_actor_options} \
         if filterd_actor_options is not None else _DEFAULT_SEND_PROXY_OPTIONS
@@ -457,8 +467,9 @@ def start_send_proxy(
         logging_level=logging_level,
         retry_policy=retry_policy,
     )
-    assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=60)
-    logger.info(f"SendProxy was successfully created.")
+    timeout = get_cluster_config().cross_silo_timeout
+    assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
+    logger.info("SendProxy was successfully created.")
 
 
 def send(
