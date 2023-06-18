@@ -16,12 +16,16 @@ def test_kv_init():
         assert compatible_utils.kv is None
         fed.init(cluster=cluster, party=party)
         assert compatible_utils.kv
-        assert compatible_utils.kv.put(b"test_key", b"test_val")
+        assert not compatible_utils.kv.put(b"test_key", b"test_val")
         assert compatible_utils.kv.get(b"test_key") == b"test_val"
 
         time.sleep(5)
         fed.shutdown()
         ray.shutdown()
+
+        assert compatible_utils.kv is None
+        with pytest.raises(ValueError):
+            ray.get_actor("_INTERNAL_KV_ACTOR")
 
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))

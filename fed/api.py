@@ -228,9 +228,7 @@ def shutdown():
     Shutdown a RayFed client.
     """
     wait_sending()
-    compatible_utils.kv.delete(constants.KEY_OF_CLUSTER_CONFIG)
-    compatible_utils.kv.delete(constants.KEY_OF_JOB_CONFIG)
-    compatible_utils.kv.reset()
+    compatible_utils._clear_internal_kv()
     clear_global_context()
     logger.info('Shutdowned rayfed.')
 
