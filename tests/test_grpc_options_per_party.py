@@ -27,8 +27,14 @@ def dummpy():
 def run(party):
     compatible_utils.init_ray(address='local')
     cluster = {
-        'alice': {'address': '127.0.0.1:11019'},
-        'bob': {'address': '127.0.0.1:11018'},
+        'alice': {
+            'address': '127.0.0.1:11010',
+            'grpc_options': [
+                ('grpc.default_authority', 'alice'),
+                ('grpc.max_send_message_length', 200)
+            ]
+            },
+        'bob': {'address': '127.0.0.1:11011'},
     }
     fed.init(
         cluster=cluster,
@@ -36,16 +42,28 @@ def run(party):
         cross_silo_messages_max_size_in_bytes=100,
     )
 
-    def _assert_on_proxy(proxy_actor):
-        options = ray.get(proxy_actor._get_grpc_options.remote())
-        assert options[0][0] == "grpc.max_send_message_length"
-        assert options[0][1] == 100
-        assert ('grpc.so_reuseport', 0) in options
+    def _assert_on_send_proxy(proxy_actor):
+        alice_config = ray.get(proxy_actor.setup_grpc_config.remote('alice'))
+        # print(f"【NKcqx】alice config: {alice_config}")
+        assert 'grpc_options' in alice_config
+        alice_options = alice_config['grpc_options']
+        assert 'grpc.max_send_message_length' in alice_options
+        # This should be overwritten by cluster config
+        assert alice_options['grpc.max_send_message_length'] == 200
+        assert 'grpc.default_authority' in alice_options
+        assert alice_options['grpc.default_authority'] == 'alice'
+
+        bob_config = ray.get(proxy_actor.setup_grpc_config.remote('bob'))
+        # print(f"【NKcqx】bob config: {bob_config}")
+        assert 'grpc_options' in bob_config
+        bob_options = bob_config['grpc_options']
+        assert "grpc.max_send_message_length" in bob_options
+        # Not setting bob's grpc_options, should be the same with global
+        assert bob_options["grpc.max_send_message_length"] == 100
+        assert 'grpc.default_authority' not in bob_options
 
     send_proxy = ray.get_actor("SendProxyActor")
-    recver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
-    _assert_on_proxy(send_proxy)
-    _assert_on_proxy(recver_proxy)
+    _assert_on_send_proxy(send_proxy)
 
     a = dummpy.party('alice').remote()
     b = dummpy.party('bob').remote()
@@ -55,7 +73,7 @@ def run(party):
     ray.shutdown()
 
 
-def test_grpc_max_size():
+def test_grpc_options():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()

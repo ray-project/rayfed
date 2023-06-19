@@ -1,3 +1,4 @@
+
 # Copyright 2023 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,35 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import multiprocessing
 import pytest
+
 import fed
-import fed._private.compatible_utils as compatible_utils
-import ray
-import fed.config as fed_config
 
 
-def run():
-    compatible_utils.init_ray(address='local')
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-    }
-    fed.init(cluster=cluster, party="alice")
-    config = fed_config.get_cluster_config()
-    assert config.cluster_addresses == cluster
-    assert config.current_party == "alice"
-    fed.shutdown()
-    ray.shutdown()
-
-
-def test_fed_apis():
-    p_alice = multiprocessing.Process(target=run)
-    p_alice.start()
-    p_alice.join()
-    assert p_alice.exitcode == 0
+@pytest.mark.parametrize("input_address, is_valid_address", [
+    ("192.168.0.1:8080", True),
+    ("sa127032as:80", True),
+    ("https://www.example.com", True),
+    ("http://www.example.com", True),
+    ("local", True),
+    ("localhost", True),
+    (None, False),
+    ("invalid_string", False),
+    ("http", False),
+    ("example.com", False),
+])
+def test_validate_address(input_address, is_valid_address):
+    if is_valid_address:
+        fed.utils.validate_address(input_address)
+    else:
+        try:
+            fed.utils.validate_address(input_address)
+            assert False
+        except Exception as e:
+            assert isinstance(e, ValueError)
 
 
 if __name__ == "__main__":
     import sys
-
     sys.exit(pytest.main(["-sv", __file__]))

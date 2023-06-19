@@ -16,7 +16,9 @@ import multiprocessing
 
 import pytest
 
+import ray
 import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -40,11 +42,12 @@ def _run(party: str):
 
         time.sleep(10)
 
+    compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    fed.init(address='local', cluster=cluster, party=party)
+    fed.init(cluster=cluster, party=party)
 
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()
@@ -53,6 +56,7 @@ def _run(party: str):
     o = add.party("alice").remote(x, y)
     assert 30 == fed.get(o)
     fed.shutdown()
+    ray.shutdown()
 
 
 # This case is used to test that we start 2 clusters not at the same time.

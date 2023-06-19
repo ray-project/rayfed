@@ -16,7 +16,9 @@ import multiprocessing
 
 import pytest
 
+import ray
 import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -42,7 +44,8 @@ cluster = {
 
 
 def run(party):
-    fed.init(address='local', cluster=cluster, party=party)
+    compatible_utils.init_ray(address='local')
+    fed.init(cluster=cluster, party=party)
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()
     o1 = my1.foo.remote(0)
@@ -53,6 +56,7 @@ def run(party):
     result = fed.get(o3)
     assert result
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_pass_fed_objects_in_list():

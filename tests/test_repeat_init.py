@@ -16,8 +16,12 @@
 import multiprocessing
 
 import pytest
-
+import time
 import fed
+import fed._private.compatible_utils as compatible_utils
+import ray
+
+from fed.cleanup import _start_check_sending, push_to_sending
 
 
 @fed.remote
@@ -44,7 +48,17 @@ cluster = {
 
 def run(party):
     def _run():
-        fed.init(address='local', cluster=cluster, party=party)
+        assert fed.cleanup._sending_obj_refs_q is None
+        compatible_utils.init_ray(address='local')
+        fed.init(cluster=cluster, party=party)
+        _start_check_sending()
+        time.sleep(0.5)
+        assert fed.cleanup._sending_obj_refs_q is not None
+        push_to_sending(True)
+        # Slightly longer than the queue polling
+        time.sleep(0.6)
+        assert fed.cleanup._sending_obj_refs_q is None
+
         my1 = My.party("alice").remote()
         my2 = My.party("bob").remote()
         o1 = my1.foo.remote(0)
@@ -54,7 +68,10 @@ def run(party):
 
         result = fed.get(o3)
         assert result
+
         fed.shutdown()
+        ray.shutdown()
+        assert fed.cleanup._sending_obj_refs_q is None
 
     _run()
     _run()

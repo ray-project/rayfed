@@ -16,6 +16,8 @@ import multiprocessing
 
 import pytest
 import fed
+import ray
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -29,11 +31,12 @@ def g(x, index):
 
 
 def run(party):
+    compatible_utils.init_ray(address='local')
     cluster = {
         'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    fed.init(address='local', cluster=cluster, party=party)
+    fed.init(cluster=cluster, party=party)
 
     o = f.party("alice").remote()
     o1 = g.party("bob").remote(o, 1)
@@ -45,16 +48,15 @@ def run(party):
     assert c == "hello2"
 
     if party == "bob":
-        import ray
         proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["receive_op_count"] == 1
     if party == "alice":
-        import ray
         proxy_actor = ray.get_actor("SendProxyActor")
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["send_op_count"] == 1
     fed.shutdown()
+    ray.shutdown()
 
 
 def test_cache_fed_object_if_sent():

@@ -15,7 +15,9 @@
 import multiprocessing
 
 import pytest
+import ray
 import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -51,6 +53,7 @@ def test_listen_addr():
 
         time.sleep(5)
         fed.shutdown()
+        ray.shutdown()
 
     p_alice = multiprocessing.Process(target=run, args=('alice', True))
     p_bob = multiprocessing.Process(target=run, args=('bob', True))

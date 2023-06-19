@@ -21,8 +21,9 @@ To start a RayFed application, you can use ``fed.init()`` function:
 
 For example:
 
+>>> import ray
 >>> import fed
+>>> ray.init()
 >>> fed.init(cluster=cluster, party="Alice", tls_config=tls_config)
 
 Successfully to connect to current Ray cluster in party `Alice`
-

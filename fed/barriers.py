@@ -24,7 +24,7 @@ import ray
 
 import fed.config as fed_config
 import fed.utils as fed_utils
-from fed._private.constants import RAYFED_DATE_FMT, RAYFED_LOG_FMT
+from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
 from fed.cleanup import push_to_sending
 from fed.grpc import fed_pb2, fed_pb2_grpc
@@ -128,9 +128,12 @@ async def send_data_grpc(
     metadata=None,
     tls_config=None,
     retry_policy=None,
+    grpc_options=None
 ):
+    grpc_options = get_grpc_options(retry_policy=retry_policy) if \
+                    grpc_options is None else fed_utils.dict2tuple(grpc_options)
+
     tls_enabled = fed_utils.tls_enabled(tls_config)
-    grpc_options = get_grpc_options(retry_policy=retry_policy)
     cluster_config = fed_config.get_cluster_config()
     metadata = fed_utils.dict2tuple(metadata)
     if tls_enabled:
@@ -144,11 +147,7 @@ async def send_data_grpc(
         async with grpc.aio.secure_channel(
             dest,
             credentials,
-            options=grpc_options
-            + [
-                # ('grpc.ssl_target_name_override', "rayfed"),
-                # ("grpc.default_authority", "rayfed"),
-            ],
+            options=grpc_options,
         ) as channel:
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             data = cloudpickle.dumps(data)
@@ -196,8 +195,8 @@ class SendProxyActor:
     ):
         setup_logger(
             logging_level=logging_level,
-            logging_format=RAYFED_LOG_FMT,
-            date_format=RAYFED_DATE_FMT,
+            logging_format=constants.RAYFED_LOG_FMT,
+            date_format=constants.RAYFED_DATE_FMT,
             party_val=party,
         )
         self._stats = {"send_op_count": 0}
@@ -232,23 +231,17 @@ class SendProxyActor:
             ' credentials.'
         )
         dest_addr = self._cluster[dest_party]['address']
-        dest_party_grpc_metadata = dict(
-            self._cluster[dest_party].get('grpc_metadata', {})
-        )
-        global_grpc_metadata = (
-            dict(self._grpc_metadata) if self._grpc_metadata is not None else {}
-        )
-        # merge grpc metadata
-        grpc_metadata = {**global_grpc_metadata, **dest_party_grpc_metadata}
+        dest_party_grpc_config = self.setup_grpc_config(dest_party)
         try:
             response = await send_data_grpc(
                 dest=dest_addr,
                 data=data,
                 upstream_seq_id=upstream_seq_id,
                 downstream_seq_id=downstream_seq_id,
-                metadata=grpc_metadata,
+                metadata=dest_party_grpc_config['grpc_metadata'],
                 tls_config=self._tls_config,
                 retry_policy=self.retry_policy,
+                grpc_options=dest_party_grpc_config['grpc_options']
             )
         except Exception as e:
             logger.error(f'Failed to {send_log_msg}, error: {e}')
@@ -256,11 +249,34 @@ class SendProxyActor:
         logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
         return True  # True indicates it's sent successfully.
 
+    def setup_grpc_config(self, dest_party):
+        dest_party_grpc_config = {}
+        global_grpc_metadata = (
+            dict(self._grpc_metadata) if self._grpc_metadata is not None else {}
+        )
+        dest_party_grpc_metadata = dict(
+            self._cluster[dest_party].get('grpc_metadata', {})
+        )
+        # merge grpc metadata
+        dest_party_grpc_config['grpc_metadata'] = {
+            **global_grpc_metadata, **dest_party_grpc_metadata}
+
+        global_grpc_options = dict(get_grpc_options(self.retry_policy))
+        dest_party_grpc_options = dict(
+            self._cluster[dest_party].get('grpc_options', {})
+        )
+        dest_party_grpc_config['grpc_options'] = {
+            **global_grpc_options, **dest_party_grpc_options}
+        return dest_party_grpc_config
+
     async def _get_stats(self):
         return self._stats
 
     async def _get_grpc_options(self):
         return get_grpc_options()
+
+    async def _get_cluster_info(self):
+        return self._cluster
 
 
 @ray.remote
@@ -275,8 +291,8 @@ class RecverProxyActor:
     ):
         setup_logger(
             logging_level=logging_level,
-            logging_format=RAYFED_LOG_FMT,
-            date_format=RAYFED_DATE_FMT,
+            logging_format=constants.RAYFED_LOG_FMT,
+            date_format=constants.RAYFED_DATE_FMT,
             party_val=party,
         )
         self._stats = {"receive_op_count": 0}
@@ -360,6 +376,7 @@ def start_recv_proxy(
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
+    # NOTE(NKcqx): This is not just addr, but a party dict containing 'address'
     party_addr = cluster[party]
     listen_addr = party_addr.get('listen_addr', None)
     if not listen_addr:
