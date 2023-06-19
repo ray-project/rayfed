@@ -112,12 +112,12 @@ async def _run_grpc_server(
         server.add_insecure_port(f'[::]:{port}')
 
     msg = f"Successfully adding port {port}."
-    server_future.set_result((True, msg))
     await server.start()
     logger.info(
         f'Successfully start Grpc service with{"out" if not tls_enabled else ""} '
         'credentials.'
     )
+    server_future.set_result((True, msg))
     await server.wait_for_termination()
 
 
