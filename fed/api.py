@@ -169,7 +169,6 @@ def init(
         ), 'Cert or key are not in tls_config.'
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
-    compatible_utils.kv.initialize()
 
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: cluster,

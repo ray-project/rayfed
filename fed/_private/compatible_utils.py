@@ -162,7 +162,7 @@ def _init_internal_kv():
             response = kv_actor._ping.remote()
             ray.get(response)
         kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
-
+        kv.initialize()
 
 def _clear_internal_kv():
     global kv
