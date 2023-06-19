@@ -36,11 +36,12 @@ class My:
 
 def test_listen_addr():
     def run(party, is_inner_party):
+        compatible_utils.init_ray(address='local')
         cluster = {
             'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:11012'},
             'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
         }
-        fed.init(address='local', cluster=cluster, party=party)
+        fed.init(cluster=cluster, party=party)
 
         o = f.party("alice").remote()
         actor_location = "alice" if is_inner_party else "bob"
@@ -66,6 +67,7 @@ def test_listen_addr():
 
 def test_listen_used_addr():
     def run(party):
+        compatible_utils.init_ray(address='local')
         cluster = {
             # "10001" is a used port by Ray
             'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:10001'},
@@ -73,7 +75,7 @@ def test_listen_used_addr():
         }
         # Listening on an used port will cause AssertionError when starting grpc server
         with pytest.raises(AssertionError):
-            fed.init(address='local', cluster=cluster, party=party)
+            fed.init(cluster=cluster, party=party)
 
         import time
 

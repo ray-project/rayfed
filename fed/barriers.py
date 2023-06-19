@@ -91,7 +91,8 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
 
 
 async def _run_grpc_server(
-    port, event, all_data, party, lock, server_future, tls_config=None, grpc_options=None
+    port, event, all_data, party, lock,
+    server_future, tls_config=None, grpc_options=None
 ):
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
@@ -327,15 +328,13 @@ class RecverProxyActor:
             )
         except RuntimeError as err:
             msg = f'Grpc server failed to listen to port: {port}' \
-                    f' Try another port by setting `listen_addr` into `cluster` config' \
-                    f' when calling `fed.init`. Grpc error msg: {err}'
+                  f' Try another port by setting `listen_addr` into `cluster` config' \
+                  f' when calling `fed.init`. Grpc error msg: {err}'
             self._server_listening.set_result((False, msg))
-
 
     async def is_ready(self):
         await self._server_listening
         return self._server_listening.result()
-
 
     async def get_data(self, src_aprty, upstream_seq_id, curr_seq_id):
         self._stats["receive_op_count"] += 1
