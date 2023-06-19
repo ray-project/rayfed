@@ -41,6 +41,7 @@ def test_n_to_1_transport():
         constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
         constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
     }
+    compatible_utils._init_internal_kv()
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
 
@@ -165,6 +166,7 @@ def test_send_grpc_with_meta():
             "key": "value"
         }
     }
+    compatible_utils._init_internal_kv()
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG,
@@ -203,6 +205,7 @@ def test_send_grpc_with_party_specific_meta():
             "key": "value"
         }
     }
+    compatible_utils._init_internal_kv()
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG,

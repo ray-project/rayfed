@@ -18,6 +18,7 @@ import fed._private.constants as fed_constants
 
 import ray.experimental.internal_kv as ray_internal_kv
 from ray._private.gcs_utils import GcsClient
+from fed._private import constants
 
 
 def _compare_version_strings(version1, version2):
@@ -152,12 +153,29 @@ class ClientModeInternalKv(AbstractInternalKv):
 
 def _init_internal_kv():
     """An internal API that initialize the internal kv object."""
-    from ray._private.client_mode_hook import is_client_mode_enabled
-    if is_client_mode_enabled:
-        kv_actor = ray.remote(InternalKv).options(name="_INTERNAL_KV_ACTOR").remote()
-        response = kv_actor._ping.remote()
-        ray.get(response)
-    return ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
+    global kv
+    if kv is None:
+        from ray._private.client_mode_hook import is_client_mode_enabled
+        if is_client_mode_enabled:
+            kv_actor = ray.remote(InternalKv).options(
+                name="_INTERNAL_KV_ACTOR").remote()
+            response = kv_actor._ping.remote()
+            ray.get(response)
+        kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
+        kv.initialize()
 
 
-kv = _init_internal_kv()
+def _clear_internal_kv():
+    global kv
+    if kv is not None:
+        kv.delete(constants.KEY_OF_CLUSTER_CONFIG)
+        kv.delete(constants.KEY_OF_JOB_CONFIG)
+        kv.reset()
+        from ray._private.client_mode_hook import is_client_mode_enabled
+        if is_client_mode_enabled:
+            _internal_kv_actor = ray.get_actor("_INTERNAL_KV_ACTOR")
+            ray.kill(_internal_kv_actor)
+        kv = None
+
+
+kv = None
