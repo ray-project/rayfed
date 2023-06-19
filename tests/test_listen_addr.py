@@ -32,27 +32,26 @@ class My:
         return self._value
 
 
-def run(party, is_inner_party):
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:11012'},
-        'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
-    }
-    fed.init(address='local', cluster=cluster, party=party)
-
-    o = f.party("alice").remote()
-    actor_location = "alice" if is_inner_party else "bob"
-    my = My.party(actor_location).remote(o)
-    val = my.get_value.remote()
-    result = fed.get(val)
-    assert result == 100
-    assert fed.get(o) == 100
-    import time
-
-    time.sleep(5)
-    fed.shutdown()
-
-
 def test_listen_addr():
+    def run(party, is_inner_party):
+        cluster = {
+            'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:11012'},
+            'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
+        }
+        fed.init(address='local', cluster=cluster, party=party)
+
+        o = f.party("alice").remote()
+        actor_location = "alice" if is_inner_party else "bob"
+        my = My.party(actor_location).remote(o)
+        val = my.get_value.remote()
+        result = fed.get(val)
+        assert result == 100
+        assert fed.get(o) == 100
+        import time
+
+        time.sleep(5)
+        fed.shutdown()
+
     p_alice = multiprocessing.Process(target=run, args=('alice', True))
     p_bob = multiprocessing.Process(target=run, args=('bob', True))
     p_alice.start()
@@ -60,6 +59,28 @@ def test_listen_addr():
     p_alice.join()
     p_bob.join()
     assert p_alice.exitcode == 0 and p_bob.exitcode == 0
+
+
+def test_listen_used_addr():
+    def run(party):
+        cluster = {
+            # "10001" is a used port by Ray
+            'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:10001'},
+            'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
+        }
+        # Listening on an used port will cause AssertionError when starting grpc server
+        with pytest.raises(AssertionError):
+            fed.init(address='local', cluster=cluster, party=party)
+
+        import time
+
+        time.sleep(5)
+        fed.shutdown()
+
+    p_alice = multiprocessing.Process(target=run, args=('alice',))
+    p_alice.start()
+    p_alice.join()
+    assert p_alice.exitcode == 0
 
 
 if __name__ == "__main__":

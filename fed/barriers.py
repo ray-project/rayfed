@@ -91,7 +91,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
 
 
 async def _run_grpc_server(
-    port, event, all_data, party, lock, tls_config=None, grpc_options=None
+    port, event, all_data, party, lock, server_future, tls_config=None, grpc_options=None
 ):
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
@@ -99,24 +99,19 @@ async def _run_grpc_server(
     )
 
     tls_enabled = fed_utils.tls_enabled(tls_config)
-    try:
-        if tls_enabled:
-            ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
-            server_credentials = grpc.ssl_server_credentials(
-                [(private_key, cert_chain)],
-                root_certificates=ca_cert,
-                require_client_auth=ca_cert is not None,
-            )
-            server.add_secure_port(f'[::]:{port}', server_credentials)
-        else:
-            server.add_insecure_port(f'[::]:{port}')
-    except RuntimeError as err:
-        err_msg = f'Grpc server failed to listen to port: {port}' \
-                  f' Try another port by setting `listen_addr` into `cluster` config' \
-                  f' when calling `fed.init`. Grpc error msg: {err}'
-        logger.error(err_msg)
-        raise RuntimeError(err_msg)
+    if tls_enabled:
+        ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
+        server_credentials = grpc.ssl_server_credentials(
+            [(private_key, cert_chain)],
+            root_certificates=ca_cert,
+            require_client_auth=ca_cert is not None,
+        )
+        server.add_secure_port(f'[::]:{port}', server_credentials)
+    else:
+        server.add_insecure_port(f'[::]:{port}')
 
+    msg = f"Successfully adding port {port}."
+    server_future.set_result((True, msg))
     await server.start()
     logger.info(
         f'Successfully start Grpc service with{"out" if not tls_enabled else ""} '
@@ -293,24 +288,38 @@ class RecverProxyActor:
         set_max_message_length(config.cross_silo_messages_max_size)
         # Workaround the threading coordinations
 
+        # Flag to see whether grpc server starts
+        self._server_listening = asyncio.Future()
+
         # All events for grpc waitting usage.
         self._events = {}  # map from (upstream_seq_id, downstream_seq_id) to event
         self._all_data = {}  # map from (upstream_seq_id, downstream_seq_id) to data
         self._lock = threading.Lock()
 
     async def run_grpc_server(self):
-        return await _run_grpc_server(
-            self._listen_addr[self._listen_addr.index(':') + 1 :],
-            self._events,
-            self._all_data,
-            self._party,
-            self._lock,
-            self._tls_config,
-            get_grpc_options(self.retry_policy),
-        )
+        try:
+            port = self._listen_addr[self._listen_addr.index(':') + 1 :]
+            await _run_grpc_server(
+                port,
+                self._events,
+                self._all_data,
+                self._party,
+                self._lock,
+                self._server_listening,
+                self._tls_config,
+                get_grpc_options(self.retry_policy),
+            )
+        except RuntimeError as err:
+            msg = f'Grpc server failed to listen to port: {port}' \
+                    f' Try another port by setting `listen_addr` into `cluster` config' \
+                    f' when calling `fed.init`. Grpc error msg: {err}'
+            self._server_listening.set_result((False, msg))
+
 
     async def is_ready(self):
-        return True
+        await self._server_listening
+        return self._server_listening.result()
+
 
     async def get_data(self, src_aprty, upstream_seq_id, curr_seq_id):
         self._stats["receive_op_count"] += 1
@@ -365,12 +374,9 @@ def start_recv_proxy(
         logging_level=logging_level,
         retry_policy=retry_policy,
     )
-    try:
-        recver_proxy_actor.run_grpc_server.remote()
-    except RuntimeError as err:
-        logger.info(f"Catched actor error, ret: {ray.get(res)} ==== msg{err}")
-        raise RuntimeError(err)
-    assert ray.get(recver_proxy_actor.is_ready.remote())
+    recver_proxy_actor.run_grpc_server.remote()
+    server_state = ray.get(recver_proxy_actor.is_ready.remote())
+    assert server_state[0], server_state[1]
     logger.info("RecverProxy was successfully created.")
 
 
