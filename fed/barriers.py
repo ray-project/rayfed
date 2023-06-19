@@ -92,7 +92,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
 
 async def _run_grpc_server(
     port, event, all_data, party, lock,
-    server_future, tls_config=None, grpc_options=None
+    server_ready_future, tls_config=None, grpc_options=None
 ):
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
@@ -111,13 +111,13 @@ async def _run_grpc_server(
     else:
         server.add_insecure_port(f'[::]:{port}')
 
-    msg = f"Successfully adding port {port}."
+    msg = f"Succeeded to add port {port}."
     await server.start()
     logger.info(
         f'Successfully start Grpc service with{"out" if not tls_enabled else ""} '
         'credentials.'
     )
-    server_future.set_result((True, msg))
+    server_ready_future.set_result((True, msg))
     await server.wait_for_termination()
 
 
@@ -306,7 +306,7 @@ class RecverProxyActor:
         # Workaround the threading coordinations
 
         # Flag to see whether grpc server starts
-        self._server_listening = asyncio.Future()
+        self._server_ready_future = asyncio.Future()
 
         # All events for grpc waitting usage.
         self._events = {}  # map from (upstream_seq_id, downstream_seq_id) to event
@@ -322,7 +322,7 @@ class RecverProxyActor:
                 self._all_data,
                 self._party,
                 self._lock,
-                self._server_listening,
+                self._server_ready_future,
                 self._tls_config,
                 get_grpc_options(self.retry_policy),
             )
@@ -330,11 +330,11 @@ class RecverProxyActor:
             msg = f'Grpc server failed to listen to port: {port}' \
                   f' Try another port by setting `listen_addr` into `cluster` config' \
                   f' when calling `fed.init`. Grpc error msg: {err}'
-            self._server_listening.set_result((False, msg))
+            self._server_ready_future.set_result((False, msg))
 
     async def is_ready(self):
-        await self._server_listening
-        return self._server_listening.result()
+        await self._server_ready_future
+        return self._server_ready_future.result()
 
     async def get_data(self, src_aprty, upstream_seq_id, curr_seq_id):
         self._stats["receive_op_count"] += 1
