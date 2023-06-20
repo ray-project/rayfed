@@ -89,4 +89,5 @@ def get_grpc_options(
                 }
             ),
         ),
+        ('grpc.so_reuseport', 0),
     ]

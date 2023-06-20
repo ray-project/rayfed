@@ -27,8 +27,8 @@ def dummpy():
 def run(party):
     compatible_utils.init_ray(address='local')
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
-        'bob': {'address': '127.0.0.1:11011'},
+        'alice': {'address': '127.0.0.1:11019'},
+        'bob': {'address': '127.0.0.1:11018'},
     }
     fed.init(
         cluster=cluster,
@@ -40,6 +40,7 @@ def run(party):
         options = ray.get(proxy_actor._get_grpc_options.remote())
         assert options[0][0] == "grpc.max_send_message_length"
         assert options[0][1] == 100
+        assert ('grpc.so_reuseport', 0) in options
 
     send_proxy = ray.get_actor("SendProxyActor")
     recver_proxy = ray.get_actor(f"RecverProxyActor-{party}")

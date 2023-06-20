@@ -23,7 +23,7 @@ import fed.config as fed_config
 def run():
     compatible_utils.init_ray(address='local')
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
+        'alice': {'address': '127.0.0.1:11012'},
     }
     fed.init(cluster=cluster, party="alice")
     config = fed_config.get_cluster_config()

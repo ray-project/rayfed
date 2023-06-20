@@ -177,7 +177,6 @@ def init(
         ), 'Cert or key are not in tls_config.'
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
-    compatible_utils.kv.initialize()
 
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
@@ -237,9 +236,7 @@ def shutdown():
     Shutdown a RayFed client.
     """
     wait_sending()
-    compatible_utils.kv.delete(constants.KEY_OF_CLUSTER_CONFIG)
-    compatible_utils.kv.delete(constants.KEY_OF_JOB_CONFIG)
-    compatible_utils.kv.reset()
+    compatible_utils._clear_internal_kv()
     clear_global_context()
     logger.info('Shutdowned rayfed.')
 
