@@ -135,7 +135,6 @@ async def send_data_grpc(
 ):
     grpc_options = get_grpc_options(retry_policy=retry_policy) if \
                     grpc_options is None else fed_utils.dict2tuple(grpc_options)
-
     tls_enabled = fed_utils.tls_enabled(tls_config)
     cluster_config = fed_config.get_cluster_config()
     metadata = fed_utils.dict2tuple(metadata)
@@ -424,12 +423,18 @@ def start_send_proxy(
     logging_level: str,
     tls_config: Dict = None,
     retry_policy=None,
+    max_retries=None,
     actor_config: Optional[fed_config.ProxyActorConfig] = None
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR
 
     actor_options = copy.deepcopy(_DEFAULT_SEND_PROXY_OPTIONS)
+    if max_retries is not None:
+        actor_options.update({
+            "max_task_retries": max_retries,
+            "max_restarts": 1,
+            })
     if actor_config is not None and actor_config.resource_label is not None:
         actor_options.update({"resources": actor_config.resource_label})
 
