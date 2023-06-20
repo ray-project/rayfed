@@ -67,20 +67,33 @@ def test_listen_addr():
 
 def test_listen_used_addr():
     def run(party):
-        compatible_utils.init_ray(address='local', dashboard_port=10020)
-        cluster = {
-            # "10020" is already taken by Ray Dashboard
-            'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:10020'},
-            'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
-        }
-        # Listening on an used port will cause AssertionError when starting grpc server
-        with pytest.raises(AssertionError):
-            fed.init(cluster=cluster, party=party)
+        import socket
 
-        import time
+        compatible_utils.init_ray(address='local')
+        occupied_port = 11020
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            # Pre-occuping the port
+            s.bind(("localhost", occupied_port))
 
-        time.sleep(5)
-        fed.shutdown()
+            cluster = {
+                'alice': {
+                    'address': '127.0.0.1:11012',
+                    'listen_addr': f'0.0.0.0:{occupied_port}'},
+                'bob': {
+                    'address': '127.0.0.1:11011',
+                    'listen_addr': '0.0.0.0:11011'},
+            }
+
+            # Listening on an used port will cause AssertionError when starting grpc server
+            with pytest.raises(AssertionError):
+                fed.init(cluster=cluster, party=party)
+
+            import time
+
+            time.sleep(5)
+            s.close()
+            fed.shutdown()
+            ray.shutdown()
 
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_alice.start()
