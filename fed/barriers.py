@@ -16,8 +16,8 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Dict
-from dataclasses import dataclass, asdict, fields
+import copy
+from typing import Dict, Optional
 
 import cloudpickle
 import grpc
@@ -58,18 +58,6 @@ def get_from_two_dim_dict(the_dict, key_a, key_b):
 def pop_from_two_dim_dict(the_dict, key_a, key_b):
     key_a, key_b = str(key_a), str(key_b)
     return the_dict[key_a].pop(key_b)
-
-
-def filter_supported_options(actor_options):
-    if actor_options is None:
-        return None
-    option_cls = ProxyActorOptions(
-        **{k: v for k, v in actor_options.items()
-           if k in [f.name for f in fields(ProxyActorOptions)]})
-    supported_options = asdict(
-        option_cls,
-        dict_factory=lambda x: {k: v for (k, v) in x if v is not None})
-    return supported_options
 
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
@@ -196,20 +184,6 @@ async def send_data_grpc(
                 f'result: {response.result}.'
             )
             return response.result
-
-
-@dataclass
-class ProxyActorOptions:
-    '''A subset of Ray ActorClass.options that are expose to API users
-    '''
-    resources: dict = None
-    num_cpus: float = None
-    num_gpus: float = None
-    memory: int = None
-    object_store_memory: int = None
-    max_task_retries: int = None
-    max_restarts: int = None
-    _metadata: dict = None
 
 
 @ray.remote
@@ -405,7 +379,7 @@ def start_recv_proxy(
     logging_level: str,
     tls_config=None,
     retry_policy=None,
-    actor_options=None
+    actor_config: Optional[fed_config.ProxyActorConfig] = None
 ):
 
     # Create RecevrProxyActor
@@ -416,15 +390,9 @@ def start_recv_proxy(
     if not listen_addr:
         listen_addr = party_addr['address']
 
-    # Overide the default options
-    filterd_actor_options = filter_supported_options(actor_options)
-    if filterd_actor_options != actor_options:
-        ignored_options = set(filterd_actor_options.keys()) ^ set(actor_options.keys())
-        logger.warning("Detect unsupported actor options, "
-                       f"ignoring options: {ignored_options}")
-
-    actor_options = {**_DEFAULT_RECV_PROXY_OPTIONS, **filterd_actor_options} \
-        if filterd_actor_options is not None else _DEFAULT_RECV_PROXY_OPTIONS
+    actor_options = copy.deepcopy(_DEFAULT_RECV_PROXY_OPTIONS)
+    if actor_config is not None and actor_config.resource_label is not None:
+        actor_options.update({"resources": actor_config.resource_label})
 
     logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
 
@@ -441,7 +409,7 @@ def start_recv_proxy(
     timeout = get_cluster_config().cross_silo_timeout
     server_state = ray.get(recver_proxy_actor.is_ready.remote(), timeout=timeout)
     assert server_state[0], server_state[1]
-    logger.info("RecverProxy was successfully created.")
+    logger.info("RecverProxy has successfully created.")
 
 
 _SEND_PROXY_ACTOR = None
@@ -456,23 +424,16 @@ def start_send_proxy(
     logging_level: str,
     tls_config: Dict = None,
     retry_policy=None,
-    actor_options={}
+    actor_config: Optional[fed_config.ProxyActorConfig] = None
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR
 
-    # Overide the default options
-    filterd_actor_options = filter_supported_options(actor_options)
-    if filterd_actor_options != actor_options:
-        # Find filtered options and report them because user may wonder
-        # why some options are not working
-        ignored_options = set(filterd_actor_options.keys()) ^ set(actor_options.keys())
-        logger.warning("Detect unsupported actor options, "
-                       f"ignoring options: {ignored_options}")
+    actor_options = copy.deepcopy(_DEFAULT_SEND_PROXY_OPTIONS)
+    if actor_config is not None and actor_config.resource_label is not None:
+        actor_options.update({"resources": actor_config.resource_label})
 
-    actor_options = {**_DEFAULT_SEND_PROXY_OPTIONS, **filterd_actor_options} \
-        if filterd_actor_options is not None else _DEFAULT_SEND_PROXY_OPTIONS
-    logger.debug(f"Start SendProxyActor with options: {actor_options}")
+    logger.debug(f"Starting SendProxyActor with options: {actor_options}")
     _SEND_PROXY_ACTOR = SendProxyActor.options(
         name="SendProxyActor", **actor_options)
 
@@ -485,7 +446,7 @@ def start_send_proxy(
     )
     timeout = get_cluster_config().cross_silo_timeout
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
-    logger.info("SendProxy was successfully created.")
+    logger.info("SendProxyActor has successfully created.")
 
 
 def send(
