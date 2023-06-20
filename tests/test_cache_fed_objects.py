@@ -33,7 +33,7 @@ def g(x, index):
 def run(party):
     compatible_utils.init_ray(address='local')
     cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
+        'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
     fed.init(cluster=cluster, party=party)
