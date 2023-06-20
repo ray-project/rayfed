@@ -84,7 +84,7 @@ def test_listen_used_addr():
                     'listen_addr': '0.0.0.0:11011'},
             }
 
-            # Listening on an used port will cause AssertionError when starting grpc server
+            # Starting grpc server on an used port will cause AssertionError
             with pytest.raises(AssertionError):
                 fed.init(cluster=cluster, party=party)
 
