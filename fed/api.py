@@ -43,6 +43,8 @@ def init(
     cross_silo_grpc_retry_policy: Dict = None,
     cross_silo_send_max_retries: int = None,
     cross_silo_serializing_allowed_list: Dict = None,
+    cross_silo_send_resource_label: Dict = None,
+    cross_silo_recv_resource_label: Dict = None,
     exit_on_failure_cross_silo_sending: bool = False,
     cross_silo_messages_max_size_in_bytes: int = None,
     cross_silo_timeout_in_seconds: int = 60,
@@ -131,6 +133,14 @@ def init(
         cross_silo_serializing_allowed_list: The package or class list allowed for
             serializing(deserializating) cross silos. It's used for avoiding pickle
             deserializing execution attack when crossing solis.
+        cross_silo_send_resource_label: Customized resource label, the SendProxyActor
+            will be scheduled based on the declared resource label. For example,
+            when setting to `{"my_label": 1}`, then the SendProxyActor will be started
+            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
+        cross_silo_recv_resource_label: Customized resource label, the RecverProxyActor
+            will be scheduled based on the declared resource label. For example,
+            when setting to `{"my_label": 1}`, then the RecverProxyActor will be started
+            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
         exit_on_failure_cross_silo_sending: whether exit when failure on
             cross-silo sending. If True, a SIGTERM will be signaled to self
             if failed to sending cross-silo data.
@@ -200,6 +210,8 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
+    recv_actor_config = fed_config.ProxyActorConfig(
+        resource_label=cross_silo_recv_resource_label)
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
@@ -207,7 +219,11 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
+        actor_config=recv_actor_config
     )
+
+    send_actor_config = fed_config.ProxyActorConfig(
+        resource_label=cross_silo_send_resource_label)
     start_send_proxy(
         cluster=cluster,
         party=party,
@@ -215,6 +231,7 @@ def init(
         tls_config=tls_config,
         retry_policy=cross_silo_grpc_retry_policy,
         max_retries=cross_silo_send_max_retries,
+        actor_config=send_actor_config
     )
 
     if enable_waiting_for_other_parties_ready:

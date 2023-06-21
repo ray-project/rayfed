@@ -16,7 +16,8 @@ import asyncio
 import logging
 import threading
 import time
-from typing import Dict
+import copy
+from typing import Dict, Optional
 
 import cloudpickle
 import grpc
@@ -27,6 +28,7 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
 from fed.cleanup import push_to_sending
+from fed.config import get_cluster_config
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.utils import setup_logger
 
@@ -133,7 +135,6 @@ async def send_data_grpc(
 ):
     grpc_options = get_grpc_options(retry_policy=retry_policy) if \
                     grpc_options is None else fed_utils.dict2tuple(grpc_options)
-
     tls_enabled = fed_utils.tls_enabled(tls_config)
     cluster_config = fed_config.get_cluster_config()
     metadata = fed_utils.dict2tuple(metadata)
@@ -366,13 +367,20 @@ class RecverProxyActor:
         return get_grpc_options()
 
 
+_DEFAULT_RECV_PROXY_OPTIONS = {
+    "max_concurrency": 1000,
+}
+
+
 def start_recv_proxy(
     cluster: str,
     party: str,
     logging_level: str,
     tls_config=None,
     retry_policy=None,
+    actor_config: Optional[fed_config.ProxyActorConfig] = None
 ):
+
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
     # NOTE(NKcqx): This is not just addr, but a party dict containing 'address'
@@ -381,8 +389,14 @@ def start_recv_proxy(
     if not listen_addr:
         listen_addr = party_addr['address']
 
+    actor_options = copy.deepcopy(_DEFAULT_RECV_PROXY_OPTIONS)
+    if actor_config is not None and actor_config.resource_label is not None:
+        actor_options.update({"resources": actor_config.resource_label})
+
+    logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
+
     recver_proxy_actor = RecverProxyActor.options(
-        name=f"RecverProxyActor-{party}", max_concurrency=1000
+        name=f"RecverProxyActor-{party}", **actor_options
     ).remote(
         listen_addr=listen_addr,
         party=party,
@@ -391,12 +405,16 @@ def start_recv_proxy(
         retry_policy=retry_policy,
     )
     recver_proxy_actor.run_grpc_server.remote()
-    server_state = ray.get(recver_proxy_actor.is_ready.remote())
+    timeout = get_cluster_config().cross_silo_timeout
+    server_state = ray.get(recver_proxy_actor.is_ready.remote(), timeout=timeout)
     assert server_state[0], server_state[1]
-    logger.info("RecverProxy was successfully created.")
+    logger.info("RecverProxy has successfully created.")
 
 
 _SEND_PROXY_ACTOR = None
+_DEFAULT_SEND_PROXY_OPTIONS = {
+    "max_concurrency": 1000,
+}
 
 
 def start_send_proxy(
@@ -406,20 +424,24 @@ def start_send_proxy(
     tls_config: Dict = None,
     retry_policy=None,
     max_retries=None,
+    actor_config: Optional[fed_config.ProxyActorConfig] = None
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR
+
+    actor_options = copy.deepcopy(_DEFAULT_SEND_PROXY_OPTIONS)
     if max_retries is not None:
-        _SEND_PROXY_ACTOR = SendProxyActor.options(
-            name="SendProxyActor",
-            max_concurrency=1000,
-            max_task_retries=max_retries,
-            max_restarts=1,
-        )
-    else:
-        _SEND_PROXY_ACTOR = SendProxyActor.options(
-            name="SendProxyActor", max_concurrency=1000
-        )
+        actor_options.update({
+            "max_task_retries": max_retries,
+            "max_restarts": 1,
+            })
+    if actor_config is not None and actor_config.resource_label is not None:
+        actor_options.update({"resources": actor_config.resource_label})
+
+    logger.debug(f"Starting SendProxyActor with options: {actor_options}")
+    _SEND_PROXY_ACTOR = SendProxyActor.options(
+        name="SendProxyActor", **actor_options)
+
     _SEND_PROXY_ACTOR = _SEND_PROXY_ACTOR.remote(
         cluster=cluster,
         party=party,
@@ -427,8 +449,9 @@ def start_send_proxy(
         logging_level=logging_level,
         retry_policy=retry_policy,
     )
-    assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote())
-    logger.info("SendProxy was successfully created.")
+    timeout = get_cluster_config().cross_silo_timeout
+    assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
+    logger.info("SendProxyActor has successfully created.")
 
 
 def send(

@@ -7,6 +7,7 @@
 import fed._private.compatible_utils as compatible_utils
 import fed._private.constants as fed_constants
 import cloudpickle
+from typing import Dict, Optional
 
 
 class ClusterConfig:
@@ -77,3 +78,16 @@ def get_job_config():
         raw_dict = compatible_utils.kv.get(fed_constants.KEY_OF_JOB_CONFIG)
         _job_config = JobConfig(raw_dict)
     return _job_config
+
+
+class ProxyActorConfig:
+    """A class to store parameters used for Proxy Actor
+
+    Attributes:
+        resource_label: The customized resources for the actor. This will be
+            filled into the "resource" field of Ray ActorClass.options.
+    """
+    def __init__(
+            self,
+            resource_label: Optional[Dict[str, str]] = None) -> None:
+        self.resource_label = resource_label
