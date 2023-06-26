@@ -24,9 +24,6 @@ def test_kv_init():
         ray.shutdown()
 
         assert compatible_utils.kv is None
-        with pytest.raises(ValueError):
-            # Make sure the kv actor is non-exist no matter whether it's in client mode
-            ray.get_actor("_INTERNAL_KV_ACTOR")
 
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))

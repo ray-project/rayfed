@@ -128,27 +128,26 @@ class ClientModeInternalKv(AbstractInternalKv):
     """
     def __init__(self) -> None:
         super().__init__()
-        self._internal_kv_actor = ray.get_actor("_INTERNAL_KV_ACTOR")
+        self._client_api_stub = ray.util.client.ray
 
     def initialize(self):
-        o = self._internal_kv_actor.initialize.remote()
-        return ray.get(o)
+        # Note(NKcqx): internval_kv is always initiated after `ray.init`,
+        # calling this is equal to directly return "True"
+        return self._client_api_stub._internal_kv_initialized()
 
-    def put(self, k, v):
-        o = self._internal_kv_actor.put.remote(k, v)
-        return ray.get(o)
+    def put(self, k, v, overwrite=True):
+        return self._client_api_stub._internal_kv_put(k, v, overwrite)
 
     def get(self, k):
-        o = self._internal_kv_actor.get.remote(k)
-        return ray.get(o)
+        return self._client_api_stub._internal_kv_get(k)
 
     def delete(self, k):
-        o = self._internal_kv_actor.delete.remote(k)
-        return ray.get(o)
+        return self._client_api_stub._internal_kv_del(k)
 
     def reset(self):
-        o = self._internal_kv_actor.reset.remote()
-        return ray.get(o)
+        # Note(NKcqx): No `gcs_client` is instantiated for kv, and the 'initialized'
+        # flag is also reset after `ray.shutdown`, so calling `reset` will do nothing
+        pass
 
 
 def _init_internal_kv():
@@ -156,11 +155,6 @@ def _init_internal_kv():
     global kv
     if kv is None:
         from ray._private.client_mode_hook import is_client_mode_enabled
-        if is_client_mode_enabled:
-            kv_actor = ray.remote(InternalKv).options(
-                name="_INTERNAL_KV_ACTOR").remote()
-            response = kv_actor._ping.remote()
-            ray.get(response)
         kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
         kv.initialize()
 
@@ -171,10 +165,6 @@ def _clear_internal_kv():
         kv.delete(constants.KEY_OF_CLUSTER_CONFIG)
         kv.delete(constants.KEY_OF_JOB_CONFIG)
         kv.reset()
-        from ray._private.client_mode_hook import is_client_mode_enabled
-        if is_client_mode_enabled:
-            _internal_kv_actor = ray.get_actor("_INTERNAL_KV_ACTOR")
-            ray.kill(_internal_kv_actor)
         kv = None
 
 
