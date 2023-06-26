@@ -80,7 +80,7 @@ def get_job_config():
     return _job_config
 
 
-class ProxyActorConfig:
+class CrossSiloProxyConfig:
     """A class to store parameters used for Proxy Actor
 
     Attributes:
@@ -89,5 +89,17 @@ class ProxyActorConfig:
     """
     def __init__(
             self,
-            resource_label: Optional[Dict[str, str]] = None) -> None:
-        self.resource_label = resource_label
+            grpc_retry_policy: Dict = None,
+            send_max_retries: int = None,
+            timeout_in_seconds: int = 60,
+            messages_max_size_in_bytes: int = None,
+            serializing_allowed_list: Optional[Dict[str, str]] = None,
+            send_resource_label: Optional[Dict[str, str]] = None,
+            recv_resource_label: Optional[Dict[str, str]] = None) -> None:
+        self.grpc_retry_policy = grpc_retry_policy
+        self.send_max_retries = send_max_retries
+        self.timeout_in_seconds = timeout_in_seconds
+        self.messages_max_size_in_bytes = messages_max_size_in_bytes
+        self.serializing_allowed_list = serializing_allowed_list
+        self.send_resource_label = send_resource_label
+        self.recv_resource_label = recv_resource_label

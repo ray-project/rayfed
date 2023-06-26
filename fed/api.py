@@ -210,7 +210,7 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
-    recv_actor_config = fed_config.ProxyActorConfig(
+    recv_actor_config = fed_config.CrossSiloProxyConfig(
         resource_label=cross_silo_recv_resource_label)
     # Start recv proxy
     start_recv_proxy(
@@ -222,7 +222,7 @@ def init(
         actor_config=recv_actor_config
     )
 
-    send_actor_config = fed_config.ProxyActorConfig(
+    send_actor_config = fed_config.CrossSiloProxyConfig(
         resource_label=cross_silo_send_resource_label)
     start_send_proxy(
         cluster=cluster,

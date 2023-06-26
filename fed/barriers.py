@@ -378,7 +378,7 @@ def start_recv_proxy(
     logging_level: str,
     tls_config=None,
     retry_policy=None,
-    actor_config: Optional[fed_config.ProxyActorConfig] = None
+    actor_config: Optional[fed_config.CrossSiloProxyConfig] = None
 ):
 
     # Create RecevrProxyActor
@@ -424,7 +424,7 @@ def start_send_proxy(
     tls_config: Dict = None,
     retry_policy=None,
     max_retries=None,
-    actor_config: Optional[fed_config.ProxyActorConfig] = None
+    actor_config: Optional[fed_config.CrossSiloProxyConfig] = None
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR
