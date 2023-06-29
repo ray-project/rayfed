@@ -128,21 +128,21 @@ class ClientModeInternalKv(AbstractInternalKv):
     """
     def __init__(self) -> None:
         super().__init__()
-        self._client_api_stub = ray.util.client.ray
+        self._client_api = ray.util.client.ray
 
     def initialize(self):
         # Note(NKcqx): internval_kv is always initiated after `ray.init`,
         # calling this is equal to directly return "True"
-        return self._client_api_stub._internal_kv_initialized()
+        return self._client_api._internal_kv_initialized()
 
     def put(self, k, v, overwrite=True):
-        return self._client_api_stub._internal_kv_put(k, v, overwrite)
+        return self._client_api._internal_kv_put(k, v, overwrite)
 
     def get(self, k):
-        return self._client_api_stub._internal_kv_get(k)
+        return self._client_api._internal_kv_get(k)
 
     def delete(self, k):
-        return self._client_api_stub._internal_kv_del(k)
+        return self._client_api._internal_kv_del(k)
 
     def reset(self):
         # Note(NKcqx): No `gcs_client` is instantiated for kv, and the 'initialized'
