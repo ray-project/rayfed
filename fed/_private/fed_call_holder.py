@@ -18,7 +18,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 from fed._private.global_context import get_global_context
-from fed.barriers import send
+from fed.proxy.barriers import send
 from fed.fed_object import FedObject
 from fed.utils import resolve_dependencies
 from fed.tree_util import tree_flatten

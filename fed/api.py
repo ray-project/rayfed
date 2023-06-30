@@ -27,7 +27,7 @@ from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context, clear_global_context
-from fed.barriers import ping_others, recv, send, start_recv_proxy, start_send_proxy
+from fed.proxy.barriers import ping_others, recv, send, start_recv_proxy, start_send_proxy
 from fed.cleanup import set_exit_on_failure_sending, wait_sending
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
