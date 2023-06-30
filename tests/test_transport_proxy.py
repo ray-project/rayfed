@@ -22,7 +22,7 @@ import grpc
 import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed.grpc import fed_pb2, fed_pb2_grpc
-from fed.barriers import send, start_recv_proxy, start_send_proxy
+from fed.proxy.barriers import send, start_recv_proxy, start_send_proxy
 from fed.cleanup import wait_sending
 
 
