@@ -17,7 +17,7 @@ import multiprocessing
 import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
-from fed.barriers import ping_others
+from fed.proxy.barriers import ping_others
 
 
 cluster = {
