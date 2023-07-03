@@ -38,7 +38,7 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
             else:
                 logger.debug(
                     f'Insert recv_op, arg task id {arg.get_fed_task_id()}, current'
-                    'task id {current_fed_task_id}'
+                    f'task id {current_fed_task_id}'
                 )
                 if arg.get_ray_object_ref() is not None:
                     # This code path indicates the ray object is already received in
