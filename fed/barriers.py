@@ -201,6 +201,7 @@ class SendProxyActor:
             date_format=constants.RAYFED_DATE_FMT,
             party_val=party,
         )
+
         self._stats = {"send_op_count": 0}
         self._cluster = cluster
         self._party = party
@@ -220,6 +221,8 @@ class SendProxyActor:
         upstream_seq_id,
         downstream_seq_id,
     ):
+        raise RuntimeError("[PaerTest] Anything.")
+
         self._stats["send_op_count"] += 1
         assert (
             dest_party in self._cluster
@@ -378,7 +381,7 @@ def start_recv_proxy(
     logging_level: str,
     tls_config=None,
     retry_policy=None,
-    actor_config: Optional[fed_config.CrossSiloProxyConfig] = None
+    actor_config: Optional[fed_config.CrossSiloCommConfig] = None
 ):
 
     # Create RecevrProxyActor
@@ -390,8 +393,8 @@ def start_recv_proxy(
         listen_addr = party_addr['address']
 
     actor_options = copy.deepcopy(_DEFAULT_RECV_PROXY_OPTIONS)
-    if actor_config is not None and actor_config.resource_label is not None:
-        actor_options.update({"resources": actor_config.resource_label})
+    if actor_config is not None and actor_config.recv_resource_label is not None:
+        actor_options.update({"resources": actor_config.recv_resource_label})
 
     logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
 
@@ -424,7 +427,7 @@ def start_send_proxy(
     tls_config: Dict = None,
     retry_policy=None,
     max_retries=None,
-    actor_config: Optional[fed_config.CrossSiloProxyConfig] = None
+    actor_config: Optional[fed_config.CrossSiloCommConfig] = None
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR
@@ -435,8 +438,8 @@ def start_send_proxy(
             "max_task_retries": max_retries,
             "max_restarts": 1,
             })
-    if actor_config is not None and actor_config.resource_label is not None:
-        actor_options.update({"resources": actor_config.resource_label})
+    if actor_config is not None and actor_config.send_resource_label is not None:
+        actor_options.update({"resources": actor_config.send_resource_label})
 
     logger.debug(f"Starting SendProxyActor with options: {actor_options}")
     _SEND_PROXY_ACTOR = SendProxyActor.options(

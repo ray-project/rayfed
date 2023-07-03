@@ -20,6 +20,8 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
+from fed.config import CrossSiloCommConfig
+
 
 def test_setup_proxy_success():
     def run(party):
@@ -37,8 +39,10 @@ def test_setup_proxy_success():
         fed.init(
             cluster=cluster,
             party=party,
-            cross_silo_send_resource_label=send_proxy_resources,
-            cross_silo_recv_resource_label=recv_proxy_resources,
+            cross_silo_comm_config=CrossSiloCommConfig(
+                send_resource_label=send_proxy_resources,
+                recv_resource_label=recv_proxy_resources
+            )
         )
 
         assert ray.get_actor("SendProxyActor") is not None
@@ -73,9 +77,11 @@ def test_setup_proxy_failed():
             fed.init(
                 cluster=cluster,
                 party=party,
-                cross_silo_send_resource_label=send_proxy_resources,
-                cross_silo_recv_resource_label=recv_proxy_resources,
-                cross_silo_timeout_in_seconds=10,  # Quick fail in test
+                cross_silo_comm_config=CrossSiloCommConfig(
+                    send_resource_label=send_proxy_resources,
+                    recv_resource_label=recv_proxy_resources,
+                    timeout_in_seconds=10  # Quick fail in test
+                )
             )
 
         fed.shutdown()

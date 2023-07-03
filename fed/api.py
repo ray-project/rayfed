@@ -15,7 +15,7 @@
 import functools
 import inspect
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 
 import cloudpickle
 import ray
@@ -29,6 +29,7 @@ from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context, clear_global_context
 from fed.barriers import ping_others, recv, send, start_recv_proxy, start_send_proxy
 from fed.cleanup import set_exit_on_failure_sending, wait_sending
+from fed.config import CrossSiloCommConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -40,16 +41,8 @@ def init(
     party: str = None,
     tls_config: Dict = None,
     logging_level: str = 'info',
-    cross_silo_grpc_retry_policy: Dict = None,
-    cross_silo_send_max_retries: int = None,
-    cross_silo_serializing_allowed_list: Dict = None,
-    cross_silo_send_resource_label: Dict = None,
-    cross_silo_recv_resource_label: Dict = None,
-    exit_on_failure_cross_silo_sending: bool = False,
-    cross_silo_messages_max_size_in_bytes: int = None,
-    cross_silo_timeout_in_seconds: int = 60,
     enable_waiting_for_other_parties_ready: bool = False,
-    grpc_metadata: Dict = None,
+    cross_silo_comm_config: Optional[CrossSiloCommConfig] = None,
     **kwargs,
 ):
     """
@@ -177,6 +170,8 @@ def init(
         assert (
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
+
+    cross_silo_comm_config = cross_silo_comm_config or CrossSiloCommConfig()
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -185,14 +180,15 @@ def init(
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,
         constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST:
-            cross_silo_serializing_allowed_list,
+            cross_silo_comm_config.serializing_allowed_list,
         constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
-            cross_silo_messages_max_size_in_bytes,
-        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
+            cross_silo_comm_config.messages_max_size_in_bytes,
+        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS:
+            cross_silo_comm_config.timeout_in_seconds,
     }
 
     job_config = {
-        constants.KEY_OF_GRPC_METADATA : grpc_metadata,
+        constants.KEY_OF_GRPC_METADATA : cross_silo_comm_config.http_header,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
@@ -209,29 +205,25 @@ def init(
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
-    set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
-    recv_actor_config = fed_config.CrossSiloProxyConfig(
-        resource_label=cross_silo_recv_resource_label)
+    set_exit_on_failure_sending(cross_silo_comm_config.exit_on_sending_failure)
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        retry_policy=cross_silo_grpc_retry_policy,
-        actor_config=recv_actor_config
+        retry_policy=cross_silo_comm_config.grpc_retry_policy,
+        actor_config=cross_silo_comm_config
     )
 
-    send_actor_config = fed_config.CrossSiloProxyConfig(
-        resource_label=cross_silo_send_resource_label)
     start_send_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        retry_policy=cross_silo_grpc_retry_policy,
-        max_retries=cross_silo_send_max_retries,
-        actor_config=send_actor_config
+        retry_policy=cross_silo_comm_config.grpc_retry_policy,
+        max_retries=cross_silo_comm_config.proxier_fo_max_retries,
+        actor_config=cross_silo_comm_config
     )
 
     if enable_waiting_for_other_parties_ready:

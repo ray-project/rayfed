@@ -8,6 +8,7 @@ import fed._private.compatible_utils as compatible_utils
 import fed._private.constants as fed_constants
 import cloudpickle
 from typing import Dict, Optional
+import json
 
 
 class ClusterConfig:
@@ -80,7 +81,7 @@ def get_job_config():
     return _job_config
 
 
-class CrossSiloProxyConfig:
+class CrossSiloCommConfig:
     """A class to store parameters used for Proxy Actor
 
     Attributes:
@@ -90,16 +91,28 @@ class CrossSiloProxyConfig:
     def __init__(
             self,
             grpc_retry_policy: Dict = None,
-            send_max_retries: int = None,
+            proxier_fo_max_retries: int = None,
             timeout_in_seconds: int = 60,
             messages_max_size_in_bytes: int = None,
+            exit_on_sending_failure: Optional[bool] = False,
             serializing_allowed_list: Optional[Dict[str, str]] = None,
             send_resource_label: Optional[Dict[str, str]] = None,
-            recv_resource_label: Optional[Dict[str, str]] = None) -> None:
+            recv_resource_label: Optional[Dict[str, str]] = None,
+            http_header: Optional[Dict[str, str]] = None) -> None:
         self.grpc_retry_policy = grpc_retry_policy
-        self.send_max_retries = send_max_retries
+        self.proxier_fo_max_retries = proxier_fo_max_retries
         self.timeout_in_seconds = timeout_in_seconds
         self.messages_max_size_in_bytes = messages_max_size_in_bytes
+        self.exit_on_sending_failure = exit_on_sending_failure
         self.serializing_allowed_list = serializing_allowed_list
         self.send_resource_label = send_resource_label
         self.recv_resource_label = recv_resource_label
+        self.http_header = http_header
+
+    def __json__(self):
+        return json.dumps(self.__dict__)
+
+    @classmethod
+    def from_json(cls, json_str):
+        data = json.loads(json_str)
+        return cls(**data)

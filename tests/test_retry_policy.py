@@ -20,6 +20,8 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
+from fed.config import CrossSiloCommConfig
+
 
 @fed.remote
 def f():
@@ -51,7 +53,9 @@ def run(party, is_inner_party):
     fed.init(
         cluster=cluster,
         party=party,
-        cross_silo_grpc_retry_policy=retry_policy,
+        cross_silo_comm_config=CrossSiloCommConfig(
+            grpc_retry_policy=retry_policy
+        )
     )
 
     o = f.party("alice").remote()

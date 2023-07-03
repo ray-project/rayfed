@@ -18,6 +18,8 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
+from fed.config import CrossSiloCommConfig
+
 
 @fed.remote
 def dummpy():
@@ -33,7 +35,8 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        cross_silo_messages_max_size_in_bytes=100,
+        cross_silo_comm_config=CrossSiloCommConfig(
+            messages_max_size_in_bytes=100)
     )
 
     def _assert_on_proxy(proxy_actor):
