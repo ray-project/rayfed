@@ -15,7 +15,6 @@
 import ray
 import time
 import sys
-import ray
 import fed
 
 

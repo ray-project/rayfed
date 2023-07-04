@@ -139,7 +139,10 @@ async def send_data_grpc(
     )
     # Waiting for the reply from downstream.
     response = await stub.SendData(
-        request, metadata=fed_utils.dict2tuple(metadata), timeout=cluster_config.cross_silo_timeout)
+        request,
+        metadata=fed_utils.dict2tuple(metadata),
+        timeout=cluster_config.cross_silo_timeout,
+    )
     logger.debug(
         f'Received data response from seq_id {downstream_seq_id}, '
         f'result: {response.result}.'
@@ -200,13 +203,14 @@ class SendProxyActor:
         dest_party_grpc_config = self.setup_grpc_config(dest_party)
         try:
             tls_enabled = fed_utils.tls_enabled(self._tls_config)
-            grpc_options =dest_party_grpc_config['grpc_options']
+            grpc_options = dest_party_grpc_config['grpc_options']
             grpc_options = get_grpc_options(retry_policy=self.retry_policy) if \
-                            grpc_options is None else fed_utils.dict2tuple(grpc_options)
-            
+                grpc_options is None else fed_utils.dict2tuple(grpc_options)
+
             if dest_party not in self._stubs:
                 if tls_enabled:
-                    ca_cert, private_key, cert_chain = fed_utils.load_cert_config(self._tls_config)
+                    ca_cert, private_key, cert_chain = fed_utils.load_cert_config(
+                        self._tls_config)
                     credentials = grpc.ssl_channel_credentials(
                         certificate_chain=cert_chain,
                         private_key=private_key,
