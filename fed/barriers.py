@@ -28,7 +28,7 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
 from fed.cleanup import push_to_sending
-from fed.config import get_cluster_config
+from fed.config import get_job_config
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.utils import setup_logger
 
@@ -136,7 +136,7 @@ async def send_data_grpc(
     grpc_options = get_grpc_options(retry_policy=retry_policy) if \
                     grpc_options is None else fed_utils.dict2tuple(grpc_options)
     tls_enabled = fed_utils.tls_enabled(tls_config)
-    cluster_config = fed_config.get_cluster_config()
+    timeout = get_job_config().cross_silo_comm_config.timeout_in_seconds
     metadata = fed_utils.dict2tuple(metadata)
     if tls_enabled:
         ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
@@ -160,7 +160,7 @@ async def send_data_grpc(
             )
             # wait for downstream's reply
             response = await stub.SendData(
-                request, metadata=metadata, timeout=cluster_config.cross_silo_timeout)
+                request, metadata=metadata, timeout=timeout)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id}, '
                 f'result: {response.result}.'
@@ -177,7 +177,7 @@ async def send_data_grpc(
             )
             # wait for downstream's reply
             response = await stub.SendData(
-                request, metadata=metadata, timeout=cluster_config.cross_silo_timeout)
+                request, metadata=metadata, timeout=timeout)
             logger.debug(
                 f'Received data response from seq_id {downstream_seq_id} '
                 f'result: {response.result}.'
@@ -207,9 +207,9 @@ class SendProxyActor:
         self._party = party
         self._tls_config = tls_config
         self.retry_policy = retry_policy
-        self._grpc_metadata = fed_config.get_job_config().grpc_metadata
-        cluster_config = fed_config.get_cluster_config()
-        set_max_message_length(cluster_config.cross_silo_messages_max_size)
+        cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
+        self._grpc_metadata = cross_silo_comm_config.http_header
+        set_max_message_length(cross_silo_comm_config.messages_max_size_in_bytes)
 
     async def is_ready(self):
         return True
@@ -221,7 +221,6 @@ class SendProxyActor:
         upstream_seq_id,
         downstream_seq_id,
     ):
-        raise RuntimeError("[PaerTest] Anything.")
 
         self._stats["send_op_count"] += 1
         assert (
@@ -305,8 +304,8 @@ class RecverProxyActor:
         self._party = party
         self._tls_config = tls_config
         self.retry_policy = retry_policy
-        config = fed_config.get_cluster_config()
-        set_max_message_length(config.cross_silo_messages_max_size)
+        cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
+        set_max_message_length(cross_silo_comm_config.messages_max_size_in_bytes)
         # Workaround the threading coordinations
 
         # Flag to see whether grpc server starts
@@ -408,7 +407,7 @@ def start_recv_proxy(
         retry_policy=retry_policy,
     )
     recver_proxy_actor.run_grpc_server.remote()
-    timeout = get_cluster_config().cross_silo_timeout
+    timeout = get_job_config().cross_silo_comm_config.timeout_in_seconds
     server_state = ray.get(recver_proxy_actor.is_ready.remote(), timeout=timeout)
     assert server_state[0], server_state[1]
     logger.info("RecverProxy has successfully created.")
@@ -452,7 +451,7 @@ def start_send_proxy(
         logging_level=logging_level,
         retry_policy=retry_policy,
     )
-    timeout = get_cluster_config().cross_silo_timeout
+    timeout = get_job_config().cross_silo_comm_config.timeout_in_seconds
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
     logger.info("SendProxyActor has successfully created.")
 

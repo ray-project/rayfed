@@ -49,8 +49,8 @@ class JobConfig:
             self._data = cloudpickle.loads(raw_bytes)
 
     @property
-    def grpc_metadata(self):
-        return self._data.get(fed_constants.KEY_OF_GRPC_METADATA, {})
+    def cross_silo_comm_config(self):
+        return self._data.get(fed_constants.KEY_OF_CROSS_SILO_COMM_CONFIG, {})
 
 
 # A module level cache for the cluster configurations.

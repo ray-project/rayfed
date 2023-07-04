@@ -179,16 +179,11 @@ def init(
         constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,
-        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST:
-            cross_silo_comm_config.serializing_allowed_list,
-        constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
-            cross_silo_comm_config.messages_max_size_in_bytes,
-        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS:
-            cross_silo_comm_config.timeout_in_seconds,
     }
 
     job_config = {
-        constants.KEY_OF_GRPC_METADATA : cross_silo_comm_config.http_header,
+        constants.KEY_OF_CROSS_SILO_COMM_CONFIG:
+            cross_silo_comm_config,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
