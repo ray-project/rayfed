@@ -16,12 +16,9 @@
 import multiprocessing
 
 import pytest
-import time
 import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
-
-from fed.cleanup import _start_check_sending, push_to_sending
 
 
 @fed.remote
