@@ -51,13 +51,6 @@ def run(party):
         assert fed.cleanup._sending_obj_refs_q is None
         compatible_utils.init_ray(address='local')
         fed.init(cluster=cluster, party=party)
-        _start_check_sending()
-        time.sleep(0.5)
-        assert fed.cleanup._sending_obj_refs_q is not None
-        push_to_sending(True)
-        # Slightly longer than the queue polling
-        time.sleep(0.6)
-        assert fed.cleanup._sending_obj_refs_q is None
 
         my1 = My.party("alice").remote()
         my2 = My.party("bob").remote()

@@ -110,12 +110,13 @@ def notify_to_exit():
 
 def wait_sending():
     global _check_send_thread
-    if _check_send_thread:
+    if _check_send_thread is not None:
         notify_to_exit()
         _check_send_thread.join()
         _check_send_thread = None
 
+    global _sending_obj_refs_q
+    if _sending_obj_refs_q is not None:
         # It's safe to reset `_sending_obj_refs_q` as another
         # thread is stoped.
-        global _sending_obj_refs_q
         _sending_obj_refs_q = None
