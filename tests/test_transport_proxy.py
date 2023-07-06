@@ -227,7 +227,6 @@ def test_send_grpc_with_party_specific_meta():
     for result in ray.get(sent_objs):
         assert result
 
-    wait_sending()
     ray.shutdown()
 
 

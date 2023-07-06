@@ -87,7 +87,6 @@ def test_n_to_1_transport():
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
 
-    wait_sending()
     ray.shutdown()
 
 
