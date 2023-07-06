@@ -18,7 +18,6 @@ import signal
 import threading
 import time
 from collections import deque
-from fed.utils import LockGuard
 
 import ray
 
@@ -54,7 +53,6 @@ class CleanupManager:
         self._monitor_thread.start()
         logger.info('Start check sending monitor thread.')
 
-
     def _stop_gracefully(self):
         assert self._check_send_thread is not None
         self._notify_to_exit()
@@ -67,7 +65,6 @@ class CleanupManager:
 
     def push_to_sending(self, obj_ref: ray.ObjectRef):
         self._sending_obj_refs_q.append(obj_ref)
-
 
     def _check_sending_objs(self):
         def _signal_exit():

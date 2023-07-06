@@ -14,6 +14,7 @@
 
 from fed.cleanup import CleanupManager
 
+
 class GlobalContext:
     def __init__(self) -> None:
         self._seq_count = 0
