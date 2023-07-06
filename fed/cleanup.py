@@ -18,26 +18,18 @@ import signal
 import threading
 import time
 from collections import deque
+from fed.utils import LockGuard
 
 import ray
 
 logger = logging.getLogger(__name__)
 
 
-class LockContext:
-    def __init__(self, lock):
-        self.lock = lock
-
-    def __enter__(self):
-        self.lock.acquire()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.lock.release()
-
-
 class CleanupManager:
     def __init__(self) -> None:
-        self._sending_obj_refs_q = None
+        # `deque()` is thread safe on `popleft` and `append` operations.
+        # See https://docs.python.org/3/library/collections.html#deque-objects
+        self._sending_obj_refs_q = deque()
         self._check_send_thread = None
         self._monitor_thread = None
         self._EXIT_ON_FAILURE_SENDING = False
@@ -49,13 +41,12 @@ class CleanupManager:
         self._exit_on_failure_sending = func
 
     def _start(self):
-        # start the necessary threads.
-        self._sending_obj_refs_q = deque()
 
         def __check_func():
             self._check_sending_objs()
 
-        self._check_send_thread = threading.Thread(target=__check_func)
+        with LockGuard(self._lock_on_send_thread):
+            self._check_send_thread = threading.Thread(target=__check_func)
         self._check_send_thread.start()
         logger.info('Start check sending thread.')
 
