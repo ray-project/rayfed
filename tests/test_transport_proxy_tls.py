@@ -21,7 +21,6 @@ import ray
 import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed.proxy.barriers import send, start_recv_proxy, start_send_proxy
-from fed.cleanup import wait_sending
 
 
 def test_n_to_1_transport():
