@@ -23,97 +23,89 @@ import ray
 
 logger = logging.getLogger(__name__)
 
-_sending_obj_refs_q = None
 
-_check_send_thread = None
+class LockContext:
+    def __init__(self, lock):
+        self.lock = lock
 
-_EXIT_ON_FAILURE_SENDING = False
+    def __enter__(self):
+        self.lock.acquire()
 
-
-def set_exit_on_failure_sending(exit_when_failure_sending: bool):
-    global _EXIT_ON_FAILURE_SENDING
-    _EXIT_ON_FAILURE_SENDING = exit_when_failure_sending
-
-
-def get_exit_when_failure_sending():
-    global _EXIT_ON_FAILURE_SENDING
-    return _EXIT_ON_FAILURE_SENDING
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.lock.release()
 
 
-def _check_sending_objs():
-    def _signal_exit():
-        os.kill(os.getpid(), signal.SIGTERM)
-
-    global _sending_obj_refs_q
-    if not _sending_obj_refs_q:
-        _sending_obj_refs_q = deque()
-
-    while True:
-        try:
-            obj_ref = _sending_obj_refs_q.popleft()
-        except IndexError:
-            time.sleep(0.5)
-            continue
-        if isinstance(obj_ref, bool):
-            break
-        try:
-            res = ray.get(obj_ref)
-        except Exception as e:
-            logger.warn(f'Failed to send {obj_ref} with error: {e}')
-            res = False
-        if not res and get_exit_when_failure_sending():
-            logger.warn('Signal self to exit.')
-            _signal_exit()
-            break
-
-    logger.info('Check sending thread was exited.')
-    global _check_send_thread
-    _check_send_thread = None
-    logger.info('Clearing sending queue.')
-    _sending_obj_refs_q = None
+class CleanupManager:
+    def __init__(self) -> None:
+        self._sending_obj_refs_q = None
+        self._check_send_thread = None
+        self._monitor_thread = None
+        self._EXIT_ON_FAILURE_SENDING = False
+        self._lock_on_sending_q = threading.Lock()
+        self._lock_on_send_thread = threading.Lock()
 
 
-def _main_thread_monitor():
-    main_thread = threading.main_thread()
-    main_thread.join()
-    notify_to_exit()
+    def set_exit_on_failure_sending(self, func):
+        self._exit_on_failure_sending = func
 
+    def _start(self):
+        # start the necessary threads.
+        self._sending_obj_refs_q = deque()
 
-_monitor_thread = None
+        def __check_func():
+            self._check_sending_objs()
 
-
-def _start_check_sending():
-    global _sending_obj_refs_q
-    if not _sending_obj_refs_q:
-        _sending_obj_refs_q = deque()
-
-    global _check_send_thread
-    if not _check_send_thread:
-        _check_send_thread = threading.Thread(target=_check_sending_objs)
-        _check_send_thread.start()
+        self._check_send_thread = threading.Thread(target=__check_func)
+        self._check_send_thread.start()
         logger.info('Start check sending thread.')
 
-        global _monitor_thread
-        if not _monitor_thread:
-            _monitor_thread = threading.Thread(target=_main_thread_monitor)
-            _monitor_thread.start()
-            logger.info('Start check sending monitor thread.')
+        def _main_thread_monitor():
+            main_thread = threading.main_thread()
+            main_thread.join()
+            self._notify_to_exit()
+
+        self._monitor_thread = threading.Thread(target=_main_thread_monitor)
+        self._monitor_thread.start()
+        logger.info('Start check sending monitor thread.')
 
 
-def push_to_sending(obj_ref: ray.ObjectRef):
-    _start_check_sending()
-    global _sending_obj_refs_q
-    _sending_obj_refs_q.append(obj_ref)
+    def _stop_gracefully(self):
+        assert self._check_send_thread is not None
+        self._notify_to_exit()
+        self._check_send_thread.join()
+
+    def _notify_to_exit(self):
+        # Sending the termination signal
+        self.push_to_sending(True)
+        logger.info('Notify check sending thread to exit.')
+
+    def push_to_sending(self, obj_ref: ray.ObjectRef):
+        self._sending_obj_refs_q.append(obj_ref)
 
 
-def notify_to_exit():
-    # Sending the termination signal
-    push_to_sending(True)
-    logger.info('Notify check sending thread to exit.')
+    def _check_sending_objs(self):
+        def _signal_exit():
+            os.kill(os.getpid(), signal.SIGTERM)
 
+        assert self._sending_obj_refs_q is not None
 
-def wait_sending():
-    global _check_send_thread
-    if _check_send_thread:
-        notify_to_exit()
-        _check_send_thread.join()
+        while True:
+            try:
+                obj_ref = self._sending_obj_refs_q.popleft()
+            except IndexError:
+                time.sleep(0.5)
+                continue
+            if isinstance(obj_ref, bool):
+                break
+            try:
+                res = ray.get(obj_ref)
+            except Exception as e:
+                logger.warn(f'Failed to send {obj_ref} with error: {e}')
+                res = False
+            if not res and self._exit_when_failure_sending:
+                logger.warn('Signal self to exit.')
+                _signal_exit()
+                break
+
+        logger.info('Check sending thread was exited.')
+        logger.info('Clearing sending queue.')

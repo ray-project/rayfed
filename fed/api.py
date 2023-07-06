@@ -34,7 +34,7 @@ from fed.proxy.barriers import (
     start_recv_proxy,
     start_send_proxy,
 )
-from fed.cleanup import set_exit_on_failure_sending, wait_sending
+# from fed.cleanup import set_exit_on_failure_sending, wait_sending
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -215,7 +215,9 @@ def init(
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
-    set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
+    get_global_context().set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
+    get_global_context()._cleanup_manager._start()
+
     recv_actor_config = fed_config.ProxyActorConfig(
         resource_label=cross_silo_recv_resource_label)
     # Start recv proxy
@@ -249,8 +251,9 @@ def shutdown():
     """
     Shutdown a RayFed client.
     """
-    wait_sending()
+    # wait_sending()
     compatible_utils._clear_internal_kv()
+    get_global_context()._cleanup_manager._stop_gracefully()
     clear_global_context()
     logger.info('Shutdowned rayfed.')
 

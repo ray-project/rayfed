@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from fed.cleanup import CleanupManager
 
 class GlobalContext:
     def __init__(self) -> None:
         self._seq_count = 0
+        self._cleanup_manager = CleanupManager()
+
+    def set_exit_on_failure_sending(self, func):
+        self._cleanup_manager.set_exit_on_failure_sending(func)
 
     def next_seq_id(self):
         self._seq_count += 1
