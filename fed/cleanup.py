@@ -45,8 +45,8 @@ class CleanupManager:
         def __check_func():
             self._check_sending_objs()
 
-        with LockGuard(self._lock_on_send_thread):
-            self._check_send_thread = threading.Thread(target=__check_func)
+        # with LockGuard(self._lock_on_send_thread):
+        self._check_send_thread = threading.Thread(target=__check_func)
         self._check_send_thread.start()
         logger.info('Start check sending thread.')
 
