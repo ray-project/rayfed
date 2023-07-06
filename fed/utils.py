@@ -196,14 +196,3 @@ def validate_cluster_info(cluster: dict):
     """
     for _, info in cluster.items():
         validate_address(info['address'])
-
-
-class LockGuard:
-    def __init__(self, lock):
-        self._lock = lock
-
-    def __enter__(self):
-        self._lock.acquire()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._lock.release()
