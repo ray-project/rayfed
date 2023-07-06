@@ -32,15 +32,11 @@ class CleanupManager:
         self._sending_obj_refs_q = deque()
         self._check_send_thread = None
         self._monitor_thread = None
-        self._EXIT_ON_FAILURE_SENDING = False
         self._lock_on_sending_q = threading.Lock()
         self._lock_on_send_thread = threading.Lock()
 
-
-    def set_exit_on_failure_sending(self, func):
-        self._exit_on_failure_sending = func
-
-    def _start(self):
+    def start(self, exit_when_failure_sending=False):
+        self._exit_when_failure_sending = exit_when_failure_sending
 
         def __check_func():
             self._check_sending_objs()
