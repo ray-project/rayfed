@@ -469,7 +469,6 @@ def send(
         downstream_seq_id=downstream_seq_id,
     )
     get_global_context()._cleanup_manager.push_to_sending(res)
-    # push_to_sending(res)
     return res
 
 

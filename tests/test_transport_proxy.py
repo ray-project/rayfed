@@ -70,7 +70,6 @@ def test_n_to_1_transport():
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
 
-    wait_sending()
     ray.shutdown()
 
 
@@ -186,7 +185,6 @@ def test_send_grpc_with_meta():
     for result in ray.get(sent_objs):
         assert result
 
-    wait_sending()
     ray.shutdown()
 
 
