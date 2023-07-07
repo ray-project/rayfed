@@ -16,12 +16,9 @@
 import multiprocessing
 
 import pytest
-# import time
 import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
-
-# from fed.cleanup import _start_check_sending, push_to_sending
 
 
 @fed.remote
@@ -48,7 +45,6 @@ cluster = {
 
 def run(party):
     def _run():
-        # assert fed.cleanup._sending_obj_refs_q is None
         compatible_utils.init_ray(address='local')
         fed.init(cluster=cluster, party=party)
 
@@ -64,7 +60,6 @@ def run(party):
 
         fed.shutdown()
         ray.shutdown()
-        # assert fed.cleanup._sending_obj_refs_q is None
 
     _run()
     _run()
