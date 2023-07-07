@@ -34,28 +34,29 @@ class My:
         return self._value
 
 
+def run(party, is_inner_party):
+    compatible_utils.init_ray(address='local')
+    cluster = {
+        'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:11012'},
+        'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
+    }
+    fed.init(cluster=cluster, party=party)
+
+    o = f.party("alice").remote()
+    actor_location = "alice" if is_inner_party else "bob"
+    my = My.party(actor_location).remote(o)
+    val = my.get_value.remote()
+    result = fed.get(val)
+    assert result == 100
+    assert fed.get(o) == 100
+    import time
+
+    time.sleep(5)
+    fed.shutdown()
+    ray.shutdown()
+
+
 def test_listen_addr():
-    def run(party, is_inner_party):
-        compatible_utils.init_ray(address='local')
-        cluster = {
-            'alice': {'address': '127.0.0.1:11012', 'listen_addr': '0.0.0.0:11012'},
-            'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
-        }
-        fed.init(cluster=cluster, party=party)
-
-        o = f.party("alice").remote()
-        actor_location = "alice" if is_inner_party else "bob"
-        my = My.party(actor_location).remote(o)
-        val = my.get_value.remote()
-        result = fed.get(val)
-        assert result == 100
-        assert fed.get(o) == 100
-        import time
-
-        time.sleep(5)
-        fed.shutdown()
-        ray.shutdown()
-
     p_alice = multiprocessing.Process(target=run, args=('alice', True))
     p_bob = multiprocessing.Process(target=run, args=('bob', True))
     p_alice.start()
