@@ -27,7 +27,6 @@ import fed.config as fed_config
 import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
-# from fed.cleanup import push_to_sending
 from fed.config import get_cluster_config
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.utils import setup_logger
@@ -468,7 +467,7 @@ def send(
         upstream_seq_id=upstream_seq_id,
         downstream_seq_id=downstream_seq_id,
     )
-    get_global_context()._cleanup_manager.push_to_sending(res)
+    get_global_context().get_cleanup_manager().push_to_sending(res)
     return res
 
 

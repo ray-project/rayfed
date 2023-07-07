@@ -25,6 +25,21 @@ logger = logging.getLogger(__name__)
 
 
 class CleanupManager:
+    """
+    This class is used to manage the related works when the fed driver exiting.
+    It monitors whether the main thread is broken and it needs wait until all sending
+    objects get repsonsed.
+
+    The main logic path is:
+        A. If `fed.shutdown()` is invoked in the main thread and every thing works well,
+        the `graceful_stop()` will be invoked as well and the checking thread will be
+        notifiled to exit gracefully.
+
+        B. If the main thread are broken before sending the notification flag to the
+        sending thread, the monitor thread will detech that and it joins until the main
+        thread exited, then notifys the checking thread.
+    """
+
     def __init__(self) -> None:
         # `deque()` is thread safe on `popleft` and `append` operations.
         # See https://docs.python.org/3/library/collections.html#deque-objects
@@ -53,7 +68,7 @@ class CleanupManager:
         self._monitor_thread.start()
         logger.info('Start check sending monitor thread.')
 
-    def _stop_gracefully(self):
+    def graceful_stop(self):
         assert self._check_send_thread is not None
         self._notify_to_exit()
         self._check_send_thread.join()

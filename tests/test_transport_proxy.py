@@ -21,6 +21,7 @@ import grpc
 
 import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
+from fed._private import global_context
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.proxy.barriers import send, start_recv_proxy, start_send_proxy
 
@@ -32,6 +33,7 @@ def test_n_to_1_transport():
     """
     compatible_utils.init_ray(address='local')
 
+    global_context.get_global_context().get_cleanup_manager().start()
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
@@ -69,6 +71,7 @@ def test_n_to_1_transport():
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
 
+    global_context.get_global_context().get_cleanup_manager().graceful_stop()
     ray.shutdown()
 
 

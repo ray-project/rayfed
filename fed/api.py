@@ -214,7 +214,7 @@ def init(
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
-    get_global_context()._cleanup_manager.start(
+    get_global_context().get_cleanup_manager().start(
         exit_when_failure_sending=exit_on_failure_cross_silo_sending)
 
     recv_actor_config = fed_config.ProxyActorConfig(
