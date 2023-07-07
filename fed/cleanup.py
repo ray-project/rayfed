@@ -46,8 +46,6 @@ class CleanupManager:
         self._sending_obj_refs_q = deque()
         self._check_send_thread = None
         self._monitor_thread = None
-        self._lock_on_sending_q = threading.Lock()
-        self._lock_on_send_thread = threading.Lock()
 
     def start(self, exit_when_failure_sending=False):
         self._exit_when_failure_sending = exit_when_failure_sending
@@ -91,7 +89,7 @@ class CleanupManager:
             try:
                 obj_ref = self._sending_obj_refs_q.popleft()
             except IndexError:
-                time.sleep(0.5)
+                time.sleep(0.1)
                 continue
             if isinstance(obj_ref, bool):
                 break
