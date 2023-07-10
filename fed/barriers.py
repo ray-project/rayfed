@@ -194,6 +194,7 @@ class SendProxyActor:
         tls_config: Dict = None,
         logging_level: str = None,
         retry_policy: Dict = None,
+        proxy_cls = None
     ):
         setup_logger(
             logging_level=logging_level,
@@ -221,6 +222,7 @@ class SendProxyActor:
         upstream_seq_id,
         downstream_seq_id,
     ):
+        # proxy_cls.send()
 
         self._stats["send_op_count"] += 1
         assert (
@@ -291,7 +293,9 @@ class RecverProxyActor:
         party: str,
         logging_level: str,
         tls_config=None,
-        retry_policy: Dict = None,
+        proxy_cls = None,
+        # retry_policy: Dict = None,
+
     ):
         setup_logger(
             logging_level=logging_level,
@@ -317,6 +321,8 @@ class RecverProxyActor:
         self._lock = threading.Lock()
 
     async def run_grpc_server(self):
+        # proxy_cls.run_grpc_server()
+
         try:
             port = self._listen_addr[self._listen_addr.index(':') + 1 :]
             await _run_grpc_server(
@@ -340,6 +346,10 @@ class RecverProxyActor:
         return self._server_ready_future.result()
 
     async def get_data(self, src_aprty, upstream_seq_id, curr_seq_id):
+        # subscriber
+        
+        # proxy_cls.get_data()  # get from broker channel
+
         self._stats["receive_op_count"] += 1
         data_log_msg = f"data for {curr_seq_id} from {upstream_seq_id} of {src_aprty}"
         logger.debug(f"Getting {data_log_msg}")
@@ -380,7 +390,7 @@ def start_recv_proxy(
     logging_level: str,
     tls_config=None,
     retry_policy=None,
-    actor_config: Optional[fed_config.CrossSiloCommConfig] = None
+    proxy_config: Optional[fed_config.CrossSiloCommConfig] = None
 ):
 
     # Create RecevrProxyActor
@@ -392,8 +402,8 @@ def start_recv_proxy(
         listen_addr = party_addr['address']
 
     actor_options = copy.deepcopy(_DEFAULT_RECV_PROXY_OPTIONS)
-    if actor_config is not None and actor_config.recv_resource_label is not None:
-        actor_options.update({"resources": actor_config.recv_resource_label})
+    if proxy_config is not None and proxy_config.recv_resource_label is not None:
+        actor_options.update({"resources": proxy_config.recv_resource_label})
 
     logger.debug(f"Starting RecvProxyActor with options: {actor_options}")
 
@@ -425,20 +435,20 @@ def start_send_proxy(
     logging_level: str,
     tls_config: Dict = None,
     retry_policy=None,
-    max_retries=None,
-    actor_config: Optional[fed_config.CrossSiloCommConfig] = None
+    proxy_cls=None,
+    proxy_config: Optional[fed_config.CrossSiloCommConfig] = None
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR
 
     actor_options = copy.deepcopy(_DEFAULT_SEND_PROXY_OPTIONS)
-    if max_retries is not None:
+    if proxy_config and proxy_config.proxier_fo_max_retries:
         actor_options.update({
-            "max_task_retries": max_retries,
+            "max_task_retries": proxy_config.proxier_fo_max_retries,
             "max_restarts": 1,
             })
-    if actor_config is not None and actor_config.send_resource_label is not None:
-        actor_options.update({"resources": actor_config.send_resource_label})
+    if proxy_config and proxy_config.send_resource_label:
+        actor_options.update({"resources": proxy_config.send_resource_label})
 
     logger.debug(f"Starting SendProxyActor with options: {actor_options}")
     _SEND_PROXY_ACTOR = SendProxyActor.options(
@@ -449,7 +459,8 @@ def start_send_proxy(
         party=party,
         tls_config=tls_config,
         logging_level=logging_level,
-        retry_policy=retry_policy,
+        # retry_policy=retry_policy,
+        # starter=server_starter
     )
     timeout = get_job_config().cross_silo_comm_config.timeout_in_seconds
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=timeout)

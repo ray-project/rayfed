@@ -120,12 +120,12 @@ class CrossSiloCommConfig:
             If None, the default value of 500 MB is specified.
         timeout_in_seconds: The timeout in seconds of a cross-silo RPC call.
             It's 60 by default.
-        http_header: The HTTP header, e.g. metadata in grpc, sent with the RPC request. This won't override
-            basic tcp headers, such as `user-agent`, but concat them together.
+        http_header: The HTTP header, e.g. metadata in grpc, sent with the RPC request.
+            This won't override basic tcp headers, such as `user-agent`, but concat
+            them together.
     """
     def __init__(
             self,
-            grpc_retry_policy: Dict = None,
             proxier_fo_max_retries: int = None,
             timeout_in_seconds: int = 60,
             messages_max_size_in_bytes: int = None,
@@ -134,7 +134,6 @@ class CrossSiloCommConfig:
             send_resource_label: Optional[Dict[str, str]] = None,
             recv_resource_label: Optional[Dict[str, str]] = None,
             http_header: Optional[Dict[str, str]] = None) -> None:
-        self.grpc_retry_policy = grpc_retry_policy
         self.proxier_fo_max_retries = proxier_fo_max_retries
         self.timeout_in_seconds = timeout_in_seconds
         self.messages_max_size_in_bytes = messages_max_size_in_bytes
@@ -151,3 +150,43 @@ class CrossSiloCommConfig:
     def from_json(cls, json_str):
         data = json.loads(json_str)
         return cls(**data)
+
+
+class CrossSiloGRPCConfig(CrossSiloCommConfig):
+    """A class to store parameters used for GRPC communication
+
+    Attributes:
+        grpc_retry_policy: 
+        grpc_channel_options: A list of tuples to store GRPC channel options,
+            e.g. [
+                    ('grpc.enable_retries', 1),
+                    ('grpc.max_send_message_length', 50 * 1024 * 1024)
+                ]
+    """
+    def __init__(self,
+                 grpc_channel_options,
+                 grpc_retry_policy,
+                 *args,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.grpc_retry_policy = grpc_retry_policy
+        self.grpc_channel_options = grpc_channel_options
+
+
+class CrossSiloBRPCConfig(CrossSiloCommConfig):
+    """A class to store parameters used for GRPC communication
+
+    Attributes:
+        grpc_retry_policy: 
+        grpc_channel_options: A list of tuples to store GRPC channel options,
+            e.g. [
+                    ('grpc.enable_retries', 1),
+                    ('grpc.max_send_message_length', 50 * 1024 * 1024)
+                ]
+    """
+    def __init__(self,
+                 brpc_options,
+                 *args,
+                 **kwargs):
+        super().__init__(*args, **kwargs)
+        self.brpc_options = brpc_options

@@ -42,7 +42,8 @@ def init(
     tls_config: Dict = None,
     logging_level: str = 'info',
     enable_waiting_for_other_parties_ready: bool = False,
-    cross_silo_comm_config: Optional[CrossSiloCommConfig] = None,
+    global_cross_silo_comm_config: Optional[CrossSiloCommConfig] = None,
+    dest_party_comm_config: Optional[Dict[CrossSiloCommConfig]] = None,
     **kwargs,
 ):
     """
@@ -108,8 +109,16 @@ def init(
             `warning`, `error`, `critical`, not case sensititive.
         enable_waiting_for_other_parties_ready: ping other parties until they
             are all ready if True.
-        cross_silo_comm_config: Cross-silo communication related config, supported
-            configs can refer to CrossSiloCommConfig in config.py
+        global_cross_silo_comm_config: Global cross-silo communication related
+            config that are applied to all connections. Supported configs
+            can refer to CrossSiloCommConfig in config.py.
+        dest_party_comm_config: Communication config for the destination party
+            specifed by the key. E.g.
+            .. code:: python
+                {
+                    'alice': alice_CrossSiloCommConfig,
+                    'bob': bob_CrossSiloCommConfig
+                }
 
     Examples:
         >>> import fed
@@ -135,7 +144,7 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    cross_silo_comm_config = cross_silo_comm_config or CrossSiloCommConfig()
+    global_cross_silo_comm_config = global_cross_silo_comm_config or CrossSiloCommConfig()
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -147,7 +156,7 @@ def init(
 
     job_config = {
         constants.KEY_OF_CROSS_SILO_COMM_CONFIG:
-            cross_silo_comm_config,
+            global_cross_silo_comm_config,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
@@ -164,15 +173,15 @@ def init(
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
-    set_exit_on_failure_sending(cross_silo_comm_config.exit_on_sending_failure)
+    set_exit_on_failure_sending(global_cross_silo_comm_config.exit_on_sending_failure)
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        retry_policy=cross_silo_comm_config.grpc_retry_policy,
-        actor_config=cross_silo_comm_config
+        proxy_cls=None,
+        proxy_config=global_cross_silo_comm_config
     )
 
     start_send_proxy(
@@ -180,9 +189,8 @@ def init(
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        retry_policy=cross_silo_comm_config.grpc_retry_policy,
-        max_retries=cross_silo_comm_config.proxier_fo_max_retries,
-        actor_config=cross_silo_comm_config
+        proxy_cls=None,
+        proxy_config=global_cross_silo_comm_config # retry_policy=cross_silo_comm_config.grpc_retry_policy,
     )
 
     if enable_waiting_for_other_parties_ready:
