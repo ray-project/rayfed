@@ -21,11 +21,9 @@ import copy
 from typing import Dict, Optional
 
 import cloudpickle
-import grpc
 import ray
 
 import fed.config as fed_config
-import fed.utils as fed_utils
 from fed._private import constants
 
 from fed.config import get_job_config, CrossSiloCommConfig
@@ -62,12 +60,14 @@ def pop_from_two_dim_dict(the_dict, key_a, key_b):
 
 class SendProxy(abc.ABC):
     def __init__(
-            self,
-            cluster: Dict,
-            party: str,
-            proxy_config = None) -> None:
+        self,
+        cluster: Dict,
+        party: str,
+        tls_config: Dict,
+        proxy_config = None) -> None:
         self._cluster = cluster
         self._party = party
+        self._tls_config = tls_config
         self._proxy_config = proxy_config
 
     
@@ -81,7 +81,7 @@ class SendProxy(abc.ABC):
     ):
         pass
 
-    async def is_ready():
+    async def is_ready(self):
         return True
 
 class RecvProxy(abc.ABC):
@@ -135,10 +135,11 @@ class SendProxyActor:
         self._party = party
         self._tls_config = tls_config
         cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
-        self.proxy_instance: SendProxy = proxy_cls(cluster, party, cross_silo_comm_config)
+        self.proxy_instance: SendProxy = proxy_cls(cluster, party, tls_config, cross_silo_comm_config)
 
     async def is_ready(self):
-        return self.proxy_instance.is_ready()
+        res = await self.proxy_instance.is_ready()
+        return res
 
     async def send(
         self,
@@ -197,20 +198,19 @@ class RecverProxyActor:
         self._party = party
         self._tls_config = tls_config
         cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
-        set_max_message_length(cross_silo_comm_config.messages_max_size_in_bytes)
-        self._proxy_instance: RecvProxy = proxy_cls(listen_addr, party, cross_silo_comm_config)
+        self._proxy_instance: RecvProxy = proxy_cls(listen_addr, party, tls_config, cross_silo_comm_config)
 
     async def start(self):
         await self._proxy_instance.start()
-        
-    async def is_ready(self):
-        return self._proxy_instance.is_ready()
 
+    async def is_ready(self):
+        res = await self._proxy_instance.is_ready()
+        return res
 
     async def get_data(self, src_party, upstream_seq_id, curr_seq_id):
         self._stats["receive_op_count"] += 1 
         data = await self._proxy_instance.get_data(src_party, upstream_seq_id, curr_seq_id)
-        return cloudpickle.loads(data)
+        return data
 
     async def _get_stats(self):
         return self._stats

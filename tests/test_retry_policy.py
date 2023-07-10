@@ -20,7 +20,7 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import CrossSiloCommConfig
+from fed.config import CrossSiloGrpcCommConfig
 
 
 @fed.remote
@@ -53,7 +53,7 @@ def run(party, is_inner_party):
     fed.init(
         cluster=cluster,
         party=party,
-        cross_silo_comm_config=CrossSiloCommConfig(
+        cross_silo_comm_config=CrossSiloGrpcCommConfig(
             grpc_retry_policy=retry_policy
         )
     )

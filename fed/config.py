@@ -85,21 +85,6 @@ class CrossSiloCommConfig:
     """A class to store parameters used for Proxy Actor
 
     Attributes:
-        grpc_retry_policy: a dict descibes the retry policy for
-            cross silo rpc call. If None, the following default retry policy
-            will be used. More details please refer to
-            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_. # noqa
-
-            .. code:: python
-                {
-                    "maxAttempts": 4,
-                    "initialBackoff": "0.1s",
-                    "maxBackoff": "1s",
-                    "backoffMultiplier": 2,
-                    "retryableStatusCodes": [
-                        "UNAVAILABLE"
-                    ]
-                }
         proxier_fo_max_retries: The max restart times for the send proxy.
         serializing_allowed_list: The package or class list allowed for
             serializing(deserializating) cross silos. It's used for avoiding pickle
@@ -156,7 +141,21 @@ class CrossSiloGrpcCommConfig(CrossSiloCommConfig):
     """A class to store parameters used for GRPC communication
 
     Attributes:
-        grpc_retry_policy: 
+        grpc_retry_policy: a dict descibes the retry policy for
+            cross silo rpc call. If None, the following default retry policy
+            will be used. More details please refer to
+            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_. # noqa
+
+            .. code:: python
+                {
+                    "maxAttempts": 4,
+                    "initialBackoff": "0.1s",
+                    "maxBackoff": "1s",
+                    "backoffMultiplier": 2,
+                    "retryableStatusCodes": [
+                        "UNAVAILABLE"
+                    ]
+                }
         grpc_channel_options: A list of tuples to store GRPC channel options,
             e.g. [
                     ('grpc.enable_retries', 1),

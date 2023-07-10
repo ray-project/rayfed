@@ -33,7 +33,8 @@ from fed.proxy.barriers import (
     send,
     start_recv_proxy,
     start_send_proxy,
-    SendProxy
+    SendProxy,
+    RecvProxy
 )
 from fed.config import CrossSiloCommConfig
 
@@ -50,6 +51,7 @@ def init(
     logging_level: str = 'info',
     enable_waiting_for_other_parties_ready: bool = False,
     send_proxy_cls: SendProxy = None,
+    recv_proxy_cls: RecvProxy = None,
     global_cross_silo_comm_config: Optional[CrossSiloCommConfig] = None,
     **kwargs,
 ):
@@ -182,20 +184,23 @@ def init(
     logger.info(f'Started rayfed with {cluster_config}')
     get_global_context().get_cleanup_manager().start(
         exit_when_failure_sending=global_cross_silo_comm_config.exit_on_sending_failure)
+    
+    if recv_proxy_cls is None:
+        from fed.proxy.grpc_proxy import GrpcRecvProxy
+        recv_proxy_cls = GrpcRecvProxy
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        proxy_cls=None,
+        proxy_cls=recv_proxy_cls,
         proxy_config=global_cross_silo_comm_config
     )
 
     if send_proxy_cls is None:
         from fed.proxy.grpc_proxy import GrpcSendProxy
         send_proxy_cls = GrpcSendProxy
-
     start_send_proxy(
         cluster=cluster,
         party=party,

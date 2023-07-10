@@ -27,10 +27,13 @@ logger = logging.getLogger(__name__)
 
 
 class GrpcSendProxy(SendProxy):
-    def __init__(self, cluster: Dict, party: str, proxy_config=None) -> None:
-        super().__init__(cluster, party, proxy_config)
+    def __init__(self, cluster: Dict, party: str, tls_config: Dict, proxy_config=None) -> None:
+        super().__init__(cluster, party, tls_config, proxy_config)
         self._grpc_metadata = proxy_config.http_header
         set_max_message_length(proxy_config.messages_max_size_in_bytes)
+        self._retry_policy = None
+        if isinstance(proxy_config, CrossSiloGrpcCommConfig):
+            self._retry_policy = proxy_config.grpc_retry_policy
         # Mapping the destination party name to the reused client stub.
         self._stubs = {}
 
@@ -44,7 +47,7 @@ class GrpcSendProxy(SendProxy):
         dest_party_grpc_config = self.setup_grpc_config(dest_party)
         tls_enabled = fed_utils.tls_enabled(self._tls_config)
         grpc_options = dest_party_grpc_config['grpc_options']
-        grpc_options = get_grpc_options(retry_policy=self.retry_policy) if \
+        grpc_options = get_grpc_options(retry_policy=self._retry_policy) if \
             grpc_options is None else fed_utils.dict2tuple(grpc_options)
         if dest_party not in self._stubs:
                 if tls_enabled:
@@ -62,11 +65,13 @@ class GrpcSendProxy(SendProxy):
                 stub = fed_pb2_grpc.GrpcServiceStub(channel)
                 self._stubs[dest_party] = stub
 
+        timeout = self._proxy_config.timeout_in_seconds
         response = await send_data_grpc(
             data=data,
             stub=self._stubs[dest_party],
             upstream_seq_id=upstream_seq_id,
             downstream_seq_id=downstream_seq_id,
+            timeout=timeout,
             metadata=dest_party_grpc_config['grpc_metadata'],
         )
         return response
@@ -83,7 +88,7 @@ class GrpcSendProxy(SendProxy):
         dest_party_grpc_config['grpc_metadata'] = {
             **global_grpc_metadata, **dest_party_grpc_metadata}
 
-        global_grpc_options = dict(get_grpc_options(self.retry_policy))
+        global_grpc_options = dict(get_grpc_options(self._retry_policy))
         dest_party_grpc_options = dict(
             self._cluster[dest_party].get('grpc_options', {})
         )
@@ -101,9 +106,10 @@ async def send_data_grpc(
     stub,
     upstream_seq_id,
     downstream_seq_id,
+    timeout,
     metadata=None,
 ):
-    cluster_config = fed_config.get_cluster_config()
+    job_config = fed_config.get_job_config()
     data = cloudpickle.dumps(data)
     request = fed_pb2.SendDataRequest(
         data=data,
@@ -114,7 +120,7 @@ async def send_data_grpc(
     response = await stub.SendData(
         request,
         metadata=fed_utils.dict2tuple(metadata),
-        timeout=cluster_config.cross_silo_timeout,
+        timeout=timeout,
     )
     logger.debug(
         f'Received data response from seq_id {downstream_seq_id}, '
@@ -124,8 +130,9 @@ async def send_data_grpc(
 
 
 class GrpcRecvProxy(RecvProxy):
-    def __init__(self, listen_addr: str, party: str, proxy_config: CrossSiloCommConfig) -> None:
-        super().__init__(listen_addr, party, proxy_config)
+    def __init__(self, listen_addr: str, party: str, tls_config: Dict, proxy_config: CrossSiloCommConfig) -> None:
+        super().__init__(listen_addr, party, tls_config, proxy_config)
+        set_max_message_length(proxy_config.messages_max_size_in_bytes)
         # Flag to see whether grpc server starts
         self._server_ready_future = asyncio.Future()
         self._retry_policy = None
@@ -159,7 +166,8 @@ class GrpcRecvProxy(RecvProxy):
 
     async def is_ready(self):
         await self._server_ready_future
-        return self._server_ready_future.result()
+        res = self._server_ready_future.result()
+        return res
 
     async def get_data(self, src_party, upstream_seq_id, curr_seq_id):
         data_log_msg = f"data for {curr_seq_id} from {upstream_seq_id} of {src_party}"
