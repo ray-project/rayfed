@@ -28,6 +28,7 @@ jobs:
             . py3/bin/activate
             which python
             pip install pytest torch cloudpickle cryptography
+            pip install protobuf<4.0
             pip install ray==2.5.0
 
     - name: Build and test
