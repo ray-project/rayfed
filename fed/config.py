@@ -152,7 +152,7 @@ class CrossSiloCommConfig:
         return cls(**data)
 
 
-class CrossSiloGRPCConfig(CrossSiloCommConfig):
+class CrossSiloGrpcCommConfig(CrossSiloCommConfig):
     """A class to store parameters used for GRPC communication
 
     Attributes:

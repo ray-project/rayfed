@@ -33,6 +33,7 @@ from fed.proxy.barriers import (
     send,
     start_recv_proxy,
     start_send_proxy,
+    SendProxy
 )
 from fed.config import CrossSiloCommConfig
 
@@ -48,6 +49,7 @@ def init(
     tls_config: Dict = None,
     logging_level: str = 'info',
     enable_waiting_for_other_parties_ready: bool = False,
+    send_proxy_cls: SendProxy = None,
     global_cross_silo_comm_config: Optional[CrossSiloCommConfig] = None,
     **kwargs,
 ):
@@ -190,12 +192,16 @@ def init(
         proxy_config=global_cross_silo_comm_config
     )
 
+    if send_proxy_cls is None:
+        from fed.proxy.grpc_proxy import GrpcSendProxy
+        send_proxy_cls = GrpcSendProxy
+
     start_send_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        proxy_cls=None,
+        proxy_cls=send_proxy_cls,
         proxy_config=global_cross_silo_comm_config # retry_policy=cross_silo_comm_config.grpc_retry_policy,
     )
 
