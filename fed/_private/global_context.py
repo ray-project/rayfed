@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from fed.cleanup import CleanupManager
+
 
 class GlobalContext:
     def __init__(self) -> None:
         self._seq_count = 0
+        self._cleanup_manager = CleanupManager()
 
-    def next_seq_id(self):
+    def next_seq_id(self) -> int:
         self._seq_count += 1
         return self._seq_count
+
+    def get_cleanup_manager(self) -> CleanupManager:
+        return self._cleanup_manager
 
 
 _global_context = None
@@ -34,4 +40,5 @@ def get_global_context():
 
 def clear_global_context():
     global _global_context
+    _global_context.get_cleanup_manager().graceful_stop()
     _global_context = None

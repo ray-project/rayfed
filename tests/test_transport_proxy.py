@@ -21,9 +21,9 @@ import grpc
 
 import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
+from fed._private import global_context
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.proxy.barriers import send, start_recv_proxy, start_send_proxy
-from fed.cleanup import wait_sending
 
 
 def test_n_to_1_transport():
@@ -33,6 +33,7 @@ def test_n_to_1_transport():
     """
     compatible_utils.init_ray(address='local')
 
+    global_context.get_global_context().get_cleanup_manager().start()
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
@@ -70,7 +71,8 @@ def test_n_to_1_transport():
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
 
-    wait_sending()
+    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.clear_global_context()
     ray.shutdown()
 
 
@@ -171,6 +173,7 @@ def test_send_grpc_with_meta():
                             cloudpickle.dumps(cluster_config))
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG,
                             cloudpickle.dumps(job_config))
+    global_context.get_global_context().get_cleanup_manager().start()
 
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
@@ -186,7 +189,8 @@ def test_send_grpc_with_meta():
     for result in ray.get(sent_objs):
         assert result
 
-    wait_sending()
+    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.clear_global_context()
     ray.shutdown()
 
 
@@ -210,6 +214,7 @@ def test_send_grpc_with_party_specific_meta():
                             cloudpickle.dumps(cluster_config))
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG,
                             cloudpickle.dumps(job_config))
+    global_context.get_global_context().get_cleanup_manager().start()
 
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
@@ -230,7 +235,8 @@ def test_send_grpc_with_party_specific_meta():
     for result in ray.get(sent_objs):
         assert result
 
-    wait_sending()
+    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.clear_global_context()
     ray.shutdown()
 
 
