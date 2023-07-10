@@ -36,7 +36,7 @@ class CleanupManager:
         notifiled to exit gracefully.
 
         B. If the main thread are broken before sending the notification flag to the
-        sending thread, the monitor thread will detech that and it joins until the main
+        sending thread, the monitor thread will detect that and it joins until the main
         thread exited, then notifys the checking thread.
     """
 
