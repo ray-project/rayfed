@@ -91,6 +91,7 @@ def test_n_to_1_transport():
         assert f"data-{i}" in ray.get(get_objs)
 
     global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.clear_global_context()
     ray.shutdown()
 
 

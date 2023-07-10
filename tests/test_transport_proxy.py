@@ -72,6 +72,7 @@ def test_n_to_1_transport():
         assert f"data-{i}" in ray.get(get_objs)
 
     global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.clear_global_context()
     ray.shutdown()
 
 
@@ -210,6 +211,7 @@ def test_send_grpc_with_party_specific_meta():
                             cloudpickle.dumps(cluster_config))
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG,
                             cloudpickle.dumps(job_config))
+    global_context.get_global_context().get_cleanup_manager().start()
 
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
@@ -230,6 +232,8 @@ def test_send_grpc_with_party_specific_meta():
     for result in ray.get(sent_objs):
         assert result
 
+    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.clear_global_context()
     ray.shutdown()
 
 
