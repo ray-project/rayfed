@@ -34,7 +34,6 @@ from fed.proxy.barriers import (
     start_recv_proxy,
     start_send_proxy,
 )
-from fed.cleanup import set_exit_on_failure_sending, wait_sending
 from fed.config import CrossSiloCommConfig
 
 from fed.fed_object import FedObject
@@ -50,7 +49,6 @@ def init(
     logging_level: str = 'info',
     enable_waiting_for_other_parties_ready: bool = False,
     global_cross_silo_comm_config: Optional[CrossSiloCommConfig] = None,
-    dest_party_comm_config: Optional[Dict[CrossSiloCommConfig]] = None,
     **kwargs,
 ):
     """

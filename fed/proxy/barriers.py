@@ -27,15 +27,7 @@ import fed.config as fed_config
 import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
-<<<<<<< HEAD:fed/barriers.py
-from fed.cleanup import push_to_sending
 from fed.config import get_job_config
-||||||| e98fd36:fed/barriers.py
-from fed.cleanup import push_to_sending
-from fed.config import get_cluster_config
-=======
-from fed.config import get_cluster_config
->>>>>>> main:fed/proxy/barriers.py
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.utils import setup_logger
 from fed._private.global_context import get_global_context
