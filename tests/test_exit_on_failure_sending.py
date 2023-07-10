@@ -19,7 +19,7 @@ import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
 
-from fed.config import CrossSiloCommConfig
+from fed.config import CrossSiloGrpcCommConfig
 
 import signal
 
@@ -63,7 +63,7 @@ def run(party, is_inner_party):
         "backoffMultiplier": 1,
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
-    cross_silo_comm_config = CrossSiloCommConfig(
+    cross_silo_comm_config = CrossSiloGrpcCommConfig(
         grpc_retry_policy=retry_policy,
         exit_on_sending_failure=True
     )
@@ -90,4 +90,5 @@ def test_exit_when_failure_on_sending():
 
 
 if __name__ == "__main__":
-    sys.exit(pytest.main(["-sv", __file__]))
+    # sys.exit(pytest.main(["-sv", __file__]))
+    test_exit_when_failure_on_sending()
