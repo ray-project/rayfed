@@ -17,7 +17,6 @@ import ray
 import fed._private.constants as fed_constants
 
 import ray.experimental.internal_kv as ray_internal_kv
-from ray._private.gcs_utils import GcsClient
 from fed._private import constants
 
 
@@ -102,6 +101,13 @@ class InternalKv(AbstractInternalKv):
         super().__init__()
 
     def initialize(self):
+        try:
+            from ray._private.gcs_utils import GcsClient
+        except ImportError:
+            # The GcsClient was moved to `ray._raylet` module in `ray-2.5.0`.
+            assert _compare_version_strings(ray.__version__, "2.4.0")
+            from ray._raylet import GcsClient
+
         gcs_client = GcsClient(
             address=_get_gcs_address_from_ray_worker(),
             nums_reconnect_retry=10)
