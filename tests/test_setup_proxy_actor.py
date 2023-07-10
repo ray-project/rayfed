@@ -47,6 +47,31 @@ def run(party):
     ray.shutdown()
 
 
+def run_failure(party):
+    compatible_utils.init_ray(address='local', resources={"127.0.0.1": 1})
+    cluster = {
+        'alice': {'address': '127.0.0.1:11010'},
+        'bob': {'address': '127.0.0.1:11011'},
+    }
+    send_proxy_resources = {
+        "127.0.0.2": 1  # Insufficient resource
+    }
+    recv_proxy_resources = {
+        "127.0.0.2": 1  # Insufficient resource
+    }
+    with pytest.raises(ray.exceptions.GetTimeoutError):
+        fed.init(
+            cluster=cluster,
+            party=party,
+            cross_silo_send_resource_label=send_proxy_resources,
+            cross_silo_recv_resource_label=recv_proxy_resources,
+            cross_silo_timeout_in_seconds=10,  # Quick fail in test
+        )
+
+    fed.shutdown()
+    ray.shutdown()
+
+
 def test_setup_proxy_success():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
@@ -58,32 +83,8 @@ def test_setup_proxy_success():
 
 
 def test_setup_proxy_failed():
-    def run(party):
-        compatible_utils.init_ray(address='local', resources={"127.0.0.1": 1})
-        cluster = {
-            'alice': {'address': '127.0.0.1:11010'},
-            'bob': {'address': '127.0.0.1:11011'},
-        }
-        send_proxy_resources = {
-            "127.0.0.2": 1  # Insufficient resource
-        }
-        recv_proxy_resources = {
-            "127.0.0.2": 1  # Insufficient resource
-        }
-        with pytest.raises(ray.exceptions.GetTimeoutError):
-            fed.init(
-                cluster=cluster,
-                party=party,
-                cross_silo_send_resource_label=send_proxy_resources,
-                cross_silo_recv_resource_label=recv_proxy_resources,
-                cross_silo_timeout_in_seconds=10,  # Quick fail in test
-            )
-
-        fed.shutdown()
-        ray.shutdown()
-
-    p_alice = multiprocessing.Process(target=run, args=('alice',))
-    p_bob = multiprocessing.Process(target=run, args=('bob',))
+    p_alice = multiprocessing.Process(target=run_failure, args=('alice',))
+    p_bob = multiprocessing.Process(target=run_failure, args=('bob',))
     p_alice.start()
     p_bob.start()
     p_alice.join()
