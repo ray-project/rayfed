@@ -7,7 +7,7 @@
 import fed._private.compatible_utils as compatible_utils
 import fed._private.constants as fed_constants
 import cloudpickle
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 import json
 
 
@@ -163,8 +163,8 @@ class CrossSiloGrpcCommConfig(CrossSiloCommConfig):
                 ]
     """
     def __init__(self,
-                 grpc_channel_options,
-                 grpc_retry_policy,
+                 grpc_channel_options: List = None,
+                 grpc_retry_policy: Dict[str, str] = None,
                  *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
