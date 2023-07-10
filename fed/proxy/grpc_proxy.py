@@ -6,7 +6,6 @@ import threading
 from typing import Dict
 
 
-import fed.config as fed_config
 import fed.utils as fed_utils
 
 from fed.config import CrossSiloCommConfig, CrossSiloGrpcCommConfig
@@ -25,9 +24,14 @@ from fed.grpc import fed_pb2, fed_pb2_grpc
 logger = logging.getLogger(__name__)
 
 
-
 class GrpcSendProxy(SendProxy):
-    def __init__(self, cluster: Dict, party: str, tls_config: Dict, proxy_config=None) -> None:
+    def __init__(
+            self,
+            cluster: Dict,
+            party: str,
+            tls_config: Dict,
+            proxy_config=None
+    ) -> None:
         super().__init__(cluster, party, tls_config, proxy_config)
         self._grpc_metadata = proxy_config.http_header
         set_max_message_length(proxy_config.messages_max_size_in_bytes)
@@ -50,20 +54,20 @@ class GrpcSendProxy(SendProxy):
         grpc_options = get_grpc_options(retry_policy=self._retry_policy) if \
             grpc_options is None else fed_utils.dict2tuple(grpc_options)
         if dest_party not in self._stubs:
-                if tls_enabled:
-                    ca_cert, private_key, cert_chain = fed_utils.load_cert_config(
-                        self._tls_config)
-                    credentials = grpc.ssl_channel_credentials(
-                        certificate_chain=cert_chain,
-                        private_key=private_key,
-                        root_certificates=ca_cert,
-                    )
-                    channel = grpc.aio.secure_channel(
-                        dest_addr, credentials, options=grpc_options)
-                else:
-                    channel = grpc.aio.insecure_channel(dest_addr, options=grpc_options)
-                stub = fed_pb2_grpc.GrpcServiceStub(channel)
-                self._stubs[dest_party] = stub
+            if tls_enabled:
+                ca_cert, private_key, cert_chain = fed_utils.load_cert_config(
+                    self._tls_config)
+                credentials = grpc.ssl_channel_credentials(
+                    certificate_chain=cert_chain,
+                    private_key=private_key,
+                    root_certificates=ca_cert,
+                )
+                channel = grpc.aio.secure_channel(
+                    dest_addr, credentials, options=grpc_options)
+            else:
+                channel = grpc.aio.insecure_channel(dest_addr, options=grpc_options)
+            stub = fed_pb2_grpc.GrpcServiceStub(channel)
+            self._stubs[dest_party] = stub
 
         timeout = self._proxy_config.timeout_in_seconds
         response = await send_data_grpc(
@@ -75,7 +79,7 @@ class GrpcSendProxy(SendProxy):
             metadata=dest_party_grpc_config['grpc_metadata'],
         )
         return response
-    
+
     def setup_grpc_config(self, dest_party):
         dest_party_grpc_config = {}
         global_grpc_metadata = (
@@ -100,7 +104,6 @@ class GrpcSendProxy(SendProxy):
         return get_grpc_options()
 
 
-
 async def send_data_grpc(
     data,
     stub,
@@ -109,7 +112,6 @@ async def send_data_grpc(
     timeout,
     metadata=None,
 ):
-    job_config = fed_config.get_job_config()
     data = cloudpickle.dumps(data)
     request = fed_pb2.SendDataRequest(
         data=data,
@@ -130,7 +132,13 @@ async def send_data_grpc(
 
 
 class GrpcRecvProxy(RecvProxy):
-    def __init__(self, listen_addr: str, party: str, tls_config: Dict, proxy_config: CrossSiloCommConfig) -> None:
+    def __init__(
+            self,
+            listen_addr: str,
+            party: str,
+            tls_config: Dict,
+            proxy_config: CrossSiloCommConfig
+    ) -> None:
         super().__init__(listen_addr, party, tls_config, proxy_config)
         set_max_message_length(proxy_config.messages_max_size_in_bytes)
         # Flag to see whether grpc server starts
@@ -163,7 +171,6 @@ class GrpcRecvProxy(RecvProxy):
                   f' when calling `fed.init`. Grpc error msg: {err}'
             self._server_ready_future.set_result((False, msg))
 
-
     async def is_ready(self):
         await self._server_ready_future
         res = self._server_ready_future.result()
@@ -193,8 +200,6 @@ class GrpcRecvProxy(RecvProxy):
 
     async def _get_grpc_options(self):
         return get_grpc_options()
-
-
 
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
@@ -258,4 +263,3 @@ async def _run_grpc_server(
     )
     server_ready_future.set_result((True, msg))
     await server.wait_for_termination()
-

@@ -176,12 +176,6 @@ class CrossSiloBRPCConfig(CrossSiloCommConfig):
     """A class to store parameters used for GRPC communication
 
     Attributes:
-        grpc_retry_policy: 
-        grpc_channel_options: A list of tuples to store GRPC channel options,
-            e.g. [
-                    ('grpc.enable_retries', 1),
-                    ('grpc.max_send_message_length', 50 * 1024 * 1024)
-                ]
     """
     def __init__(self,
                  brpc_options,

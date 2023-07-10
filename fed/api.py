@@ -153,7 +153,8 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    global_cross_silo_comm_config = global_cross_silo_comm_config or CrossSiloCommConfig()
+    global_cross_silo_comm_config = \
+        global_cross_silo_comm_config or CrossSiloCommConfig()
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -184,7 +185,7 @@ def init(
     logger.info(f'Started rayfed with {cluster_config}')
     get_global_context().get_cleanup_manager().start(
         exit_when_failure_sending=global_cross_silo_comm_config.exit_on_sending_failure)
-    
+
     if recv_proxy_cls is None:
         from fed.proxy.grpc_proxy import GrpcRecvProxy
         recv_proxy_cls = GrpcRecvProxy
@@ -207,7 +208,7 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         proxy_cls=send_proxy_cls,
-        proxy_config=global_cross_silo_comm_config # retry_policy=cross_silo_comm_config.grpc_retry_policy,
+        proxy_config=global_cross_silo_comm_config
     )
 
     if enable_waiting_for_other_parties_ready:

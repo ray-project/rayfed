@@ -13,14 +13,11 @@
 # limitations under the License.
 
 import abc
-import asyncio
 import logging
-import threading
 import time
 import copy
 from typing import Dict, Optional
 
-import cloudpickle
 import ray
 
 import fed.config as fed_config
@@ -64,13 +61,13 @@ class SendProxy(abc.ABC):
         cluster: Dict,
         party: str,
         tls_config: Dict,
-        proxy_config = None) -> None:
+        proxy_config=None
+    ) -> None:
         self._cluster = cluster
         self._party = party
         self._tls_config = tls_config
         self._proxy_config = proxy_config
 
-    
     @abc.abstractmethod
     async def send(
         self,
@@ -84,18 +81,19 @@ class SendProxy(abc.ABC):
     async def is_ready(self):
         return True
 
+
 class RecvProxy(abc.ABC):
     def __init__(
             self,
             listen_addr: str,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloCommConfig) -> None:
+            proxy_config: CrossSiloCommConfig
+    ) -> None:
         self._listen_addr = listen_addr
         self._party = party
         self._tls_config = tls_config
         self._proxy_config = proxy_config
-
 
     @abc.abstractmethod
     def start(self):
@@ -121,7 +119,7 @@ class SendProxyActor:
         party: str,
         tls_config: Dict = None,
         logging_level: str = None,
-        proxy_cls = None
+        proxy_cls=None
     ):
         setup_logger(
             logging_level=logging_level,
@@ -135,7 +133,8 @@ class SendProxyActor:
         self._party = party
         self._tls_config = tls_config
         cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
-        self.proxy_instance: SendProxy = proxy_cls(cluster, party, tls_config, cross_silo_comm_config)
+        self.proxy_instance: SendProxy = proxy_cls(
+            cluster, party, tls_config, cross_silo_comm_config)
 
     async def is_ready(self):
         res = await self.proxy_instance.is_ready()
@@ -161,17 +160,16 @@ class SendProxyActor:
             ' credentials.'
         )
         try:
-            response = await self.proxy_instance.send(dest_party, data, upstream_seq_id, downstream_seq_id)
+            response = await self.proxy_instance.send(
+                dest_party, data, upstream_seq_id, downstream_seq_id)
         except Exception as e:
             logger.error(f'Failed to {send_log_msg}, error: {e}')
             return False
         logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
         return True  # True indicates it's sent successfully.
 
-
     async def _get_stats(self):
         return self._stats
-
 
     async def _get_cluster_info(self):
         return self._cluster
@@ -185,7 +183,7 @@ class RecverProxyActor:
         party: str,
         logging_level: str,
         tls_config=None,
-        proxy_cls = None,
+        proxy_cls=None,
     ):
         setup_logger(
             logging_level=logging_level,
@@ -198,7 +196,8 @@ class RecverProxyActor:
         self._party = party
         self._tls_config = tls_config
         cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
-        self._proxy_instance: RecvProxy = proxy_cls(listen_addr, party, tls_config, cross_silo_comm_config)
+        self._proxy_instance: RecvProxy = proxy_cls(
+            listen_addr, party, tls_config, cross_silo_comm_config)
 
     async def start(self):
         await self._proxy_instance.start()
@@ -208,13 +207,13 @@ class RecverProxyActor:
         return res
 
     async def get_data(self, src_party, upstream_seq_id, curr_seq_id):
-        self._stats["receive_op_count"] += 1 
-        data = await self._proxy_instance.get_data(src_party, upstream_seq_id, curr_seq_id)
+        self._stats["receive_op_count"] += 1
+        data = await self._proxy_instance.get_data(
+            src_party, upstream_seq_id, curr_seq_id)
         return data
 
     async def _get_stats(self):
         return self._stats
-
 
 
 _DEFAULT_RECV_PROXY_OPTIONS = {
