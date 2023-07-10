@@ -27,10 +27,18 @@ import fed.config as fed_config
 import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
+<<<<<<< HEAD:fed/barriers.py
 from fed.cleanup import push_to_sending
 from fed.config import get_job_config
+||||||| e98fd36:fed/barriers.py
+from fed.cleanup import push_to_sending
+from fed.config import get_cluster_config
+=======
+from fed.config import get_cluster_config
+>>>>>>> main:fed/proxy/barriers.py
 from fed.grpc import fed_pb2, fed_pb2_grpc
 from fed.utils import setup_logger
+from fed._private.global_context import get_global_context
 
 logger = logging.getLogger(__name__)
 
@@ -124,65 +132,30 @@ async def _run_grpc_server(
 
 
 async def send_data_grpc(
-    dest,
     data,
+    stub,
     upstream_seq_id,
     downstream_seq_id,
     metadata=None,
-    tls_config=None,
-    retry_policy=None,
-    grpc_options=None
 ):
-    grpc_options = get_grpc_options(retry_policy=retry_policy) if \
-                    grpc_options is None else fed_utils.dict2tuple(grpc_options)
-    tls_enabled = fed_utils.tls_enabled(tls_config)
-    timeout = get_job_config().cross_silo_comm_config.timeout_in_seconds
-    metadata = fed_utils.dict2tuple(metadata)
-    if tls_enabled:
-        ca_cert, private_key, cert_chain = fed_utils.load_cert_config(tls_config)
-        credentials = grpc.ssl_channel_credentials(
-            certificate_chain=cert_chain,
-            private_key=private_key,
-            root_certificates=ca_cert,
-        )
-
-        async with grpc.aio.secure_channel(
-            dest,
-            credentials,
-            options=grpc_options,
-        ) as channel:
-            stub = fed_pb2_grpc.GrpcServiceStub(channel)
-            data = cloudpickle.dumps(data)
-            request = fed_pb2.SendDataRequest(
-                data=data,
-                upstream_seq_id=str(upstream_seq_id),
-                downstream_seq_id=str(downstream_seq_id),
-            )
-            # wait for downstream's reply
-            response = await stub.SendData(
-                request, metadata=metadata, timeout=timeout)
-            logger.debug(
-                f'Received data response from seq_id {downstream_seq_id}, '
-                f'result: {response.result}.'
-            )
-            return response.result
-    else:
-        async with grpc.aio.insecure_channel(dest, options=grpc_options) as channel:
-            stub = fed_pb2_grpc.GrpcServiceStub(channel)
-            data = cloudpickle.dumps(data)
-            request = fed_pb2.SendDataRequest(
-                data=data,
-                upstream_seq_id=str(upstream_seq_id),
-                downstream_seq_id=str(downstream_seq_id),
-            )
-            # wait for downstream's reply
-            response = await stub.SendData(
-                request, metadata=metadata, timeout=timeout)
-            logger.debug(
-                f'Received data response from seq_id {downstream_seq_id} '
-                f'result: {response.result}.'
-            )
-            return response.result
+    cluster_config = fed_config.get_cluster_config()
+    data = cloudpickle.dumps(data)
+    request = fed_pb2.SendDataRequest(
+        data=data,
+        upstream_seq_id=str(upstream_seq_id),
+        downstream_seq_id=str(downstream_seq_id),
+    )
+    # Waiting for the reply from downstream.
+    response = await stub.SendData(
+        request,
+        metadata=fed_utils.dict2tuple(metadata),
+        timeout=cluster_config.cross_silo_timeout,
+    )
+    logger.debug(
+        f'Received data response from seq_id {downstream_seq_id}, '
+        f'result: {response.result}.'
+    )
+    return response.result
 
 
 @ray.remote
@@ -211,6 +184,8 @@ class SendProxyActor:
         cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
         self._grpc_metadata = cross_silo_comm_config.http_header
         set_max_message_length(cross_silo_comm_config.messages_max_size_in_bytes)
+        # Mapping the destination party name to the reused client stub.
+        self._stubs = {}
 
     async def is_ready(self):
         return True
@@ -239,15 +214,33 @@ class SendProxyActor:
         dest_addr = self._cluster[dest_party]['address']
         dest_party_grpc_config = self.setup_grpc_config(dest_party)
         try:
+            tls_enabled = fed_utils.tls_enabled(self._tls_config)
+            grpc_options = dest_party_grpc_config['grpc_options']
+            grpc_options = get_grpc_options(retry_policy=self.retry_policy) if \
+                grpc_options is None else fed_utils.dict2tuple(grpc_options)
+
+            if dest_party not in self._stubs:
+                if tls_enabled:
+                    ca_cert, private_key, cert_chain = fed_utils.load_cert_config(
+                        self._tls_config)
+                    credentials = grpc.ssl_channel_credentials(
+                        certificate_chain=cert_chain,
+                        private_key=private_key,
+                        root_certificates=ca_cert,
+                    )
+                    channel = grpc.aio.secure_channel(
+                        dest_addr, credentials, options=grpc_options)
+                else:
+                    channel = grpc.aio.insecure_channel(dest_addr, options=grpc_options)
+                stub = fed_pb2_grpc.GrpcServiceStub(channel)
+                self._stubs[dest_party] = stub
+
             response = await send_data_grpc(
-                dest=dest_addr,
                 data=data,
+                stub=self._stubs[dest_party],
                 upstream_seq_id=upstream_seq_id,
                 downstream_seq_id=downstream_seq_id,
                 metadata=dest_party_grpc_config['grpc_metadata'],
-                tls_config=self._tls_config,
-                retry_policy=self.retry_policy,
-                grpc_options=dest_party_grpc_config['grpc_options']
             )
         except Exception as e:
             logger.error(f'Failed to {send_log_msg}, error: {e}')
@@ -480,7 +473,7 @@ def send(
         upstream_seq_id=upstream_seq_id,
         downstream_seq_id=downstream_seq_id,
     )
-    push_to_sending(res)
+    get_global_context().get_cleanup_manager().push_to_sending(res)
     return res
 
 

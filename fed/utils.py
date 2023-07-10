@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
-    from fed.barriers import recv
+    from fed.proxy.barriers import recv
 
     flattened_args, tree = fed.tree_util.tree_flatten((args, kwargs))
     indexes = []
@@ -37,8 +37,8 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                 resolved.append(arg.get_ray_object_ref())
             else:
                 logger.debug(
-                    f'Insert recv_op, arg task id {arg.get_fed_task_id()}, current'
-                    'task id {current_fed_task_id}'
+                    f'Insert recv_op, arg task id {arg.get_fed_task_id()}, current '
+                    f'task id {current_fed_task_id}'
                 )
                 if arg.get_ray_object_ref() is not None:
                     # This code path indicates the ray object is already received in

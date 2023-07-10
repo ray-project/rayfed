@@ -27,9 +27,16 @@ from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed._private.global_context import get_global_context, clear_global_context
-from fed.barriers import ping_others, recv, send, start_recv_proxy, start_send_proxy
+from fed.proxy.barriers import (
+    ping_others,
+    recv,
+    send,
+    start_recv_proxy,
+    start_send_proxy,
+)
 from fed.cleanup import set_exit_on_failure_sending, wait_sending
 from fed.config import CrossSiloCommConfig
+
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -173,7 +180,19 @@ def init(
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
+<<<<<<< HEAD
     set_exit_on_failure_sending(global_cross_silo_comm_config.exit_on_sending_failure)
+||||||| e98fd36
+    set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
+    recv_actor_config = fed_config.ProxyActorConfig(
+        resource_label=cross_silo_recv_resource_label)
+=======
+    get_global_context().get_cleanup_manager().start(
+        exit_when_failure_sending=exit_on_failure_cross_silo_sending)
+
+    recv_actor_config = fed_config.ProxyActorConfig(
+        resource_label=cross_silo_recv_resource_label)
+>>>>>>> main
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
@@ -202,7 +221,6 @@ def shutdown():
     """
     Shutdown a RayFed client.
     """
-    wait_sending()
     compatible_utils._clear_internal_kv()
     clear_global_context()
     logger.info('Shutdowned rayfed.')
