@@ -300,9 +300,9 @@ class FedRemoteFunction:
         return self
 
     def remote(self, *args, **kwargs):
-        assert (
-            self._node_party is not None
-        ), "A fed function should be specified within a party to execute."
+        if not self._node_party:
+            raise ValueError("You should specify a party name on the fed function.")
+
         return self._fed_call_holder.internal_remote(*args, **kwargs)
 
     def _execute_impl(self, args, kwargs):
