@@ -56,7 +56,7 @@ class FedCallHolder:
         return self
 
     def internal_remote(self, *args, **kwargs):
-        if self._node_party is None or len(self._node_party) == 0:
+        if not self._node_party:
             raise ValueError("You should specify a party name on the fed actor.")
 
         # Generate a new fed task id for this call.
