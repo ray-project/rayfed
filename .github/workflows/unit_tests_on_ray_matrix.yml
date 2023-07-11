@@ -33,7 +33,8 @@ jobs:
             . py3/bin/activate
             which python
             pip install pytest torch cloudpickle cryptography
-            pip install "protobuf<4.0"
+            # six is required in ray-2.1.0
+            pip install "protobuf<4.0" six
             pip install ray==${{ matrix.ray_version }}
 
     - name: Build and test
