@@ -55,7 +55,7 @@ def run(party):
     fed.init(cluster=cluster, party=party)
 
     epochs = 3
-    alice_model = MyModel.remote("alice", 2)
+    alice_model = MyModel.party("alice").remote("alice", 2)
     bob_model = MyModel.party("bob").remote("bob", 4)
 
     all_mean_weights = []
