@@ -1,4 +1,4 @@
-name: test on ray2.4.0
+name: test on many rays
 
 on:
   push:
@@ -7,7 +7,12 @@ on:
     branches: [ main ]
 
 jobs:
-  run-unit-tests:
+  run-unit-tests-on-many-rays:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        ray_version: [2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.4.0]
+
     timeout-minutes: 60
     runs-on: ubuntu-latest
     container: docker.io/library/ubuntu:latest
@@ -28,8 +33,9 @@ jobs:
             . py3/bin/activate
             which python
             pip install pytest torch cloudpickle cryptography
-            pip install "protobuf<4.0"
-            pip install ray==2.4.0
+            # six is required in ray-2.1.0
+            pip install "protobuf<4.0" six
+            pip install ray==${{ matrix.ray_version }}
 
     - name: Build and test
       run: |
