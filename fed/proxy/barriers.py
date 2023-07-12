@@ -34,7 +34,8 @@ if _compare_version_strings(importlib.metadata.version('protobuf'), '4.0.0'):
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
     from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
 else:
-    from fed.grpc import fed_pb2_in_protobuf3, fed_pb2_grpc_in_protobuf3
+    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
+    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
 from fed.utils import setup_logger
 from fed._private.global_context import get_global_context
 
