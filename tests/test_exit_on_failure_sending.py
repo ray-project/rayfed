@@ -90,5 +90,4 @@ def test_exit_when_failure_on_sending():
 
 
 if __name__ == "__main__":
-    # sys.exit(pytest.main(["-sv", __file__]))
-    test_exit_when_failure_on_sending()
+    sys.exit(pytest.main(["-sv", __file__]))

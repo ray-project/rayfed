@@ -40,7 +40,9 @@ def run(party):
     )
 
     def _assert_on_proxy(proxy_actor):
-        options = ray.get(proxy_actor._get_grpc_options.remote())
+        config = ray.get(proxy_actor._get_proxy_config.remote())
+        print(f"==============={config}==============")
+        options = config['grpc_options']
         assert options[0][0] == "grpc.max_send_message_length"
         assert options[0][1] == 100
         assert ('grpc.so_reuseport', 0) in options

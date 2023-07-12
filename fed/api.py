@@ -69,7 +69,8 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10001',
-                        # (Optional) The party specific metadata sent with the grpc request
+                        'cross_silo_comm_config': CrossSiloCommConfig
+                        # (Optional) The party specific metadata sent with grpc requests
                         'grpc_metadata': (('token', 'alice-token'),),
                         'grpc_options': [
                             ('grpc.default_authority', 'alice'),
@@ -82,7 +83,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10002',
-                        # (Optional) The party specific metadata sent with the grpc request
+                        # (Optional) The party specific metadata sent with grpc requests
                         'grpc_metadata': (('token', 'bob-token'),),
                     },
                     'carol': {
@@ -91,7 +92,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10003',
-                        # (Optional) The party specific metadata sent with the grpc request
+                        # (Optional) The party specific metadata sent with grpc requests
                         'grpc_metadata': (('token', 'carol-token'),),
                     },
                 }

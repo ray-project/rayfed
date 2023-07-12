@@ -61,7 +61,7 @@ class SendProxy(abc.ABC):
         cluster: Dict,
         party: str,
         tls_config: Dict,
-        proxy_config=None
+        proxy_config: CrossSiloCommConfig=None
     ) -> None:
         self._cluster = cluster
         self._party = party
@@ -80,6 +80,9 @@ class SendProxy(abc.ABC):
 
     async def is_ready(self):
         return True
+
+    async def get_proxy_config(self):
+        return self._proxy_config
 
 
 class RecvProxy(abc.ABC):
@@ -110,6 +113,9 @@ class RecvProxy(abc.ABC):
     async def is_ready(self):
         return True
 
+    async def get_proxy_config(self):
+        return self._proxy_config
+
 
 @ray.remote
 class SendProxyActor:
@@ -133,11 +139,11 @@ class SendProxyActor:
         self._party = party
         self._tls_config = tls_config
         cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
-        self.proxy_instance: SendProxy = proxy_cls(
+        self._proxy_instance: SendProxy = proxy_cls(
             cluster, party, tls_config, cross_silo_comm_config)
 
     async def is_ready(self):
-        res = await self.proxy_instance.is_ready()
+        res = await self._proxy_instance.is_ready()
         return res
 
     async def send(
@@ -160,7 +166,7 @@ class SendProxyActor:
             ' credentials.'
         )
         try:
-            response = await self.proxy_instance.send(
+            response = await self._proxy_instance.send(
                 dest_party, data, upstream_seq_id, downstream_seq_id)
         except Exception as e:
             logger.error(f'Failed to {send_log_msg}, error: {e}')
@@ -174,6 +180,8 @@ class SendProxyActor:
     async def _get_cluster_info(self):
         return self._cluster
 
+    async def _get_proxy_config(self):
+        return await self._proxy_instance.get_proxy_config()
 
 @ray.remote
 class RecverProxyActor:
@@ -214,6 +222,9 @@ class RecverProxyActor:
 
     async def _get_stats(self):
         return self._stats
+
+    async def _get_proxy_config(self):
+        return await self._proxy_instance.get_proxy_config()
 
 
 _DEFAULT_RECV_PROXY_OPTIONS = {
