@@ -17,12 +17,18 @@ import cloudpickle
 import pytest
 import ray
 import grpc
-
+import importlib.metadata
 
 import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed._private import global_context
-from fed.grpc import fed_pb2, fed_pb2_grpc
+if compatible_utils._compare_version_strings(
+        importlib.metadata.version('protobuf'), '4.0.0'):
+    from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
+    from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
+else:
+    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
+    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
 from fed.proxy.barriers import send, start_recv_proxy, start_send_proxy
 
 
