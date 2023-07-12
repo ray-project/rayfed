@@ -37,9 +37,11 @@ def parse_grpc_options(proxy_config: CrossSiloCommConfig):
                     proxy_config.messages_max_size_in_bytes
             })
         if isinstance(proxy_config, CrossSiloGrpcCommConfig):
-            grpc_channel_options.update(proxy_config.grpc_channel_options)
+            if proxy_config.grpc_channel_options is not None:
+                grpc_channel_options.update(proxy_config.grpc_channel_options)
             if proxy_config.grpc_retry_policy is not None:
                 grpc_channel_options.update({
+                    'grpc.service_config':
                     json.dumps(
                         {
                             'methodConfig': [
@@ -122,16 +124,20 @@ class GrpcSendProxy(SendProxy):
                     **dest_party_grpc_metadata
                 }
             dest_party_grpc_options = parse_grpc_options(dest_party_comm_config)
-            grpc_options = fed_utils.dict2tuple({
+            grpc_options = {
                 **grpc_options, **dest_party_grpc_options
-            })
-        return grpc_metadata, grpc_options
+            }
+        return grpc_metadata, fed_utils.dict2tuple(grpc_options)
 
-    async def get_proxy_config(self):
+    async def get_proxy_config(self, dest_party=None):
+        if dest_party is None:
+            grpc_options = fed_utils.dict2tuple(self._grpc_options)
+        else:
+            _, grpc_options = self.get_grpc_config_by_party(dest_party)
         proxy_config = self._proxy_config.__dict__
-        proxy_config.update({'grpc_options': fed_utils.dict2tuple(self._grpc_options)})
+        proxy_config.update({'grpc_options': grpc_options})
         return proxy_config
-    
+
 
 async def send_data_grpc(
     data,
@@ -191,7 +197,7 @@ class GrpcRecvProxy(RecvProxy):
                 self._lock,
                 self._server_ready_future,
                 self._tls_config,
-                self._grpc_options,
+                fed_utils.dict2tuple(self._grpc_options),
             )
         except RuntimeError as err:
             msg = f'Grpc server failed to listen to port: {port}' \

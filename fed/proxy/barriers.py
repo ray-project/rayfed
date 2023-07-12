@@ -81,7 +81,7 @@ class SendProxy(abc.ABC):
     async def is_ready(self):
         return True
 
-    async def get_proxy_config(self):
+    async def get_proxy_config(self, dest_party=None):
         return self._proxy_config
 
 
@@ -180,8 +180,8 @@ class SendProxyActor:
     async def _get_cluster_info(self):
         return self._cluster
 
-    async def _get_proxy_config(self):
-        return await self._proxy_instance.get_proxy_config()
+    async def _get_proxy_config(self, dest_party=None):
+        return await self._proxy_instance.get_proxy_config(dest_party)
 
 @ray.remote
 class RecverProxyActor:

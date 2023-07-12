@@ -71,7 +71,7 @@ def run(party, is_inner_party):
         cluster=cluster,
         party=party,
         logging_level='debug',
-        cross_silo_comm_config=cross_silo_comm_config
+        global_cross_silo_comm_config=cross_silo_comm_config
     )
 
     o = f.party("alice").remote()
