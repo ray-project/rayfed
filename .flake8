@@ -1,7 +1,9 @@
 [flake8]
 exclude =
-  fed_pb2_grpc.py
-  fed_pb2.py
+  fed_pb2_grpc_in_protobuf3.py
+  fed_pb2_in_protobuf3.py
+  fed_pb2_grpc_in_protobuf4.py
+  fed_pb2_in_protobuf4.py
   build
   py3
 max-line-length = 88
@@ -40,3 +42,5 @@ ignore =
 avoid-escape = no
 per-file-ignores =
     fed/_private/fed_call_holder.py:E402
+    fed/proxy/barriers.py:F401
+    tests/test_transport_proxy.py:F401
