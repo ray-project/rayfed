@@ -16,6 +16,7 @@ import abc
 import logging
 import time
 import copy
+import importlib.metadata
 from typing import Dict, Optional
 
 import ray

@@ -40,6 +40,30 @@ def test_fed_apis():
     assert p_alice.exitcode == 0
 
 
+def test_miss_party_name_on_actor():
+    def run():
+        compatible_utils.init_ray(address='local')
+        cluster = {
+            'alice': {'address': '127.0.0.1:11012'},
+        }
+        fed.init(cluster=cluster, party="alice")
+
+        @fed.remote
+        class MyActor:
+            pass
+
+        with pytest.raises(ValueError):
+            MyActor.remote()
+
+        fed.shutdown()
+        ray.shutdown()
+
+    p_alice = multiprocessing.Process(target=run)
+    p_alice.start()
+    p_alice.join()
+    assert p_alice.exitcode == 0
+
+
 if __name__ == "__main__":
     import sys
 

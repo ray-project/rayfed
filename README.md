@@ -1,5 +1,5 @@
 # RayFed
-![docs building](https://readthedocs.org/projects/rayfed/badge/?version=latest) ![test on ray 2.0.0](https://github.com/ray-project/rayfed/actions/workflows/test_on_ray2.0.0.yml/badge.svg) ![test on ray 1.13.0](https://github.com/ray-project/rayfed/actions/workflows/test_on_ray1.13.0.yml/badge.svg)
+![docs building](https://readthedocs.org/projects/rayfed/badge/?version=latest) ![test on many rays](https://github.com/ray-project/rayfed/actions/workflows/unit_tests_on_ray_matrix.yml/badge.svg) ![test on ray 1.13.0](https://github.com/ray-project/rayfed/actions/workflows/test_on_ray1.13.0.yml/badge.svg)
 
 A multiple parties joint, distributed execution engine based on Ray, to help build your own federated learning frameworks in minutes.
 
@@ -35,10 +35,10 @@ The code view in each party is exactly the same, but the execution differs based
 
 
 ## Supported Ray Versions
-| RayFed Versions | ray-1.13.0 | ray-2.0.0 | ray-2.1.0 | ray-2.2.0 | ray-2.3.0 |
-|:---------------:|:--------:|:--------:|:--------:|:--------:|:--------:|
-| 0.1.0           |✅      | ✅      | ✅      | ✅      | ❌      |
-| 0.2.0           |not released|not released|not released|not released|not released|
+| RayFed Versions | ray-1.13.0 | ray-2.0.0 | ray-2.1.0 | ray-2.2.0 | ray-2.3.0 | ray-2.4.0 |
+|:---------------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|
+| 0.1.0           |✅      | ✅      | ✅      | ✅      | ✅      | ✅      |
+| 0.2.0           |not released|not released|not released|not released|not released|not released|
 
 
 ## Installation

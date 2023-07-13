@@ -5,12 +5,14 @@ import grpc
 import logging
 import threading
 import json
+import importlib.metadata
 from typing import Dict
 
 
 import fed.utils as fed_utils
 
 from fed.config import CrossSiloCommConfig, CrossSiloGrpcCommConfig
+from fed._private.compatible_utils import _compare_version_strings
 from fed._private.grpc_options import _DEFAULT_GRPC_CHANNEL_OPTIONS, _GRPC_SERVICE
 from fed.proxy.barriers import (
     add_two_dim_dict,
@@ -20,7 +22,12 @@ from fed.proxy.barriers import (
     SendProxy,
     RecvProxy
 )
-from fed.grpc import fed_pb2, fed_pb2_grpc
+if _compare_version_strings(importlib.metadata.version('protobuf'), '4.0.0'):
+    from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
+    from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
+else:
+    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
+    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
 
 
 logger = logging.getLogger(__name__)
