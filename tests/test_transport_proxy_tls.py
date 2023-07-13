@@ -22,6 +22,8 @@ import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed._private import global_context
 from fed.proxy.barriers import send, start_recv_proxy, start_send_proxy
+from fed.proxy.grpc_proxy import GrpcSendProxy, GrpcRecvProxy
+from fed.config import CrossSiloGrpcCommConfig
 
 
 def test_n_to_1_transport():
@@ -58,17 +60,22 @@ def test_n_to_1_transport():
     SERVER_ADDRESS = "127.0.0.1:65422"
     party = 'test_party'
     cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
+    config = CrossSiloGrpcCommConfig()
     start_recv_proxy(
         cluster_config,
         party,
         logging_level='info',
         tls_config=tls_config,
+        proxy_cls=GrpcRecvProxy,
+        proxy_config=config
     )
     start_send_proxy(
         cluster_config,
         party,
         logging_level='info',
         tls_config=tls_config,
+        proxy_cls=GrpcSendProxy,
+        proxy_config=config
     )
 
     sent_objs = []

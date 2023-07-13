@@ -50,7 +50,7 @@ class JobConfig:
 
     @property
     def cross_silo_comm_config(self):
-        return self._data.get(fed_constants.KEY_OF_CROSS_SILO_COMM_CONFIG, {})
+        return self._data.get(fed_constants.KEY_OF_CROSS_SILO_COMM_CONFIG, CrossSiloCommConfig())
 
 
 # A module level cache for the cluster configurations.
@@ -85,7 +85,7 @@ class CrossSiloCommConfig:
     """A class to store parameters used for Proxy Actor
 
     Attributes:
-        proxier_fo_max_retries: The max restart times for the send proxy.
+        proxy_max_restarts: The max restart times for the send proxy.
         serializing_allowed_list: The package or class list allowed for
             serializing(deserializating) cross silos. It's used for avoiding pickle
             deserializing execution attack when crossing solis.
@@ -111,7 +111,7 @@ class CrossSiloCommConfig:
     """
     def __init__(
             self,
-            proxier_fo_max_retries: int = None,
+            proxy_max_restarts: int = None,
             timeout_in_seconds: int = 60,
             messages_max_size_in_bytes: int = None,
             exit_on_sending_failure: Optional[bool] = False,
@@ -119,7 +119,7 @@ class CrossSiloCommConfig:
             send_resource_label: Optional[Dict[str, str]] = None,
             recv_resource_label: Optional[Dict[str, str]] = None,
             http_header: Optional[Dict[str, str]] = None) -> None:
-        self.proxier_fo_max_retries = proxier_fo_max_retries
+        self.proxy_max_restarts = proxy_max_restarts
         self.timeout_in_seconds = timeout_in_seconds
         self.messages_max_size_in_bytes = messages_max_size_in_bytes
         self.exit_on_sending_failure = exit_on_sending_failure
@@ -170,16 +170,3 @@ class CrossSiloGrpcCommConfig(CrossSiloCommConfig):
         super().__init__(*args, **kwargs)
         self.grpc_retry_policy = grpc_retry_policy
         self.grpc_channel_options = grpc_channel_options
-
-
-class CrossSiloBRPCConfig(CrossSiloCommConfig):
-    """A class to store parameters used for GRPC communication
-
-    Attributes:
-    """
-    def __init__(self,
-                 brpc_options,
-                 *args,
-                 **kwargs):
-        super().__init__(*args, **kwargs)
-        self.brpc_options = brpc_options

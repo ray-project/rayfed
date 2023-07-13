@@ -91,7 +91,7 @@ class RecvProxy(abc.ABC):
             listen_addr: str,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloCommConfig
+            proxy_config: CrossSiloCommConfig=None
     ) -> None:
         self._listen_addr = listen_addr
         self._party = party
@@ -289,9 +289,9 @@ def start_send_proxy(
     global _SEND_PROXY_ACTOR
 
     actor_options = copy.deepcopy(_DEFAULT_SEND_PROXY_OPTIONS)
-    if proxy_config and proxy_config.proxier_fo_max_retries:
+    if proxy_config and proxy_config.proxy_max_restarts:
         actor_options.update({
-            "max_task_retries": proxy_config.proxier_fo_max_retries,
+            "max_task_retries": proxy_config.proxy_max_restarts,
             "max_restarts": 1,
             })
     if proxy_config and proxy_config.send_resource_label:
