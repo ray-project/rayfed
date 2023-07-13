@@ -46,9 +46,6 @@ def test_n_to_1_transport():
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: tls_config,
-        constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: None,
-        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
-        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
     }
 
     global_context.get_global_context().get_cleanup_manager().start()

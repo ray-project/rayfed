@@ -68,7 +68,7 @@ def run_failure(party):
             global_cross_silo_comm_config=CrossSiloCommConfig(
                 send_resource_label=send_proxy_resources,
                 recv_resource_label=recv_proxy_resources,
-                timeout_in_seconds=10,
+                timeout_in_ms=10*1000,
             )
         )
 

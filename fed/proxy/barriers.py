@@ -265,7 +265,7 @@ def start_recv_proxy(
         proxy_cls=proxy_cls
     )
     recver_proxy_actor.start.remote()
-    timeout = proxy_config.timeout_in_seconds if proxy_config is not None else 60
+    timeout = proxy_config.timeout_in_ms / 1000 if proxy_config is not None else 60
     server_state = ray.get(recver_proxy_actor.is_ready.remote(), timeout=timeout)
     assert server_state[0], server_state[1]
     logger.info("RecverProxy has successfully created.")
@@ -308,7 +308,7 @@ def start_send_proxy(
         logging_level=logging_level,
         proxy_cls=proxy_cls
     )
-    timeout = get_job_config().cross_silo_comm_config.timeout_in_seconds
+    timeout = get_job_config().cross_silo_comm_config.timeout_in_ms / 1000
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
     logger.info("SendProxyActor has successfully created.")
 

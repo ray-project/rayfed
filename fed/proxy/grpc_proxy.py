@@ -97,7 +97,7 @@ class GrpcSendProxy(SendProxy):
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             self._stubs[dest_party] = stub
 
-        timeout = self._proxy_config.timeout_in_seconds
+        timeout = self._proxy_config.timeout_in_ms / 1000
         response = await send_data_grpc(
             data=data,
             stub=self._stubs[dest_party],
@@ -274,6 +274,7 @@ async def _run_grpc_server(
     port, event, all_data, party, lock,
     server_ready_future, tls_config=None, grpc_options=None
 ):
+    print(f"ReceiveProxy binding port {port}, options: {grpc_options}...")
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
         SendDataService(event, all_data, party, lock), server
@@ -290,6 +291,7 @@ async def _run_grpc_server(
         server.add_secure_port(f'[::]:{port}', server_credentials)
     else:
         server.add_insecure_port(f'[::]:{port}')
+        # server.add_insecure_port(f'[::]:{port}')
 
     msg = f"Succeeded to add port {port}."
     await server.start()

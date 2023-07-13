@@ -70,12 +70,6 @@ def init(
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10001',
                         'cross_silo_comm_config': CrossSiloCommConfig
-                        # (Optional) The party specific metadata sent with grpc requests
-                        'grpc_metadata': (('token', 'alice-token'),),
-                        'grpc_options': [
-                            ('grpc.default_authority', 'alice'),
-                            ('grpc.max_send_message_length', 50 * 1024 * 1024)
-                        ]
                     },
                     'bob': {
                         # The address for other parties.
@@ -122,13 +116,6 @@ def init(
         global_cross_silo_comm_config: Global cross-silo communication related
             config that are applied to all connections. Supported configs
             can refer to CrossSiloCommConfig in config.py.
-        dest_party_comm_config: Communication config for the destination party
-            specifed by the key. E.g.
-            .. code:: python
-                {
-                    'alice': alice_CrossSiloCommConfig,
-                    'bob': bob_CrossSiloCommConfig
-                }
 
     Examples:
         >>> import fed
