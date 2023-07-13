@@ -37,6 +37,7 @@ else:
     from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
     from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
 
+
 def test_n_to_1_transport():
     """This case is used to test that we have N send_op barriers,
     sending data to the target recver proxy, and there also have

@@ -38,7 +38,7 @@ def parse_grpc_options(proxy_config: CrossSiloCommConfig):
     if proxy_config is not None:
         if proxy_config.messages_max_size_in_bytes is not None:
             grpc_channel_options.update({
-                'grpc.max_send_message_length': 
+                'grpc.max_send_message_length':
                     proxy_config.messages_max_size_in_bytes,
                 'grpc.max_receive_message_length':
                     proxy_config.messages_max_size_in_bytes
@@ -70,7 +70,7 @@ class GrpcSendProxy(SendProxy):
             cluster: Dict,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloCommConfig=None
+            proxy_config: CrossSiloCommConfig = None
     ) -> None:
         super().__init__(cluster, party, tls_config, proxy_config)
         self._grpc_metadata = proxy_config.http_header or {}
@@ -100,7 +100,8 @@ class GrpcSendProxy(SendProxy):
                 channel = grpc.aio.secure_channel(
                     dest_addr, credentials, options=grpc_channel_options)
             else:
-                channel = grpc.aio.insecure_channel(dest_addr, options=grpc_channel_options)
+                channel = grpc.aio.insecure_channel(
+                    dest_addr, options=grpc_channel_options)
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             self._stubs[dest_party] = stub
 

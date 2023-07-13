@@ -62,7 +62,7 @@ class SendProxy(abc.ABC):
         cluster: Dict,
         party: str,
         tls_config: Dict,
-        proxy_config: CrossSiloCommConfig=None
+        proxy_config: CrossSiloCommConfig = None
     ) -> None:
         self._cluster = cluster
         self._party = party
@@ -92,7 +92,7 @@ class RecvProxy(abc.ABC):
             listen_addr: str,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloCommConfig=None
+            proxy_config: CrossSiloCommConfig = None
     ) -> None:
         self._listen_addr = listen_addr
         self._party = party
@@ -183,6 +183,7 @@ class SendProxyActor:
 
     async def _get_proxy_config(self, dest_party=None):
         return await self._proxy_instance.get_proxy_config(dest_party)
+
 
 @ray.remote
 class RecverProxyActor:
