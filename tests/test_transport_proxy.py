@@ -17,13 +17,12 @@ import cloudpickle
 import pytest
 import ray
 import grpc
-import importlib.metadata
 
 import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed._private import global_context
 if compatible_utils._compare_version_strings(
-        importlib.metadata.version('protobuf'), '4.0.0'):
+        compatible_utils._get_package_version_string('protobuf'), '4.0.0'):
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
     from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
 else:
