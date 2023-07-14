@@ -17,7 +17,6 @@ import logging
 import threading
 import time
 import copy
-import importlib.metadata
 from typing import Dict, Optional
 
 import cloudpickle
@@ -28,9 +27,10 @@ import fed.config as fed_config
 import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.grpc_options import get_grpc_options, set_max_message_length
-from fed._private.compatible_utils import _compare_version_strings
+import fed._private.compatible_utils as compatible_utils
 from fed.config import get_cluster_config
-if _compare_version_strings(importlib.metadata.version('protobuf'), '4.0.0'):
+if compatible_utils._compare_version_strings(
+        fed_utils.get_package_version('protobuf'), '4.0.0'):
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
     from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
 else:

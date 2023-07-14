@@ -14,13 +14,32 @@
 
 import logging
 import re
+import sys
 
 import fed
 import ray
 
+from fed._private.compatible_utils import _compare_version_strings
 from fed.fed_object import FedObject
 
 logger = logging.getLogger(__name__)
+
+
+def get_package_version(package_name: str) -> str:
+    """
+    This utility function can retrieve the version number
+     of a Python library in string format, such as '4.23.4'.
+    You don't need to worry about the Python version.
+    When using version 3.7 and below, it uses the built-in `pkg_resources`.
+    When using Python 3.8 and above, it uses `importlib.metadata`.
+    """
+    curr_python_version = sys.version.split(" ")[0]
+    if _compare_version_strings(curr_python_version, '3.7.99'):
+        import importlib.metadata
+        return importlib.metadata.version(package_name)
+    else:
+        import pkg_resources
+        return pkg_resources.get_distribution(package_name).version
 
 
 def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
