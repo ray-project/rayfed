@@ -23,7 +23,8 @@ from fed._private import constants
 
 def _get_package_version_string(package_name):
     """
-    This utility function can retrieve the version number of a Python library in string format, such as '4.23.4'.
+    This utility function can retrieve the version number
+     of a Python library in string format, such as '4.23.4'.
     You don't need to worry about the Python version.
     When using version 3.7 and below, it uses the built-in `pkg_resources`.
     When using Python 3.8 and above, it uses `importlib.metadata`.
