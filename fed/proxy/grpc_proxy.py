@@ -299,7 +299,6 @@ async def _run_grpc_server(
         server.add_secure_port(f'[::]:{port}', server_credentials)
     else:
         server.add_insecure_port(f'[::]:{port}')
-        # server.add_insecure_port(f'[::]:{port}')
 
     msg = f"Succeeded to add port {port}."
     await server.start()

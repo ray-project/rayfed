@@ -49,6 +49,11 @@ def test_ping_started_party():
         if (party == 'alice'):
             ping_success = ping_others(cluster, party, 5)
             assert ping_success is True
+        else:
+            # NOTE(NKcqx): Wait for 'alice' ping, otherwise, 'bob'
+            # may exit too soon to be found by 'alice'
+            import time
+            time.sleep(2)
 
         fed.shutdown()
         ray.shutdown()
