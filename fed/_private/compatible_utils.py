@@ -12,30 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import abc
 import ray
 import fed._private.constants as fed_constants
 
 import ray.experimental.internal_kv as ray_internal_kv
 from fed._private import constants
-
-
-def _get_package_version_string(package_name):
-    """
-    This utility function can retrieve the version number
-     of a Python library in string format, such as '4.23.4'.
-    You don't need to worry about the Python version.
-    When using version 3.7 and below, it uses the built-in `pkg_resources`.
-    When using Python 3.8 and above, it uses `importlib.metadata`.
-    """
-    curr_python_version = sys.version.split(" ")[0]
-    if _compare_version_strings(curr_python_version, '3.7.99'):
-        import importlib.metadata
-        return importlib.metadata.version(package_name)
-    else:
-        import pkg_resources
-        return pkg_resources.get_distribution(package_name).version
 
 
 def _compare_version_strings(version1, version2):
