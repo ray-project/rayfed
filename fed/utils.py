@@ -25,7 +25,7 @@ from fed.fed_object import FedObject
 logger = logging.getLogger(__name__)
 
 
-def get_package_version_string(package_name: str) -> str:
+def get_package_version(package_name: str) -> str:
     """
     This utility function can retrieve the version number
      of a Python library in string format, such as '4.23.4'.

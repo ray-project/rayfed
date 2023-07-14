@@ -23,7 +23,7 @@ import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed._private import global_context
 if compatible_utils._compare_version_strings(
-        fed_utils.get_package_version_string('protobuf'), '4.0.0'):
+        fed_utils.get_package_version('protobuf'), '4.0.0'):
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
     from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
 else:
