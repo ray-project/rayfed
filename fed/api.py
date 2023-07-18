@@ -67,7 +67,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10001',
-                        'cross_silo_comm_config': CrossSiloMsgConfig
+                        'cross_silo_msg_config': CrossSiloMsgConfig
                     },
                     'bob': {
                         # The address for other parties.

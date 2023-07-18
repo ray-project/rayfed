@@ -63,7 +63,7 @@ def run(party, is_inner_party):
         "backoffMultiplier": 1,
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
-    cross_silo_comm_config = GrpcCrossSiloMsgConfig(
+    cross_silo_msg_config = GrpcCrossSiloMsgConfig(
         grpc_retry_policy=retry_policy,
         exit_on_sending_failure=True
     )
@@ -71,7 +71,7 @@ def run(party, is_inner_party):
         cluster=cluster,
         party=party,
         logging_level='debug',
-        global_cross_silo_msg_config=cross_silo_comm_config
+        global_cross_silo_msg_config=cross_silo_msg_config
     )
 
     o = f.party("alice").remote()

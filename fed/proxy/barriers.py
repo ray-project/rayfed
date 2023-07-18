@@ -75,9 +75,9 @@ class SendProxyActor:
         self._cluster = cluster
         self._party = party
         self._tls_config = tls_config
-        cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
+        cross_silo_msg_config = fed_config.get_job_config().cross_silo_msg_config
         self._proxy_instance: SendProxy = proxy_cls(
-            cluster, party, tls_config, cross_silo_comm_config)
+            cluster, party, tls_config, cross_silo_msg_config)
 
     async def is_ready(self):
         res = await self._proxy_instance.is_ready()
@@ -141,9 +141,9 @@ class RecverProxyActor:
         self._listen_addr = listen_addr
         self._party = party
         self._tls_config = tls_config
-        cross_silo_comm_config = fed_config.get_job_config().cross_silo_comm_config
+        cross_silo_msg_config = fed_config.get_job_config().cross_silo_msg_config
         self._proxy_instance: RecvProxy = proxy_cls(
-            listen_addr, party, tls_config, cross_silo_comm_config)
+            listen_addr, party, tls_config, cross_silo_msg_config)
 
     async def start(self):
         await self._proxy_instance.start()
@@ -246,7 +246,7 @@ def start_send_proxy(
         logging_level=logging_level,
         proxy_cls=proxy_cls
     )
-    timeout = get_job_config().cross_silo_comm_config.timeout_in_ms / 1000
+    timeout = get_job_config().cross_silo_msg_config.timeout_in_ms / 1000
     assert ray.get(_SEND_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
     logger.info("SendProxyActor has successfully created.")
 

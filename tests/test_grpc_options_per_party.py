@@ -31,7 +31,7 @@ def run(party):
     cluster = {
         'alice': {
             'address': '127.0.0.1:11010',
-            'cross_silo_comm_config': GrpcCrossSiloMsgConfig(
+            'cross_silo_msg_config': GrpcCrossSiloMsgConfig(
                 grpc_channel_options=[
                     ('grpc.default_authority', 'alice'),
                     ('grpc.max_send_message_length', 200)
@@ -89,7 +89,7 @@ def party_grpc_options(party):
     cluster = {
         'alice': {
             'address': '127.0.0.1:11010',
-            'cross_silo_comm_config': GrpcCrossSiloMsgConfig(
+            'cross_silo_msg_config': GrpcCrossSiloMsgConfig(
                 grpc_channel_options=[
                     ('grpc.default_authority', 'alice'),
                     ('grpc.max_send_message_length', 51 * 1024 * 1024)
@@ -97,7 +97,7 @@ def party_grpc_options(party):
         },
         'bob': {
             'address': '127.0.0.1:11011',
-            'cross_silo_comm_config': GrpcCrossSiloMsgConfig(
+            'cross_silo_msg_config': GrpcCrossSiloMsgConfig(
                 grpc_channel_options=[
                     ('grpc.default_authority', 'bob'),
                     ('grpc.max_send_message_length', 50 * 1024 * 1024)

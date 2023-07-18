@@ -242,7 +242,7 @@ def test_send_grpc_with_party_specific_meta():
     cluster_parties_config = {
         'test_party': {
             'address': SERVER_ADDRESS,
-            'cross_silo_comm_config': CrossSiloMsgConfig(
+            'cross_silo_msg_config': CrossSiloMsgConfig(
                 http_header={"token": "test-party-token"})
         }
     }

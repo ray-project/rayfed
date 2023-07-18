@@ -39,7 +39,7 @@ class JobConfig:
             self._data = cloudpickle.loads(raw_bytes)
 
     @property
-    def cross_silo_comm_config(self):
+    def cross_silo_msg_config(self):
         return self._data.get(
             fed_constants.KEY_OF_CROSS_SILO_MSG_CONFIG,
             CrossSiloMsgConfig())
