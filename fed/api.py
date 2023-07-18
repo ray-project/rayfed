@@ -50,7 +50,7 @@ def init(
     enable_waiting_for_other_parties_ready: bool = False,
     send_proxy_cls: SendProxy = None,
     recv_proxy_cls: RecvProxy = None,
-    global_cross_silo_comm_config: Optional[CrossSiloMsgConfig] = None,
+    global_cross_silo_msg_config: Optional[CrossSiloMsgConfig] = None,
     **kwargs,
 ):
     """
@@ -111,8 +111,8 @@ def init(
             `warning`, `error`, `critical`, not case sensititive.
         enable_waiting_for_other_parties_ready: ping other parties until they
             are all ready if True.
-        global_cross_silo_comm_config: Global cross-silo communication related
-            config that are applied to all connections. Supported configs
+        global_cross_silo_msg_config: Global cross-silo message related
+            configs that are applied to all connections. Supported configs
             can refer to CrossSiloMsgConfig in config.py.
 
     Examples:
@@ -139,8 +139,8 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    global_cross_silo_comm_config = \
-        global_cross_silo_comm_config or CrossSiloMsgConfig()
+    global_cross_silo_msg_config = \
+        global_cross_silo_msg_config or CrossSiloMsgConfig()
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -152,7 +152,7 @@ def init(
 
     job_config = {
         constants.KEY_OF_CROSS_SILO_MSG_CONFIG:
-            global_cross_silo_comm_config,
+            global_cross_silo_msg_config,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
@@ -170,7 +170,7 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     get_global_context().get_cleanup_manager().start(
-        exit_when_failure_sending=global_cross_silo_comm_config.exit_on_sending_failure)
+        exit_when_failure_sending=global_cross_silo_msg_config.exit_on_sending_failure)
 
     if recv_proxy_cls is None:
         logger.debug(
@@ -184,7 +184,7 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         proxy_cls=recv_proxy_cls,
-        proxy_config=global_cross_silo_comm_config
+        proxy_config=global_cross_silo_msg_config
     )
 
     if send_proxy_cls is None:
@@ -198,7 +198,7 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         proxy_cls=send_proxy_cls,
-        proxy_config=global_cross_silo_comm_config
+        proxy_config=global_cross_silo_msg_config
     )
 
     if enable_waiting_for_other_parties_ready:

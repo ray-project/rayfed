@@ -53,7 +53,7 @@ def run(party, is_inner_party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_comm_config=GrpcCrossSiloMsgConfig(
+        global_cross_silo_msg_config=GrpcCrossSiloMsgConfig(
             grpc_retry_policy=retry_policy
         )
     )

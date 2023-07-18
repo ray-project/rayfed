@@ -53,7 +53,7 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_comm_config=CrossSiloMsgConfig(
+        global_cross_silo_msg_config=CrossSiloMsgConfig(
             serializing_allowed_list=allowed_list
         ))
 
