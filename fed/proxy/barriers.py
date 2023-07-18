@@ -16,15 +16,22 @@ import abc
 import logging
 import time
 import copy
-import importlib.metadata
 from typing import Dict, Optional
 
 import ray
 
 import fed.config as fed_config
+import fed.utils as fed_utils
 from fed._private import constants
-
+import fed._private.compatible_utils as compatible_utils
 from fed.config import get_job_config, CrossSiloCommConfig
+if compatible_utils._compare_version_strings(
+        fed_utils.get_package_version('protobuf'), '4.0.0'):
+    from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
+    from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
+else:
+    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
+    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
 from fed.utils import setup_logger
 from fed._private.global_context import get_global_context
 
