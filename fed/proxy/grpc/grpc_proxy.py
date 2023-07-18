@@ -142,16 +142,16 @@ class GrpcSendProxy(SendProxy):
         grpc_metadata = self._grpc_metadata
         grpc_options = self._grpc_options
 
-        dest_party_comm_config = self._cluster[dest_party].get(
+        dest_party_msg_config = self._cluster[dest_party].get(
             'cross_silo_msg_config', None)
-        if dest_party_comm_config is not None:
-            if dest_party_comm_config.http_header is not None:
-                dest_party_grpc_metadata = dict(dest_party_comm_config.http_header)
+        if dest_party_msg_config is not None:
+            if dest_party_msg_config.http_header is not None:
+                dest_party_grpc_metadata = dict(dest_party_msg_config.http_header)
                 grpc_metadata = {
                     **grpc_metadata,
                     **dest_party_grpc_metadata
                 }
-            dest_party_grpc_options = parse_grpc_options(dest_party_comm_config)
+            dest_party_grpc_options = parse_grpc_options(dest_party_msg_config)
             grpc_options = {
                 **grpc_options, **dest_party_grpc_options
             }
