@@ -20,7 +20,7 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import CrossSiloCommConfig
+from fed.config import CrossSiloMsgConfig
 
 
 def run(party):
@@ -65,7 +65,7 @@ def run_failure(party):
         fed.init(
             cluster=cluster,
             party=party,
-            global_cross_silo_comm_config=CrossSiloCommConfig(
+            global_cross_silo_comm_config=CrossSiloMsgConfig(
                 send_resource_label=send_proxy_resources,
                 recv_resource_label=recv_proxy_resources,
                 timeout_in_ms=10*1000,

@@ -18,7 +18,7 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import CrossSiloGrpcCommConfig
+from fed.config import GrpcCrossSiloMsgConfig
 
 
 @fed.remote
@@ -35,7 +35,7 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_comm_config=CrossSiloGrpcCommConfig(
+        global_cross_silo_comm_config=GrpcCrossSiloMsgConfig(
             grpc_channel_options=[(
                 'grpc.max_send_message_length', 100
             )]

@@ -41,8 +41,8 @@ class JobConfig:
     @property
     def cross_silo_comm_config(self):
         return self._data.get(
-            fed_constants.KEY_OF_CROSS_SILO_COMM_CONFIG,
-            CrossSiloCommConfig())
+            fed_constants.KEY_OF_CROSS_SILO_MSG_CONFIG,
+            CrossSiloMsgConfig())
 
 
 # A module level cache for the cluster configurations.
@@ -74,7 +74,7 @@ def get_job_config():
 
 
 @dataclass
-class CrossSiloCommConfig:
+class CrossSiloMsgConfig:
     """A class to store parameters used for Proxy Actor
 
     Attributes:
@@ -121,13 +121,13 @@ class CrossSiloCommConfig:
 
     @classmethod
     def from_dict(cls, data: Dict):
-        """Initialize CrossSiloCommConfig from a dictionary.
+        """Initialize CrossSiloMsgConfig from a dictionary.
 
         Args:
             data (Dict): Dictionary with keys as member variable names.
 
         Returns:
-            CrossSiloCommConfig: An instance of CrossSiloCommConfig.
+            CrossSiloMsgConfig: An instance of CrossSiloMsgConfig.
         """
         # Get the attributes of the class
         attrs = {attr for attr, _ in cls.__annotations__.items()}
@@ -137,7 +137,7 @@ class CrossSiloCommConfig:
 
 
 @dataclass
-class CrossSiloGrpcCommConfig(CrossSiloCommConfig):
+class GrpcCrossSiloMsgConfig(CrossSiloMsgConfig):
     """A class to store parameters used for GRPC communication
 
     Attributes:

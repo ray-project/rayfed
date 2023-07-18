@@ -19,7 +19,7 @@ import fed._private.compatible_utils as compatible_utils
 import multiprocessing
 import numpy
 
-from fed.config import CrossSiloCommConfig
+from fed.config import CrossSiloMsgConfig
 
 
 @fed.remote
@@ -53,7 +53,7 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_comm_config=CrossSiloCommConfig(
+        global_cross_silo_comm_config=CrossSiloMsgConfig(
             serializing_allowed_list=allowed_list
         ))
 

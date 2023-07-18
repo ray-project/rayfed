@@ -33,11 +33,9 @@ from fed.proxy.barriers import (
     send,
     start_recv_proxy,
     start_send_proxy,
-    SendProxy,
-    RecvProxy
 )
-from fed.config import CrossSiloCommConfig
-
+from fed.proxy.grpc.grpc_proxy import SendProxy, RecvProxy
+from fed.config import CrossSiloMsgConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -52,7 +50,7 @@ def init(
     enable_waiting_for_other_parties_ready: bool = False,
     send_proxy_cls: SendProxy = None,
     recv_proxy_cls: RecvProxy = None,
-    global_cross_silo_comm_config: Optional[CrossSiloCommConfig] = None,
+    global_cross_silo_comm_config: Optional[CrossSiloMsgConfig] = None,
     **kwargs,
 ):
     """
@@ -69,7 +67,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10001',
-                        'cross_silo_comm_config': CrossSiloCommConfig
+                        'cross_silo_comm_config': CrossSiloMsgConfig
                     },
                     'bob': {
                         # The address for other parties.
@@ -115,7 +113,7 @@ def init(
             are all ready if True.
         global_cross_silo_comm_config: Global cross-silo communication related
             config that are applied to all connections. Supported configs
-            can refer to CrossSiloCommConfig in config.py.
+            can refer to CrossSiloMsgConfig in config.py.
 
     Examples:
         >>> import fed
@@ -142,7 +140,7 @@ def init(
         ), 'Cert or key are not in tls_config.'
 
     global_cross_silo_comm_config = \
-        global_cross_silo_comm_config or CrossSiloCommConfig()
+        global_cross_silo_comm_config or CrossSiloMsgConfig()
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -153,7 +151,7 @@ def init(
     }
 
     job_config = {
-        constants.KEY_OF_CROSS_SILO_COMM_CONFIG:
+        constants.KEY_OF_CROSS_SILO_MSG_CONFIG:
             global_cross_silo_comm_config,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
@@ -175,7 +173,9 @@ def init(
         exit_when_failure_sending=global_cross_silo_comm_config.exit_on_sending_failure)
 
     if recv_proxy_cls is None:
-        from fed.proxy.grpc_proxy import GrpcRecvProxy
+        logger.debug(
+            "Not declaring recver proxy class, using `GrpcRecvProxy` as default.")
+        from fed.proxy.grpc.grpc_proxy import GrpcRecvProxy
         recv_proxy_cls = GrpcRecvProxy
     # Start recv proxy
     start_recv_proxy(
@@ -188,7 +188,9 @@ def init(
     )
 
     if send_proxy_cls is None:
-        from fed.proxy.grpc_proxy import GrpcSendProxy
+        logger.debug(
+            "Not declaring send proxy class, using `GrpcSendProxy` as default.")
+        from fed.proxy.grpc.grpc_proxy import GrpcSendProxy
         send_proxy_cls = GrpcSendProxy
     start_send_proxy(
         cluster=cluster,

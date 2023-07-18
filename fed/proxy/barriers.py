@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import abc
 import logging
 import time
 import copy
@@ -21,18 +20,10 @@ from typing import Dict, Optional
 import ray
 
 import fed.config as fed_config
-import fed.utils as fed_utils
-from fed._private import constants
-import fed._private.compatible_utils as compatible_utils
-from fed.config import get_job_config, CrossSiloCommConfig
-if compatible_utils._compare_version_strings(
-        fed_utils.get_package_version('protobuf'), '4.0.0'):
-    from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
-    from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
-else:
-    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
-    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
+from fed.config import get_job_config
+from fed.proxy.base_proxy import SendProxy, RecvProxy
 from fed.utils import setup_logger
+from fed._private import constants
 from fed._private.global_context import get_global_context
 
 logger = logging.getLogger(__name__)
@@ -61,68 +52,6 @@ def get_from_two_dim_dict(the_dict, key_a, key_b):
 def pop_from_two_dim_dict(the_dict, key_a, key_b):
     key_a, key_b = str(key_a), str(key_b)
     return the_dict[key_a].pop(key_b)
-
-
-class SendProxy(abc.ABC):
-    def __init__(
-        self,
-        cluster: Dict,
-        party: str,
-        tls_config: Dict,
-        proxy_config: CrossSiloCommConfig = None
-    ) -> None:
-        self._cluster = cluster
-        self._party = party
-        self._tls_config = tls_config
-        self._proxy_config = proxy_config
-
-    @abc.abstractmethod
-    async def send(
-        self,
-        dest_party,
-        data,
-        upstream_seq_id,
-        downstream_seq_id
-    ):
-        pass
-
-    async def is_ready(self):
-        return True
-
-    async def get_proxy_config(self, dest_party=None):
-        return self._proxy_config
-
-
-class RecvProxy(abc.ABC):
-    def __init__(
-            self,
-            listen_addr: str,
-            party: str,
-            tls_config: Dict,
-            proxy_config: CrossSiloCommConfig = None
-    ) -> None:
-        self._listen_addr = listen_addr
-        self._party = party
-        self._tls_config = tls_config
-        self._proxy_config = proxy_config
-
-    @abc.abstractmethod
-    def start(self):
-        pass
-
-    @abc.abstractmethod
-    async def get_data(
-            self,
-            src_party,
-            upstream_seq_id,
-            curr_seq_id):
-        pass
-
-    async def is_ready(self):
-        return True
-
-    async def get_proxy_config(self):
-        return self._proxy_config
 
 
 @ray.remote
@@ -247,7 +176,7 @@ def start_recv_proxy(
     logging_level: str,
     tls_config=None,
     proxy_cls=None,
-    proxy_config: Optional[fed_config.CrossSiloCommConfig] = None
+    proxy_config: Optional[fed_config.CrossSiloMsgConfig] = None
 ):
 
     # Create RecevrProxyActor
@@ -292,7 +221,7 @@ def start_send_proxy(
     logging_level: str,
     tls_config: Dict = None,
     proxy_cls=None,
-    proxy_config: Optional[fed_config.CrossSiloCommConfig] = None
+    proxy_config: Optional[fed_config.CrossSiloMsgConfig] = None
 ):
     # Create SendProxyActor
     global _SEND_PROXY_ACTOR

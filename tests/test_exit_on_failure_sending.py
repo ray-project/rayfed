@@ -19,7 +19,7 @@ import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
 
-from fed.config import CrossSiloGrpcCommConfig
+from fed.config import GrpcCrossSiloMsgConfig
 
 import signal
 
@@ -63,7 +63,7 @@ def run(party, is_inner_party):
         "backoffMultiplier": 1,
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
-    cross_silo_comm_config = CrossSiloGrpcCommConfig(
+    cross_silo_comm_config = GrpcCrossSiloMsgConfig(
         grpc_retry_policy=retry_policy,
         exit_on_sending_failure=True
     )

@@ -1,3 +1,17 @@
+# Copyright 2023 The RayFed Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import asyncio
 import copy
 import cloudpickle
@@ -10,17 +24,16 @@ from typing import Dict
 
 import fed.utils as fed_utils
 
-from fed.config import CrossSiloCommConfig, CrossSiloGrpcCommConfig
+from fed.config import CrossSiloMsgConfig, GrpcCrossSiloMsgConfig
 import fed._private.compatible_utils as compatible_utils
-from fed._private.grpc_options import _DEFAULT_GRPC_CHANNEL_OPTIONS, _GRPC_SERVICE
+from fed.proxy.grpc.grpc_options import _DEFAULT_GRPC_CHANNEL_OPTIONS, _GRPC_SERVICE
 from fed.proxy.barriers import (
     add_two_dim_dict,
     get_from_two_dim_dict,
     pop_from_two_dim_dict,
     key_exists_in_two_dim_dict,
-    SendProxy,
-    RecvProxy
 )
+from fed.proxy.base_proxy import SendProxy, RecvProxy
 if compatible_utils._compare_version_strings(
         fed_utils.get_package_version('protobuf'), '4.0.0'):
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
@@ -33,11 +46,24 @@ else:
 logger = logging.getLogger(__name__)
 
 
-def parse_grpc_options(proxy_config: CrossSiloCommConfig):
+def parse_grpc_options(proxy_config: CrossSiloMsgConfig):
+    """
+    Extract certain fields in `CrossSiloGrpcCommConfig` into the
+    "grpc_channel_options". Note that the resulting dict's key
+    may not be identical to the config name, but a grpc-supported
+    option name.
+
+    Args:
+        proxy_config (CrossSiloMsgConfig): The proxy configuration
+            from which to extract the gRPC options.
+
+    Returns:
+        dict: A dictionary containing the gRPC channel options.
+    """
     grpc_channel_options = {}
     if proxy_config is not None and isinstance(
-        proxy_config, CrossSiloGrpcCommConfig):
-        if isinstance(proxy_config, CrossSiloGrpcCommConfig):
+            proxy_config, GrpcCrossSiloMsgConfig):
+        if isinstance(proxy_config, GrpcCrossSiloMsgConfig):
             if proxy_config.grpc_channel_options is not None:
                 grpc_channel_options.update(proxy_config.grpc_channel_options)
             if proxy_config.grpc_retry_policy is not None:
@@ -64,7 +90,7 @@ class GrpcSendProxy(SendProxy):
             cluster: Dict,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloCommConfig = None
+            proxy_config: CrossSiloMsgConfig = None
     ) -> None:
         super().__init__(cluster, party, tls_config, proxy_config)
         self._grpc_metadata = proxy_config.http_header or {}
@@ -174,7 +200,7 @@ class GrpcRecvProxy(RecvProxy):
             listen_addr: str,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloCommConfig
+            proxy_config: CrossSiloMsgConfig
     ) -> None:
         super().__init__(listen_addr, party, tls_config, proxy_config)
         self._grpc_options = copy.deepcopy(_DEFAULT_GRPC_CHANNEL_OPTIONS)
