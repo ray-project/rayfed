@@ -5,14 +5,13 @@ import grpc
 import logging
 import threading
 import json
-import importlib.metadata
 from typing import Dict
 
 
 import fed.utils as fed_utils
 
 from fed.config import CrossSiloCommConfig, CrossSiloGrpcCommConfig
-from fed._private.compatible_utils import _compare_version_strings
+import fed._private.compatible_utils as compatible_utils
 from fed._private.grpc_options import _DEFAULT_GRPC_CHANNEL_OPTIONS, _GRPC_SERVICE
 from fed.proxy.barriers import (
     add_two_dim_dict,
@@ -22,7 +21,8 @@ from fed.proxy.barriers import (
     SendProxy,
     RecvProxy
 )
-if _compare_version_strings(importlib.metadata.version('protobuf'), '4.0.0'):
+if compatible_utils._compare_version_strings(
+        fed_utils.get_package_version('protobuf'), '4.0.0'):
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
     from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
 else:
@@ -35,14 +35,8 @@ logger = logging.getLogger(__name__)
 
 def parse_grpc_options(proxy_config: CrossSiloCommConfig):
     grpc_channel_options = {}
-    if proxy_config is not None:
-        if proxy_config.messages_max_size_in_bytes is not None:
-            grpc_channel_options.update({
-                'grpc.max_send_message_length':
-                    proxy_config.messages_max_size_in_bytes,
-                'grpc.max_receive_message_length':
-                    proxy_config.messages_max_size_in_bytes
-            })
+    if proxy_config is not None and isinstance(
+        proxy_config, CrossSiloGrpcCommConfig):
         if isinstance(proxy_config, CrossSiloGrpcCommConfig):
             if proxy_config.grpc_channel_options is not None:
                 grpc_channel_options.update(proxy_config.grpc_channel_options)

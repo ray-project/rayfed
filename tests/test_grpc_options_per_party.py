@@ -42,8 +42,11 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_comm_config=CrossSiloCommConfig(
-            messages_max_size_in_bytes=100)
+        global_cross_silo_comm_config=CrossSiloGrpcCommConfig(
+            grpc_channel_options=[(
+                'grpc.max_send_message_length', 100
+            )]
+        )
     )
 
     def _assert_on_send_proxy(proxy_actor):
@@ -104,8 +107,11 @@ def party_grpc_options(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_comm_config=CrossSiloCommConfig(
-            messages_max_size_in_bytes=100)
+        global_cross_silo_comm_config=CrossSiloGrpcCommConfig(
+            grpc_channel_options=[(
+                'grpc.max_send_message_length', 100
+            )]
+        )
     )
 
     def _assert_on_send_proxy(proxy_actor):

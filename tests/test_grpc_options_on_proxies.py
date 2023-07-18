@@ -18,7 +18,7 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import CrossSiloCommConfig
+from fed.config import CrossSiloGrpcCommConfig
 
 
 @fed.remote
@@ -35,8 +35,11 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_comm_config=CrossSiloCommConfig(
-            messages_max_size_in_bytes=100)
+        global_cross_silo_comm_config=CrossSiloGrpcCommConfig(
+            grpc_channel_options=[(
+                'grpc.max_send_message_length', 100
+            )]
+        )
     )
 
     def _assert_on_proxy(proxy_actor):
