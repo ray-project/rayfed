@@ -7,7 +7,10 @@
 import fed._private.compatible_utils as compatible_utils
 import fed._private.constants as fed_constants
 import cloudpickle
-from typing import Dict, Optional
+import json
+
+from typing import Dict, List, Optional
+from dataclasses import dataclass
 
 
 class ClusterConfig:
@@ -27,18 +30,6 @@ class ClusterConfig:
     def tls_config(self):
         return self._data[fed_constants.KEY_OF_TLS_CONFIG]
 
-    @property
-    def serializing_allowed_list(self):
-        return self._data[fed_constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST]
-
-    @property
-    def cross_silo_timeout(self):
-        return self._data[fed_constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS]
-
-    @property
-    def cross_silo_messages_max_size(self):
-        return self._data[fed_constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES]
-
 
 class JobConfig:
     def __init__(self, raw_bytes: bytes) -> None:
@@ -48,8 +39,10 @@ class JobConfig:
             self._data = cloudpickle.loads(raw_bytes)
 
     @property
-    def grpc_metadata(self):
-        return self._data.get(fed_constants.KEY_OF_GRPC_METADATA, {})
+    def cross_silo_msg_config(self):
+        return self._data.get(
+            fed_constants.KEY_OF_CROSS_SILO_MSG_CONFIG,
+            CrossSiloMsgConfig())
 
 
 # A module level cache for the cluster configurations.
@@ -80,14 +73,94 @@ def get_job_config():
     return _job_config
 
 
-class ProxyActorConfig:
+@dataclass
+class CrossSiloMsgConfig:
     """A class to store parameters used for Proxy Actor
 
     Attributes:
-        resource_label: The customized resources for the actor. This will be
-            filled into the "resource" field of Ray ActorClass.options.
+        proxy_max_restarts: The max restart times for the send proxy.
+        serializing_allowed_list: The package or class list allowed for
+            serializing(deserializating) cross silos. It's used for avoiding pickle
+            deserializing execution attack when crossing solis.
+        send_resource_label: Customized resource label, the SendProxyActor
+            will be scheduled based on the declared resource label. For example,
+            when setting to `{"my_label": 1}`, then the SendProxyActor will be started
+            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
+        recv_resource_label: Customized resource label, the RecverProxyActor
+            will be scheduled based on the declared resource label. For example,
+            when setting to `{"my_label": 1}`, then the RecverProxyActor will be started
+            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
+        exit_on_sending_failure: whether exit when failure on
+            cross-silo sending. If True, a SIGTERM will be signaled to self
+            if failed to sending cross-silo data.
+        messages_max_size_in_bytes: The maximum length in bytes of
+            cross-silo messages.
+            If None, the default value of 500 MB is specified.
+        timeout_in_ms: The timeout in mili-seconds of a cross-silo RPC call.
+            It's 60000 by default.
+        http_header: The HTTP header, e.g. metadata in grpc, sent with the RPC request.
+            This won't override basic tcp headers, such as `user-agent`, but concat
+            them together.
     """
-    def __init__(
-            self,
-            resource_label: Optional[Dict[str, str]] = None) -> None:
-        self.resource_label = resource_label
+    proxy_max_restarts: int = None
+    timeout_in_ms: int = 60000
+    messages_max_size_in_bytes: int = None
+    exit_on_sending_failure: Optional[bool] = False
+    serializing_allowed_list: Optional[Dict[str, str]] = None
+    send_resource_label: Optional[Dict[str, str]] = None
+    recv_resource_label: Optional[Dict[str, str]] = None
+    http_header: Optional[Dict[str, str]] = None
+
+    def __json__(self):
+        return json.dumps(self.__dict__)
+
+    @classmethod
+    def from_json(cls, json_str):
+        data = json.loads(json_str)
+        return cls(**data)
+
+    @classmethod
+    def from_dict(cls, data: Dict):
+        """Initialize CrossSiloMsgConfig from a dictionary.
+
+        Args:
+            data (Dict): Dictionary with keys as member variable names.
+
+        Returns:
+            CrossSiloMsgConfig: An instance of CrossSiloMsgConfig.
+        """
+        # Get the attributes of the class
+        attrs = {attr for attr, _ in cls.__annotations__.items()}
+        # Filter the dictionary to only include keys that are attributes of the class
+        filtered_data = {key: value for key, value in data.items() if key in attrs}
+        return cls(**filtered_data)
+
+
+@dataclass
+class GrpcCrossSiloMsgConfig(CrossSiloMsgConfig):
+    """A class to store parameters used for GRPC communication
+
+    Attributes:
+        grpc_retry_policy: a dict descibes the retry policy for
+            cross silo rpc call. If None, the following default retry policy
+            will be used. More details please refer to
+            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_. # noqa
+
+            .. code:: python
+                {
+                    "maxAttempts": 4,
+                    "initialBackoff": "0.1s",
+                    "maxBackoff": "1s",
+                    "backoffMultiplier": 2,
+                    "retryableStatusCodes": [
+                        "UNAVAILABLE"
+                    ]
+                }
+        grpc_channel_options: A list of tuples to store GRPC channel options,
+            e.g. [
+                    ('grpc.enable_retries', 1),
+                    ('grpc.max_send_message_length', 50 * 1024 * 1024)
+                ]
+    """
+    grpc_channel_options: List = None
+    grpc_retry_policy: Dict[str, str] = None

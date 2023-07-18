@@ -63,7 +63,8 @@ def _restricted_loads(
 def _apply_loads_function_with_whitelist():
     global _pickle_whitelist
 
-    _pickle_whitelist = fed_config.get_cluster_config().serializing_allowed_list
+    _pickle_whitelist = fed_config.get_job_config() \
+        .cross_silo_msg_config.serializing_allowed_list
     if _pickle_whitelist is None:
         return
 

@@ -19,6 +19,8 @@ import fed._private.compatible_utils as compatible_utils
 import multiprocessing
 import numpy
 
+from fed.config import CrossSiloMsgConfig
+
 
 @fed.remote
 def generate_wrong_type():
@@ -51,7 +53,9 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        cross_silo_serializing_allowed_list=allowed_list)
+        global_cross_silo_msg_config=CrossSiloMsgConfig(
+            serializing_allowed_list=allowed_list
+        ))
 
     # Test passing an allowed type.
     o1 = generate_allowed_type.party("alice").remote()

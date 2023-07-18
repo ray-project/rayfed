@@ -22,6 +22,8 @@ import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed._private import global_context
 from fed.proxy.barriers import send, start_recv_proxy, start_send_proxy
+from fed.proxy.grpc.grpc_proxy import GrpcSendProxy, GrpcRecvProxy
+from fed.config import GrpcCrossSiloMsgConfig
 
 
 def test_n_to_1_transport():
@@ -44,9 +46,6 @@ def test_n_to_1_transport():
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: tls_config,
-        constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES: None,
-        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST: {},
-        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: 60,
     }
 
     global_context.get_global_context().get_cleanup_manager().start()
@@ -58,17 +57,22 @@ def test_n_to_1_transport():
     SERVER_ADDRESS = "127.0.0.1:65422"
     party = 'test_party'
     cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
+    config = GrpcCrossSiloMsgConfig()
     start_recv_proxy(
         cluster_config,
         party,
         logging_level='info',
         tls_config=tls_config,
+        proxy_cls=GrpcRecvProxy,
+        proxy_config=config
     )
     start_send_proxy(
         cluster_config,
         party,
         logging_level='info',
         tls_config=tls_config,
+        proxy_cls=GrpcSendProxy,
+        proxy_config=config
     )
 
     sent_objs = []

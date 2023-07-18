@@ -15,7 +15,7 @@
 import functools
 import inspect
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 
 import cloudpickle
 import ray
@@ -34,6 +34,8 @@ from fed.proxy.barriers import (
     start_recv_proxy,
     start_send_proxy,
 )
+from fed.proxy.grpc.grpc_proxy import SendProxy, RecvProxy
+from fed.config import CrossSiloMsgConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -45,16 +47,10 @@ def init(
     party: str = None,
     tls_config: Dict = None,
     logging_level: str = 'info',
-    cross_silo_grpc_retry_policy: Dict = None,
-    cross_silo_send_max_retries: int = None,
-    cross_silo_serializing_allowed_list: Dict = None,
-    cross_silo_send_resource_label: Dict = None,
-    cross_silo_recv_resource_label: Dict = None,
-    exit_on_failure_cross_silo_sending: bool = False,
-    cross_silo_messages_max_size_in_bytes: int = None,
-    cross_silo_timeout_in_seconds: int = 60,
     enable_waiting_for_other_parties_ready: bool = False,
-    grpc_metadata: Dict = None,
+    send_proxy_cls: SendProxy = None,
+    recv_proxy_cls: RecvProxy = None,
+    global_cross_silo_msg_config: Optional[CrossSiloMsgConfig] = None,
     **kwargs,
 ):
     """
@@ -71,12 +67,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10001',
-                        # (Optional) The party specific metadata sent with the grpc request
-                        'grpc_metadata': (('token', 'alice-token'),),
-                        'grpc_options': [
-                            ('grpc.default_authority', 'alice'),
-                            ('grpc.max_send_message_length', 50 * 1024 * 1024)
-                        ]
+                        'cross_silo_msg_config': CrossSiloMsgConfig
                     },
                     'bob': {
                         # The address for other parties.
@@ -84,7 +75,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10002',
-                        # (Optional) The party specific metadata sent with the grpc request
+                        # (Optional) The party specific metadata sent with grpc requests
                         'grpc_metadata': (('token', 'bob-token'),),
                     },
                     'carol': {
@@ -93,7 +84,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10003',
-                        # (Optional) The party specific metadata sent with the grpc request
+                        # (Optional) The party specific metadata sent with grpc requests
                         'grpc_metadata': (('token', 'carol-token'),),
                     },
                 }
@@ -116,48 +107,13 @@ def init(
                     "cert": "bob's server cert",
                     "key": "bob's server cert key",
                 }
-
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
-        cross_silo_grpc_retry_policy: a dict descibes the retry policy for
-            cross silo rpc call. If None, the following default retry policy
-            will be used. More details please refer to
-            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_. # noqa
-
-            .. code:: python
-                {
-                    "maxAttempts": 4,
-                    "initialBackoff": "0.1s",
-                    "maxBackoff": "1s",
-                    "backoffMultiplier": 2,
-                    "retryableStatusCodes": [
-                        "UNAVAILABLE"
-                    ]
-                }
-        cross_silo_send_max_retries: the max retries for sending data cross silo.
-        cross_silo_serializing_allowed_list: The package or class list allowed for
-            serializing(deserializating) cross silos. It's used for avoiding pickle
-            deserializing execution attack when crossing solis.
-        cross_silo_send_resource_label: Customized resource label, the SendProxyActor
-            will be scheduled based on the declared resource label. For example,
-            when setting to `{"my_label": 1}`, then the SendProxyActor will be started
-            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
-        cross_silo_recv_resource_label: Customized resource label, the RecverProxyActor
-            will be scheduled based on the declared resource label. For example,
-            when setting to `{"my_label": 1}`, then the RecverProxyActor will be started
-            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
-        exit_on_failure_cross_silo_sending: whether exit when failure on
-            cross-silo sending. If True, a SIGTERM will be signaled to self
-            if failed to sending cross-silo data.
-        cross_silo_messages_max_size_in_bytes: The maximum length in bytes of
-            cross-silo messages.
-            If None, the default value of 500 MB is specified.
-        cross_silo_timeout_in_seconds: The timeout in seconds of a cross-silo RPC call.
-            It's 60 by default.
         enable_waiting_for_other_parties_ready: ping other parties until they
             are all ready if True.
-        grpc_metadata: optional; The metadata sent with the grpc request. This won't override
-            basic tcp headers, such as `user-agent`, but aggregate them together.
+        global_cross_silo_msg_config: Global cross-silo message related
+            configs that are applied to all connections. Supported configs
+            can refer to CrossSiloMsgConfig in config.py.
 
     Examples:
         >>> import fed
@@ -182,6 +138,9 @@ def init(
         assert (
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
+
+    global_cross_silo_msg_config = \
+        global_cross_silo_msg_config or CrossSiloMsgConfig()
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -189,15 +148,11 @@ def init(
         constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,
-        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST:
-            cross_silo_serializing_allowed_list,
-        constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
-            cross_silo_messages_max_size_in_bytes,
-        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
     }
 
     job_config = {
-        constants.KEY_OF_GRPC_METADATA : grpc_metadata,
+        constants.KEY_OF_CROSS_SILO_MSG_CONFIG:
+            global_cross_silo_msg_config,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
@@ -215,30 +170,35 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     get_global_context().get_cleanup_manager().start(
-        exit_when_failure_sending=exit_on_failure_cross_silo_sending)
+        exit_when_failure_sending=global_cross_silo_msg_config.exit_on_sending_failure)
 
-    recv_actor_config = fed_config.ProxyActorConfig(
-        resource_label=cross_silo_recv_resource_label)
+    if recv_proxy_cls is None:
+        logger.debug(
+            "Not declaring recver proxy class, using `GrpcRecvProxy` as default.")
+        from fed.proxy.grpc.grpc_proxy import GrpcRecvProxy
+        recv_proxy_cls = GrpcRecvProxy
     # Start recv proxy
     start_recv_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        retry_policy=cross_silo_grpc_retry_policy,
-        actor_config=recv_actor_config
+        proxy_cls=recv_proxy_cls,
+        proxy_config=global_cross_silo_msg_config
     )
 
-    send_actor_config = fed_config.ProxyActorConfig(
-        resource_label=cross_silo_send_resource_label)
+    if send_proxy_cls is None:
+        logger.debug(
+            "Not declaring send proxy class, using `GrpcSendProxy` as default.")
+        from fed.proxy.grpc.grpc_proxy import GrpcSendProxy
+        send_proxy_cls = GrpcSendProxy
     start_send_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        retry_policy=cross_silo_grpc_retry_policy,
-        max_retries=cross_silo_send_max_retries,
-        actor_config=send_actor_config
+        proxy_cls=send_proxy_cls,
+        proxy_config=global_cross_silo_msg_config
     )
 
     if enable_waiting_for_other_parties_ready:
