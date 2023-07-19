@@ -39,7 +39,7 @@ class My:
 
 def run(party, is_inner_party):
     compatible_utils.init_ray(address='local')
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
@@ -51,7 +51,7 @@ def run(party, is_inner_party):
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         global_cross_silo_message_config=GrpcCrossSiloMessageConfig(
             grpc_retry_policy=retry_policy

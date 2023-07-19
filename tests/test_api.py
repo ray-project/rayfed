@@ -22,12 +22,12 @@ import fed.config as fed_config
 
 def run():
     compatible_utils.init_ray(address='local')
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11012'},
     }
-    fed.init(cluster=cluster, party="alice")
+    fed.init(addresses=addresses, party="alice")
     config = fed_config.get_cluster_config()
-    assert config.cluster_addresses == cluster
+    assert config.cluster_addresses == addresses
     assert config.current_party == "alice"
     fed.shutdown()
     ray.shutdown()
@@ -43,10 +43,10 @@ def test_fed_apis():
 def test_miss_party_name_on_actor():
     def run():
         compatible_utils.init_ray(address='local')
-        cluster = {
+        addresses = {
             'alice': {'address': '127.0.0.1:11012'},
         }
-        fed.init(cluster=cluster, party="alice")
+        fed.init(addresses=addresses, party="alice")
 
         @fed.remote
         class MyActor:

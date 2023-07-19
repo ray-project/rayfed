@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 
 def init(
-    cluster: Dict = None,
+    addresses: Dict = None,
     party: str = None,
     tls_config: Dict = None,
     logging_level: str = 'info',
@@ -57,34 +57,37 @@ def init(
     Initialize a RayFed client.
 
     Args:
-        cluster: optional; a dict describes the cluster config. E.g.
+        addresses: optional; a dict describes the addresses configurations. E.g.
 
             .. code:: python
                 {
                     'alice': {
-                        # The address for other parties.
+                        # The address that can be connected by other parties.
                         'address': '127.0.0.1:10001',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10001',
+                        # (Optional) The address this party is going to listen on.
+                        # If not provided, the `address` will be used.
+                        'listening_on': '0.0.0.0:10001',
+                        # TODO(qwang): Move it!!!
                         'cross_silo_message_config': CrossSiloMessageConfig
                     },
                     'bob': {
-                        # The address for other parties.
+                        # The address that can be connected by other parties.
                         'address': '127.0.0.1:10002',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10002',
+                        # (Optional) The address this party is going to listen on.
+                        # If not provided, the `address` will be used.
+                        'listening_on': '0.0.0.0:10002',
                         # (Optional) The party specific metadata sent with grpc requests
+                        # TODO(qwang): Move it!!!
                         'grpc_metadata': (('token', 'bob-token'),),
                     },
                     'carol': {
-                        # The address for other parties.
+                        # The address that can be connected by other parties.
                         'address': '127.0.0.1:10003',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10003',
+                        # (Optional) The address this party is going to listen on.
+                        # If not provided, the `address` will be used.
+                        'listening_on': '0.0.0.0:10003',
                         # (Optional) The party specific metadata sent with grpc requests
+                        # TODO(qwang): Move it!!!
                         'grpc_metadata': (('token', 'carol-token'),),
                     },
                 }
@@ -119,19 +122,19 @@ def init(
         >>> import fed
         >>> import ray
         >>> ray.init(address='local')
-        >>> cluster = {
+        >>> addresses = {
         >>>    'alice': {'address': '127.0.0.1:10001'},
         >>>    'bob': {'address': '127.0.0.1:10002'},
         >>>    'carol': {'address': '127.0.0.1:10003'},
         >>> }
         >>> # Start as alice.
-        >>> fed.init(cluster=cluster, self_party='alice')
+        >>> fed.init(addresses=addresses, party='alice')
     """
-    assert cluster, "Cluster should be provided."
+    assert addresses, "Addresses should be provided."
     assert party, "Party should be provided."
-    assert party in cluster, f"Party {party} is not in cluster {cluster}."
+    assert party in addresses, f"Party {party} is not in the addresses {addresses}."
 
-    fed_utils.validate_cluster_info(cluster)
+    fed_utils.validate_addresses(addresses)
 
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
@@ -145,7 +148,7 @@ def init(
     compatible_utils._init_internal_kv()
 
     cluster_config = {
-        constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
+        constants.KEY_OF_CLUSTER_ADDRESSES: addresses,
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,
     }
@@ -179,7 +182,7 @@ def init(
         from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
         receiver_proxy_cls = GrpcReceiverProxy
     _start_receiver_proxy(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
@@ -194,7 +197,7 @@ def init(
         from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
         sender_proxy_cls = GrpcSenderProxy
     _start_sender_proxy(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
@@ -204,7 +207,7 @@ def init(
 
     if enable_waiting_for_other_parties_ready:
         # TODO(zhouaihui): can be removed after we have a better retry strategy.
-        ping_others(cluster=cluster, self_party=party, max_retries=3600)
+        ping_others(addresses=addresses, self_party=party, max_retries=3600)
 
 
 def shutdown():
@@ -216,9 +219,9 @@ def shutdown():
     logger.info('Shutdowned rayfed.')
 
 
-def _get_cluster():
+def _get_addresses():
     """
-    Get the RayFed cluster configration.
+    Get the RayFed addresses configration.
     """
     return fed_config.get_cluster_config().cluster_addresses
 
@@ -290,7 +293,7 @@ class FedRemoteClass:
         fed_class_task_id = get_global_context().next_seq_id()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
-            _get_cluster(),
+            _get_addresses(),
             self._cls,
             _get_party(),
             self._party,
@@ -341,7 +344,7 @@ def get(
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
-    cluster = _get_cluster()
+    addresses = _get_addresses()
     current_party = _get_party()
     is_individual_id = isinstance(fed_objects, FedObject)
     if is_individual_id:
@@ -357,7 +360,7 @@ def get(
             assert ray_object_ref is not None
             ray_refs.append(ray_object_ref)
 
-            for party_name in cluster:
+            for party_name in addresses:
                 if party_name == current_party:
                     continue
                 else:

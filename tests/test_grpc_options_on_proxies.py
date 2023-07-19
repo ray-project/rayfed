@@ -28,12 +28,12 @@ def dummpy():
 
 def run(party):
     compatible_utils.init_ray(address='local')
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11019'},
         'bob': {'address': '127.0.0.1:11018'},
     }
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         global_cross_silo_message_config=GrpcCrossSiloMessageConfig(
             grpc_channel_options=[(

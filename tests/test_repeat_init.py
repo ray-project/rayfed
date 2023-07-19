@@ -37,7 +37,7 @@ class My:
         return True
 
 
-cluster = {
+addresses = {
     'alice': {'address': '127.0.0.1:11012'},
     'bob': {'address': '127.0.0.1:11011'},
 }
@@ -46,7 +46,7 @@ cluster = {
 def run(party):
     def _run():
         compatible_utils.init_ray(address='local')
-        fed.init(cluster=cluster, party=party)
+        fed.init(addresses=addresses, party=party)
 
         my1 = My.party("alice").remote()
         my2 = My.party("bob").remote()
