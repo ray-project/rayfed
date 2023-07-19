@@ -25,8 +25,8 @@ from fed._private import constants
 from fed._private import global_context
 from fed.proxy.barriers import (
     send,
-    start_receiver_proxy,
-    start_sender_proxy
+    _start_receiver_proxy,
+    _start_sender_proxy
 )
 from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy, GrpcReceiverProxy
 if compatible_utils._compare_version_strings(
@@ -60,14 +60,14 @@ def test_n_to_1_transport():
     party = 'test_party'
     cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
     config = GrpcCrossSiloMessageConfig()
-    start_receiver_proxy(
+    _start_receiver_proxy(
         cluster_config,
         party,
         logging_level='info',
         proxy_cls=GrpcReceiverProxy,
         proxy_config=config
     )
-    start_sender_proxy(
+    _start_sender_proxy(
         cluster_config,
         party,
         logging_level='info',
@@ -200,7 +200,7 @@ def test_send_grpc_with_meta():
         cluster_config, party, logging_level='info',
         expected_metadata=metadata,
     )
-    start_sender_proxy(
+    _start_sender_proxy(
         cluster_config,
         party,
         logging_level='info',
@@ -250,7 +250,7 @@ def test_send_grpc_with_party_specific_meta():
         cluster_parties_config, party, logging_level='info',
         expected_metadata={"key": "value", "token": "test-party-token"},
     )
-    start_sender_proxy(
+    _start_sender_proxy(
         cluster_parties_config,
         party,
         logging_level='info',
