@@ -21,12 +21,12 @@ from fed.config import CrossSiloMessageConfig
 class SenderProxy(abc.ABC):
     def __init__(
         self,
-        cluster: Dict,
+        addresses: Dict,
         party: str,
         tls_config: Dict,
         proxy_config: CrossSiloMessageConfig = None
     ) -> None:
-        self._cluster = cluster
+        self._addresses = addresses
         self._party = party
         self._tls_config = tls_config
         self._proxy_config = proxy_config

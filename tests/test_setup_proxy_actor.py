@@ -25,7 +25,7 @@ from fed.config import CrossSiloMessageConfig
 
 def run(party):
     compatible_utils.init_ray(address='local', resources={"127.0.0.1": 2})
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }

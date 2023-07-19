@@ -83,7 +83,7 @@ def test_listen_used_addr():
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind(("127.0.0.1", occupied_port))
 
-        cluster = {
+        addresses = {
             'alice': {
                 'address': '127.0.0.1:11012',
                 'listen_addr': f'0.0.0.0:{occupied_port}'},

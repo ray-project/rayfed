@@ -86,7 +86,7 @@ def test_grpc_options():
 
 def party_grpc_options(party):
     compatible_utils.init_ray(address='local')
-    cluster = {
+    addresses = {
         'alice': {
             'address': '127.0.0.1:11010',
             'cross_silo_message_config': GrpcCrossSiloMessageConfig(
