@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 def init(
     addresses: Dict = None,
     party: str = None,
+    config: Dict = None,
     tls_config: Dict = None,
     logging_level: str = 'info',
     enable_waiting_for_other_parties_ready: bool = False,

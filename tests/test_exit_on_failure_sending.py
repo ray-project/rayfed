@@ -71,7 +71,9 @@ def run(party, is_inner_party):
         addresses=addresses,
         party=party,
         logging_level='debug',
-        global_cross_silo_message_config=cross_silo_message_config
+        config = {
+            "cross_silo_message_config": cross_silo_message_config,
+        },
     )
 
     o = f.party("alice").remote()
