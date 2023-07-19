@@ -15,7 +15,7 @@
 import functools
 import inspect
 import logging
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Union
 
 import cloudpickle
 import ray
@@ -35,7 +35,7 @@ from fed.proxy.barriers import (
     _start_sender_proxy,
 )
 from fed.proxy.grpc.grpc_proxy import SenderProxy, ReceiverProxy
-from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
+from fed.config import GrpcCrossSiloMessageConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -45,10 +45,9 @@ logger = logging.getLogger(__name__)
 def init(
     cluster: Dict = None,
     party: str = None,
-    config: Dict = None,
+    config: Dict = {},
     tls_config: Dict = None,
     logging_level: str = 'info',
-    enable_waiting_for_other_parties_ready: bool = False,
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
     **kwargs,
@@ -67,7 +66,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10001',
-                        'cross_silo_message_config': CrossSiloMessageConfig
+                        'cross_silo_message': {}
                     },
                     'bob': {
                         # The address for other parties.
@@ -109,8 +108,6 @@ def init(
                 }
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
-        enable_waiting_for_other_parties_ready: ping other parties until they
-            are all ready if True.
 
     Examples:
         >>> import fed
@@ -136,7 +133,9 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    cross_silo_message_config = GrpcCrossSiloMessageConfig.from_dict(config["cross_silo_message"])
+    cross_silo_message_dict = config.get("cross_silo_message", {})
+    cross_silo_message_config = GrpcCrossSiloMessageConfig.from_dict(
+        cross_silo_message_dict)
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -199,7 +198,7 @@ def init(
         proxy_config=cross_silo_message_config
     )
 
-    if enable_waiting_for_other_parties_ready:
+    if config.get("barrier_on_initializing", False):
         # TODO(zhouaihui): can be removed after we have a better retry strategy.
         ping_others(cluster=cluster, self_party=party, max_retries=3600)
 

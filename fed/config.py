@@ -132,6 +132,7 @@ class CrossSiloMessageConfig:
             CrossSiloMessageConfig: An instance of CrossSiloMessageConfig.
         """
         # Get the attributes of the class
+        data = data or {}
         attrs = {attr for attr, _ in cls.__annotations__.items()}
         # Filter the dictionary to only include keys that are attributes of the class
         filtered_data = {key: value for key, value in data.items() if key in attrs}
