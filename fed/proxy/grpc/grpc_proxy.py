@@ -24,7 +24,7 @@ from typing import Dict
 
 import fed.utils as fed_utils
 
-from fed.config import CrossSiloMsgConfig, GrpcCrossSiloMsgConfig
+from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
 import fed._private.compatible_utils as compatible_utils
 from fed.proxy.grpc.grpc_options import _DEFAULT_GRPC_CHANNEL_OPTIONS, _GRPC_SERVICE
 from fed.proxy.barriers import (
@@ -33,7 +33,7 @@ from fed.proxy.barriers import (
     pop_from_two_dim_dict,
     key_exists_in_two_dim_dict,
 )
-from fed.proxy.base_proxy import SendProxy, RecvProxy
+from fed.proxy.base_proxy import SenderProxy, ReceiverProxy
 if compatible_utils._compare_version_strings(
         fed_utils.get_package_version('protobuf'), '4.0.0'):
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
@@ -46,7 +46,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-def parse_grpc_options(proxy_config: CrossSiloMsgConfig):
+def parse_grpc_options(proxy_config: CrossSiloMessageConfig):
     """
     Extract certain fields in `CrossSiloGrpcCommConfig` into the
     "grpc_channel_options". Note that the resulting dict's key
@@ -54,7 +54,7 @@ def parse_grpc_options(proxy_config: CrossSiloMsgConfig):
     option name.
 
     Args:
-        proxy_config (CrossSiloMsgConfig): The proxy configuration
+        proxy_config (CrossSiloMessageConfig): The proxy configuration
             from which to extract the gRPC options.
 
     Returns:
@@ -62,8 +62,8 @@ def parse_grpc_options(proxy_config: CrossSiloMsgConfig):
     """
     grpc_channel_options = {}
     if proxy_config is not None and isinstance(
-            proxy_config, GrpcCrossSiloMsgConfig):
-        if isinstance(proxy_config, GrpcCrossSiloMsgConfig):
+            proxy_config, GrpcCrossSiloMessageConfig):
+        if isinstance(proxy_config, GrpcCrossSiloMessageConfig):
             if proxy_config.grpc_channel_options is not None:
                 grpc_channel_options.update(proxy_config.grpc_channel_options)
             if proxy_config.grpc_retry_policy is not None:
@@ -84,13 +84,13 @@ def parse_grpc_options(proxy_config: CrossSiloMsgConfig):
     return grpc_channel_options
 
 
-class GrpcSendProxy(SendProxy):
+class GrpcSenderProxy(SenderProxy):
     def __init__(
             self,
             cluster: Dict,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloMsgConfig = None
+            proxy_config: CrossSiloMessageConfig = None
     ) -> None:
         super().__init__(cluster, party, tls_config, proxy_config)
         self._grpc_metadata = proxy_config.http_header or {}
@@ -143,7 +143,7 @@ class GrpcSendProxy(SendProxy):
         grpc_options = self._grpc_options
 
         dest_party_msg_config = self._cluster[dest_party].get(
-            'cross_silo_msg_config', None)
+            'cross_silo_message_config', None)
         if dest_party_msg_config is not None:
             if dest_party_msg_config.http_header is not None:
                 dest_party_grpc_metadata = dict(dest_party_msg_config.http_header)
@@ -194,13 +194,13 @@ async def send_data_grpc(
     return response.result
 
 
-class GrpcRecvProxy(RecvProxy):
+class GrpcReceiverProxy(ReceiverProxy):
     def __init__(
             self,
             listen_addr: str,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloMsgConfig
+            proxy_config: CrossSiloMessageConfig
     ) -> None:
         super().__init__(listen_addr, party, tls_config, proxy_config)
         self._grpc_options = copy.deepcopy(_DEFAULT_GRPC_CHANNEL_OPTIONS)
@@ -319,7 +319,6 @@ async def _run_grpc_server(
         server.add_secure_port(f'[::]:{port}', server_credentials)
     else:
         server.add_insecure_port(f'[::]:{port}')
-        # server.add_insecure_port(f'[::]:{port}')
 
     msg = f"Succeeded to add port {port}."
     await server.start()

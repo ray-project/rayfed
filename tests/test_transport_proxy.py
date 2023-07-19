@@ -20,15 +20,15 @@ import grpc
 
 import fed.utils as fed_utils
 import fed._private.compatible_utils as compatible_utils
-from fed.config import CrossSiloMsgConfig, GrpcCrossSiloMsgConfig
+from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
 from fed._private import constants
 from fed._private import global_context
 from fed.proxy.barriers import (
     send,
-    start_recv_proxy,
-    start_send_proxy
+    _start_receiver_proxy,
+    _start_sender_proxy
 )
-from fed.proxy.grpc.grpc_proxy import GrpcSendProxy, GrpcRecvProxy
+from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy, GrpcReceiverProxy
 if compatible_utils._compare_version_strings(
         fed_utils.get_package_version('protobuf'), '4.0.0'):
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
@@ -40,8 +40,8 @@ else:
 
 def test_n_to_1_transport():
     """This case is used to test that we have N send_op barriers,
-    sending data to the target recver proxy, and there also have
-    N receivers to `get_data` from Recver proxy at that time.
+    sending data to the target receiver proxy, and there also have
+    N receivers to `get_data` from receiver proxy at that time.
     """
     compatible_utils.init_ray(address='local')
 
@@ -59,29 +59,29 @@ def test_n_to_1_transport():
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
     cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
-    config = GrpcCrossSiloMsgConfig()
-    start_recv_proxy(
+    config = GrpcCrossSiloMessageConfig()
+    _start_receiver_proxy(
         cluster_config,
         party,
         logging_level='info',
-        proxy_cls=GrpcRecvProxy,
+        proxy_cls=GrpcReceiverProxy,
         proxy_config=config
     )
-    start_send_proxy(
+    _start_sender_proxy(
         cluster_config,
         party,
         logging_level='info',
-        proxy_cls=GrpcSendProxy,
+        proxy_cls=GrpcSenderProxy,
         proxy_config=config
     )
 
     sent_objs = []
     get_objs = []
-    recver_proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
+    receiver_proxy_actor = ray.get_actor(f"ReceiverProxyActor-{party}")
     for i in range(NUM_DATA):
         sent_obj = send(party, f"data-{i}", i, i + 1)
         sent_objs.append(sent_obj)
-        get_obj = recver_proxy_actor.get_data.remote(party, i, i + 1)
+        get_obj = receiver_proxy_actor.get_data.remote(party, i, i + 1)
         get_objs.append(get_obj)
     for result in ray.get(sent_objs):
         assert result
@@ -122,7 +122,7 @@ async def _test_run_grpc_server(
 
 
 @ray.remote
-class TestRecverProxyActor:
+class TestReceiverProxyActor:
     def __init__(
         self,
         listen_addr: str,
@@ -147,7 +147,7 @@ class TestRecverProxyActor:
         return True
 
 
-def _test_start_recv_proxy(
+def _test_start_receiver_proxy(
     cluster: str,
     party: str,
     logging_level: str,
@@ -160,15 +160,15 @@ def _test_start_recv_proxy(
     if not listen_addr:
         listen_addr = party_addr['address']
 
-    recver_proxy_actor = TestRecverProxyActor.options(
-        name=f"RecverProxyActor-{party}", max_concurrency=1000
+    receiver_proxy_actor = TestReceiverProxyActor.options(
+        name=f"ReceiverProxyActor-{party}", max_concurrency=1000
     ).remote(
         listen_addr=listen_addr,
         party=party,
         expected_metadata=expected_metadata
     )
-    recver_proxy_actor.run_grpc_server.remote()
-    assert ray.get(recver_proxy_actor.is_ready.remote())
+    receiver_proxy_actor.run_grpc_server.remote()
+    assert ray.get(receiver_proxy_actor.is_ready.remote())
 
 
 def test_send_grpc_with_meta():
@@ -179,12 +179,12 @@ def test_send_grpc_with_meta():
         constants.KEY_OF_TLS_CONFIG: "",
     }
     metadata = {"key": "value"}
-    send_proxy_config = CrossSiloMsgConfig(
+    sender_proxy_config = CrossSiloMessageConfig(
         http_header=metadata
     )
     job_config = {
-        constants.KEY_OF_CROSS_SILO_MSG_CONFIG:
-            send_proxy_config,
+        constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG:
+            sender_proxy_config,
     }
     compatible_utils._init_internal_kv()
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
@@ -196,16 +196,16 @@ def test_send_grpc_with_meta():
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
     cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
-    _test_start_recv_proxy(
+    _test_start_receiver_proxy(
         cluster_config, party, logging_level='info',
         expected_metadata=metadata,
     )
-    start_send_proxy(
+    _start_sender_proxy(
         cluster_config,
         party,
         logging_level='info',
-        proxy_cls=GrpcSendProxy,
-        proxy_config=GrpcCrossSiloMsgConfig())
+        proxy_cls=GrpcSenderProxy,
+        proxy_config=GrpcCrossSiloMessageConfig())
     sent_objs = []
     sent_obj = send(party, "data", 0, 1)
     sent_objs.append(sent_obj)
@@ -224,11 +224,11 @@ def test_send_grpc_with_party_specific_meta():
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: "",
     }
-    send_proxy_config = CrossSiloMsgConfig(
+    sender_proxy_config = CrossSiloMessageConfig(
         http_header={"key": "value"})
     job_config = {
-        constants.KEY_OF_CROSS_SILO_MSG_CONFIG:
-            send_proxy_config,
+        constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG:
+            sender_proxy_config,
     }
     compatible_utils._init_internal_kv()
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
@@ -242,20 +242,20 @@ def test_send_grpc_with_party_specific_meta():
     cluster_parties_config = {
         'test_party': {
             'address': SERVER_ADDRESS,
-            'cross_silo_msg_config': CrossSiloMsgConfig(
+            'cross_silo_message_config': CrossSiloMessageConfig(
                 http_header={"token": "test-party-token"})
         }
     }
-    _test_start_recv_proxy(
+    _test_start_receiver_proxy(
         cluster_parties_config, party, logging_level='info',
         expected_metadata={"key": "value", "token": "test-party-token"},
     )
-    start_send_proxy(
+    _start_sender_proxy(
         cluster_parties_config,
         party,
         logging_level='info',
-        proxy_cls=GrpcSendProxy,
-        proxy_config=send_proxy_config)
+        proxy_cls=GrpcSenderProxy,
+        proxy_config=sender_proxy_config)
     sent_objs = []
     sent_obj = send(party, "data", 0, 1)
     sent_objs.append(sent_obj)

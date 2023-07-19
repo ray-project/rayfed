@@ -18,7 +18,7 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import GrpcCrossSiloMsgConfig
+from fed.config import GrpcCrossSiloMessageConfig
 
 
 @fed.remote
@@ -35,7 +35,7 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_msg_config=GrpcCrossSiloMsgConfig(
+        global_cross_silo_message_config=GrpcCrossSiloMessageConfig(
             grpc_channel_options=[(
                 'grpc.max_send_message_length', 100
             )]
@@ -48,10 +48,10 @@ def run(party):
         assert ("grpc.max_send_message_length", 100) in options
         assert ('grpc.so_reuseport', 0) in options
 
-    send_proxy = ray.get_actor("SendProxyActor")
-    recver_proxy = ray.get_actor(f"RecverProxyActor-{party}")
-    _assert_on_proxy(send_proxy)
-    _assert_on_proxy(recver_proxy)
+    sender_proxy = ray.get_actor("SenderProxyActor")
+    receiver_proxy = ray.get_actor(f"ReceiverProxyActor-{party}")
+    _assert_on_proxy(sender_proxy)
+    _assert_on_proxy(receiver_proxy)
 
     a = dummpy.party('alice').remote()
     b = dummpy.party('bob').remote()

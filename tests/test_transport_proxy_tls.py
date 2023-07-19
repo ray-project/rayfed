@@ -21,15 +21,15 @@ import ray
 import fed._private.compatible_utils as compatible_utils
 from fed._private import constants
 from fed._private import global_context
-from fed.proxy.barriers import send, start_recv_proxy, start_send_proxy
-from fed.proxy.grpc.grpc_proxy import GrpcSendProxy, GrpcRecvProxy
-from fed.config import GrpcCrossSiloMsgConfig
+from fed.proxy.barriers import send, _start_receiver_proxy, _start_sender_proxy
+from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy, GrpcReceiverProxy
+from fed.config import GrpcCrossSiloMessageConfig
 
 
 def test_n_to_1_transport():
     """This case is used to test that we have N send_op barriers,
-    sending data to the target recver proxy, and there also have
-    N receivers to `get_data` from Recver proxy at that time.
+    sending data to the target receiver proxy, and there also have
+    N receivers to `get_data` from receiver proxy at that time.
     """
     compatible_utils.init_ray(address='local')
 
@@ -57,27 +57,27 @@ def test_n_to_1_transport():
     SERVER_ADDRESS = "127.0.0.1:65422"
     party = 'test_party'
     cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
-    config = GrpcCrossSiloMsgConfig()
-    start_recv_proxy(
+    config = GrpcCrossSiloMessageConfig()
+    _start_receiver_proxy(
         cluster_config,
         party,
         logging_level='info',
         tls_config=tls_config,
-        proxy_cls=GrpcRecvProxy,
+        proxy_cls=GrpcReceiverProxy,
         proxy_config=config
     )
-    start_send_proxy(
+    _start_sender_proxy(
         cluster_config,
         party,
         logging_level='info',
         tls_config=tls_config,
-        proxy_cls=GrpcSendProxy,
+        proxy_cls=GrpcSenderProxy,
         proxy_config=config
     )
 
     sent_objs = []
     get_objs = []
-    recver_proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
+    receiver_proxy_actor = ray.get_actor(f"ReceiverProxyActor-{party}")
     for i in range(NUM_DATA):
         sent_obj = send(
             party,
@@ -86,7 +86,7 @@ def test_n_to_1_transport():
             i + 1,
         )
         sent_objs.append(sent_obj)
-        get_obj = recver_proxy_actor.get_data.remote(party, i, i + 1)
+        get_obj = receiver_proxy_actor.get_data.remote(party, i, i + 1)
         get_objs.append(get_obj)
     for result in ray.get(sent_objs):
         assert result

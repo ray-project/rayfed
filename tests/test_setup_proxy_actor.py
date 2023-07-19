@@ -20,7 +20,7 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import CrossSiloMsgConfig
+from fed.config import CrossSiloMessageConfig
 
 
 def run(party):
@@ -29,21 +29,21 @@ def run(party):
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    send_proxy_resources = {
+    sender_proxy_resources = {
         "127.0.0.1": 1
     }
-    recv_proxy_resources = {
+    receiver_proxy_resources = {
          "127.0.0.1": 1
     }
     fed.init(
         cluster=cluster,
         party=party,
-        cross_silo_send_resource_label=send_proxy_resources,
-        cross_silo_recv_resource_label=recv_proxy_resources,
+        cross_silo_send_resource_label=sender_proxy_resources,
+        cross_silo_recv_resource_label=receiver_proxy_resources,
     )
 
-    assert ray.get_actor("SendProxyActor") is not None
-    assert ray.get_actor(f"RecverProxyActor-{party}") is not None
+    assert ray.get_actor("SenderProxyActor") is not None
+    assert ray.get_actor(f"ReceiverProxyActor-{party}") is not None
 
     fed.shutdown()
     ray.shutdown()
@@ -55,19 +55,19 @@ def run_failure(party):
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    send_proxy_resources = {
+    sender_proxy_resources = {
         "127.0.0.2": 1  # Insufficient resource
     }
-    recv_proxy_resources = {
+    receiver_proxy_resources = {
         "127.0.0.2": 1  # Insufficient resource
     }
     with pytest.raises(ray.exceptions.GetTimeoutError):
         fed.init(
             cluster=cluster,
             party=party,
-            global_cross_silo_msg_config=CrossSiloMsgConfig(
-                send_resource_label=send_proxy_resources,
-                recv_resource_label=recv_proxy_resources,
+            global_cross_silo_message_config=CrossSiloMessageConfig(
+                send_resource_label=sender_proxy_resources,
+                recv_resource_label=receiver_proxy_resources,
                 timeout_in_ms=10*1000,
             )
         )

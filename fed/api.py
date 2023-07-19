@@ -31,11 +31,11 @@ from fed.proxy.barriers import (
     ping_others,
     recv,
     send,
-    start_recv_proxy,
-    start_send_proxy,
+    _start_receiver_proxy,
+    _start_sender_proxy,
 )
-from fed.proxy.grpc.grpc_proxy import SendProxy, RecvProxy
-from fed.config import CrossSiloMsgConfig
+from fed.proxy.grpc.grpc_proxy import SenderProxy, ReceiverProxy
+from fed.config import CrossSiloMessageConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -48,9 +48,9 @@ def init(
     tls_config: Dict = None,
     logging_level: str = 'info',
     enable_waiting_for_other_parties_ready: bool = False,
-    send_proxy_cls: SendProxy = None,
-    recv_proxy_cls: RecvProxy = None,
-    global_cross_silo_msg_config: Optional[CrossSiloMsgConfig] = None,
+    sender_proxy_cls: SenderProxy = None,
+    receiver_proxy_cls: ReceiverProxy = None,
+    global_cross_silo_message_config: Optional[CrossSiloMessageConfig] = None,
     **kwargs,
 ):
     """
@@ -67,7 +67,7 @@ def init(
                         # (Optional) the listen address, the `address` will be
                         # used if not provided.
                         'listen_addr': '0.0.0.0:10001',
-                        'cross_silo_msg_config': CrossSiloMsgConfig
+                        'cross_silo_message_config': CrossSiloMessageConfig
                     },
                     'bob': {
                         # The address for other parties.
@@ -111,9 +111,9 @@ def init(
             `warning`, `error`, `critical`, not case sensititive.
         enable_waiting_for_other_parties_ready: ping other parties until they
             are all ready if True.
-        global_cross_silo_msg_config: Global cross-silo message related
+        global_cross_silo_message_config: Global cross-silo message related
             configs that are applied to all connections. Supported configs
-            can refer to CrossSiloMsgConfig in config.py.
+            can refer to CrossSiloMessageConfig in config.py.
 
     Examples:
         >>> import fed
@@ -139,8 +139,8 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    global_cross_silo_msg_config = \
-        global_cross_silo_msg_config or CrossSiloMsgConfig()
+    global_cross_silo_message_config = \
+        global_cross_silo_message_config or CrossSiloMessageConfig()
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -151,8 +151,8 @@ def init(
     }
 
     job_config = {
-        constants.KEY_OF_CROSS_SILO_MSG_CONFIG:
-            global_cross_silo_msg_config,
+        constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG:
+            global_cross_silo_message_config,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
@@ -170,35 +170,36 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     get_global_context().get_cleanup_manager().start(
-        exit_when_failure_sending=global_cross_silo_msg_config.exit_on_sending_failure)
+        exit_when_failure_sending=global_cross_silo_message_config.exit_on_sending_failure) # noqa
 
-    if recv_proxy_cls is None:
+    if receiver_proxy_cls is None:
         logger.debug(
-            "Not declaring recver proxy class, using `GrpcRecvProxy` as default.")
-        from fed.proxy.grpc.grpc_proxy import GrpcRecvProxy
-        recv_proxy_cls = GrpcRecvProxy
-    # Start recv proxy
-    start_recv_proxy(
+            "There is no receiver proxy class specified, it uses `GrpcRecvProxy` by "
+            "default.")
+        from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
+        receiver_proxy_cls = GrpcReceiverProxy
+    _start_receiver_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        proxy_cls=recv_proxy_cls,
-        proxy_config=global_cross_silo_msg_config
+        proxy_cls=receiver_proxy_cls,
+        proxy_config=global_cross_silo_message_config
     )
 
-    if send_proxy_cls is None:
+    if sender_proxy_cls is None:
         logger.debug(
-            "Not declaring send proxy class, using `GrpcSendProxy` as default.")
-        from fed.proxy.grpc.grpc_proxy import GrpcSendProxy
-        send_proxy_cls = GrpcSendProxy
-    start_send_proxy(
+            "There is no sender proxy class specified, it uses `GrpcRecvProxy` by "
+            "default.")
+        from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
+        sender_proxy_cls = GrpcSenderProxy
+    _start_sender_proxy(
         cluster=cluster,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
-        proxy_cls=send_proxy_cls,
-        proxy_config=global_cross_silo_msg_config
+        proxy_cls=sender_proxy_cls,
+        proxy_config=global_cross_silo_message_config
     )
 
     if enable_waiting_for_other_parties_ready:

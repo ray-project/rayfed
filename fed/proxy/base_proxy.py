@@ -15,16 +15,16 @@
 import abc
 from typing import Dict
 
-from fed.config import CrossSiloMsgConfig
+from fed.config import CrossSiloMessageConfig
 
 
-class SendProxy(abc.ABC):
+class SenderProxy(abc.ABC):
     def __init__(
         self,
         cluster: Dict,
         party: str,
         tls_config: Dict,
-        proxy_config: CrossSiloMsgConfig = None
+        proxy_config: CrossSiloMessageConfig = None
     ) -> None:
         self._cluster = cluster
         self._party = party
@@ -48,13 +48,13 @@ class SendProxy(abc.ABC):
         return self._proxy_config
 
 
-class RecvProxy(abc.ABC):
+class ReceiverProxy(abc.ABC):
     def __init__(
             self,
             listen_addr: str,
             party: str,
             tls_config: Dict,
-            proxy_config: CrossSiloMsgConfig = None
+            proxy_config: CrossSiloMessageConfig = None
     ) -> None:
         self._listen_addr = listen_addr
         self._party = party

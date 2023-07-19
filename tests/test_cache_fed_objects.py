@@ -48,11 +48,11 @@ def run(party):
     assert c == "hello2"
 
     if party == "bob":
-        proxy_actor = ray.get_actor(f"RecverProxyActor-{party}")
+        proxy_actor = ray.get_actor(f"ReceiverProxyActor-{party}")
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["receive_op_count"] == 1
     if party == "alice":
-        proxy_actor = ray.get_actor("SendProxyActor")
+        proxy_actor = ray.get_actor("SenderProxyActor")
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["send_op_count"] == 1
     fed.shutdown()
