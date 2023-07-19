@@ -35,7 +35,7 @@ from fed.proxy.barriers import (
     _start_sender_proxy,
 )
 from fed.proxy.grpc.grpc_proxy import SenderProxy, ReceiverProxy
-from fed.config import CrossSiloMessageConfig
+from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -45,12 +45,12 @@ logger = logging.getLogger(__name__)
 def init(
     cluster: Dict = None,
     party: str = None,
+    config: Dict = None,
     tls_config: Dict = None,
     logging_level: str = 'info',
     enable_waiting_for_other_parties_ready: bool = False,
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
-    global_cross_silo_message_config: Optional[CrossSiloMessageConfig] = None,
     **kwargs,
 ):
     """
@@ -111,9 +111,6 @@ def init(
             `warning`, `error`, `critical`, not case sensititive.
         enable_waiting_for_other_parties_ready: ping other parties until they
             are all ready if True.
-        global_cross_silo_message_config: Global cross-silo message related
-            configs that are applied to all connections. Supported configs
-            can refer to CrossSiloMessageConfig in config.py.
 
     Examples:
         >>> import fed
@@ -139,8 +136,7 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    global_cross_silo_message_config = \
-        global_cross_silo_message_config or CrossSiloMessageConfig()
+    cross_silo_message_config = GrpcCrossSiloMessageConfig.from_dict(config["cross_silo_message"])
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
@@ -152,7 +148,7 @@ def init(
 
     job_config = {
         constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG:
-            global_cross_silo_message_config,
+            cross_silo_message_config,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
@@ -170,7 +166,7 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     get_global_context().get_cleanup_manager().start(
-        exit_when_failure_sending=global_cross_silo_message_config.exit_on_sending_failure) # noqa
+        exit_when_failure_sending=cross_silo_message_config.exit_on_sending_failure) # noqa
 
     if receiver_proxy_cls is None:
         logger.debug(
@@ -184,7 +180,7 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         proxy_cls=receiver_proxy_cls,
-        proxy_config=global_cross_silo_message_config
+        proxy_config=cross_silo_message_config
     )
 
     if sender_proxy_cls is None:
@@ -199,7 +195,8 @@ def init(
         logging_level=logging_level,
         tls_config=tls_config,
         proxy_cls=sender_proxy_cls,
-        proxy_config=global_cross_silo_message_config
+        # TODO(qwang): proxy_config -> cross_silo_message_config
+        proxy_config=cross_silo_message_config
     )
 
     if enable_waiting_for_other_parties_ready:
