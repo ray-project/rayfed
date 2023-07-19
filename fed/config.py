@@ -39,10 +39,10 @@ class JobConfig:
             self._data = cloudpickle.loads(raw_bytes)
 
     @property
-    def cross_silo_msg_config(self):
+    def cross_silo_message_config(self):
         return self._data.get(
-            fed_constants.KEY_OF_CROSS_SILO_MSG_CONFIG,
-            CrossSiloMsgConfig())
+            fed_constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG,
+            CrossSiloMessageConfig())
 
 
 # A module level cache for the cluster configurations.
@@ -74,7 +74,7 @@ def get_job_config():
 
 
 @dataclass
-class CrossSiloMsgConfig:
+class CrossSiloMessageConfig:
     """A class to store parameters used for Proxy Actor
 
     Attributes:
@@ -82,14 +82,16 @@ class CrossSiloMsgConfig:
         serializing_allowed_list: The package or class list allowed for
             serializing(deserializating) cross silos. It's used for avoiding pickle
             deserializing execution attack when crossing solis.
-        send_resource_label: Customized resource label, the SendProxyActor
+        send_resource_label: Customized resource label, the SenderProxyActor
             will be scheduled based on the declared resource label. For example,
-            when setting to `{"my_label": 1}`, then the SendProxyActor will be started
-            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
-        recv_resource_label: Customized resource label, the RecverProxyActor
+            when setting to `{"my_label": 1}`, then the sender proxy actor will be
+            started only on Nodes with `{"resource": {"my_label": $NUM}}` where
+            $NUM >= 1.
+        recv_resource_label: Customized resource label, the ReceiverProxyActor
             will be scheduled based on the declared resource label. For example,
-            when setting to `{"my_label": 1}`, then the RecverProxyActor will be started
-            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
+            when setting to `{"my_label": 1}`, then the receiver proxy actor will be
+            started only on Nodes with `{"resource": {"my_label": $NUM}}` where
+            $NUM >= 1.
         exit_on_sending_failure: whether exit when failure on
             cross-silo sending. If True, a SIGTERM will be signaled to self
             if failed to sending cross-silo data.
@@ -121,13 +123,13 @@ class CrossSiloMsgConfig:
 
     @classmethod
     def from_dict(cls, data: Dict):
-        """Initialize CrossSiloMsgConfig from a dictionary.
+        """Initialize CrossSiloMessageConfig from a dictionary.
 
         Args:
             data (Dict): Dictionary with keys as member variable names.
 
         Returns:
-            CrossSiloMsgConfig: An instance of CrossSiloMsgConfig.
+            CrossSiloMessageConfig: An instance of CrossSiloMessageConfig.
         """
         # Get the attributes of the class
         attrs = {attr for attr, _ in cls.__annotations__.items()}
@@ -137,7 +139,7 @@ class CrossSiloMsgConfig:
 
 
 @dataclass
-class GrpcCrossSiloMsgConfig(CrossSiloMsgConfig):
+class GrpcCrossSiloMessageConfig(CrossSiloMessageConfig):
     """A class to store parameters used for GRPC communication
 
     Attributes:

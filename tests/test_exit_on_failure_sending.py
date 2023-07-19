@@ -19,7 +19,7 @@ import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
 
-from fed.config import GrpcCrossSiloMsgConfig
+from fed.config import GrpcCrossSiloMessageConfig
 
 import signal
 
@@ -63,7 +63,7 @@ def run(party, is_inner_party):
         "backoffMultiplier": 1,
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
-    cross_silo_msg_config = GrpcCrossSiloMsgConfig(
+    cross_silo_message_config = GrpcCrossSiloMessageConfig(
         grpc_retry_policy=retry_policy,
         exit_on_sending_failure=True
     )
@@ -71,7 +71,7 @@ def run(party, is_inner_party):
         cluster=cluster,
         party=party,
         logging_level='debug',
-        global_cross_silo_msg_config=cross_silo_msg_config
+        global_cross_silo_message_config=cross_silo_message_config
     )
 
     o = f.party("alice").remote()

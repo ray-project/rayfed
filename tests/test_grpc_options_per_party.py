@@ -18,7 +18,7 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import GrpcCrossSiloMsgConfig
+from fed.config import GrpcCrossSiloMessageConfig
 
 
 @fed.remote
@@ -31,7 +31,7 @@ def run(party):
     cluster = {
         'alice': {
             'address': '127.0.0.1:11010',
-            'cross_silo_msg_config': GrpcCrossSiloMsgConfig(
+            'cross_silo_message_config': GrpcCrossSiloMessageConfig(
                 grpc_channel_options=[
                     ('grpc.default_authority', 'alice'),
                     ('grpc.max_send_message_length', 200)
@@ -42,14 +42,14 @@ def run(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_msg_config=GrpcCrossSiloMsgConfig(
+        global_cross_silo_message_config=GrpcCrossSiloMessageConfig(
             grpc_channel_options=[(
                 'grpc.max_send_message_length', 100
             )]
         )
     )
 
-    def _assert_on_send_proxy(proxy_actor):
+    def _assert_on_sender_proxy(proxy_actor):
         alice_config = ray.get(proxy_actor._get_proxy_config.remote('alice'))
         # print(f"【NKcqx】alice config: {alice_config}")
         assert 'grpc_options' in alice_config
@@ -63,8 +63,8 @@ def run(party):
         assert ('grpc.max_send_message_length', 100) in bob_options
         assert not any(o[0] == 'grpc.default_authority' for o in bob_options)
 
-    send_proxy = ray.get_actor("SendProxyActor")
-    _assert_on_send_proxy(send_proxy)
+    sender_proxy = ray.get_actor("SenderProxyActor")
+    _assert_on_sender_proxy(sender_proxy)
 
     a = dummpy.party('alice').remote()
     b = dummpy.party('bob').remote()
@@ -89,7 +89,7 @@ def party_grpc_options(party):
     cluster = {
         'alice': {
             'address': '127.0.0.1:11010',
-            'cross_silo_msg_config': GrpcCrossSiloMsgConfig(
+            'cross_silo_message_config': GrpcCrossSiloMessageConfig(
                 grpc_channel_options=[
                     ('grpc.default_authority', 'alice'),
                     ('grpc.max_send_message_length', 51 * 1024 * 1024)
@@ -97,7 +97,7 @@ def party_grpc_options(party):
         },
         'bob': {
             'address': '127.0.0.1:11011',
-            'cross_silo_msg_config': GrpcCrossSiloMsgConfig(
+            'cross_silo_message_config': GrpcCrossSiloMessageConfig(
                 grpc_channel_options=[
                     ('grpc.default_authority', 'bob'),
                     ('grpc.max_send_message_length', 50 * 1024 * 1024)
@@ -107,14 +107,14 @@ def party_grpc_options(party):
     fed.init(
         cluster=cluster,
         party=party,
-        global_cross_silo_msg_config=GrpcCrossSiloMsgConfig(
+        global_cross_silo_message_config=GrpcCrossSiloMessageConfig(
             grpc_channel_options=[(
                 'grpc.max_send_message_length', 100
             )]
         )
     )
 
-    def _assert_on_send_proxy(proxy_actor):
+    def _assert_on_sender_proxy(proxy_actor):
         alice_config = ray.get(proxy_actor._get_proxy_config.remote('alice'))
         assert 'grpc_options' in alice_config
         alice_options = alice_config['grpc_options']
@@ -127,8 +127,8 @@ def party_grpc_options(party):
         assert ('grpc.max_send_message_length', 50 * 1024 * 1024) in bob_options
         assert ('grpc.default_authority', 'bob') in bob_options
 
-    send_proxy = ray.get_actor("SendProxyActor")
-    _assert_on_send_proxy(send_proxy)
+    sender_proxy = ray.get_actor("SenderProxyActor")
+    _assert_on_sender_proxy(sender_proxy)
 
     a = dummpy.party('alice').remote()
     b = dummpy.party('bob').remote()
