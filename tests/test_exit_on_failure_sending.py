@@ -52,7 +52,7 @@ def run(party, is_inner_party):
     signal.signal(signal.SIGTERM, signal_handler)
 
     compatible_utils.init_ray(address='local')
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
@@ -68,10 +68,12 @@ def run(party, is_inner_party):
         exit_on_sending_failure=True
     )
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         logging_level='debug',
-        global_cross_silo_message_config=cross_silo_message_config
+        config = {
+            "cross_silo_message_config": cross_silo_message_config,
+        },
     )
 
     o = f.party("alice").remote()

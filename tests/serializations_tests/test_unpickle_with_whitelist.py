@@ -42,7 +42,7 @@ def pass_arg(d):
 
 def run(party):
     compatible_utils.init_ray(address='local')
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
@@ -51,7 +51,7 @@ def run(party):
                 "numpy": ["dtype"],
     }
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         global_cross_silo_message_config=CrossSiloMessageConfig(
             serializing_allowed_list=allowed_list

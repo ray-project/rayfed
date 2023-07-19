@@ -4,7 +4,7 @@ import ray
 import fed._private.compatible_utils as compatible_utils
 import pytest
 
-cluster = {
+addresses = {
     'alice': {'address': '127.0.0.1:11012'},
     'bob': {'address': '127.0.0.1:11011'},
 }
@@ -22,7 +22,7 @@ class A:
 def run(party):
     compatible_utils.init_ray(address='local')
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party)
 
     actor = A.party('alice').remote(10)
@@ -46,7 +46,7 @@ def run(party):
 
     compatible_utils.init_ray(address='local')
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party)
 
     actor = A.party('alice').remote(10)

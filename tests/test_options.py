@@ -33,11 +33,11 @@ def bar(x):
 
 def run(party):
     compatible_utils.init_ray(address='local')
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11012'},
         'bob': {'address': '127.0.0.1:11011'},
     }
-    fed.init(cluster=cluster, party=party)
+    fed.init(addresses=addresses, party=party)
 
     foo = Foo.party("alice").remote()
     a, b = fed.get(foo.run.options(num_returns=2).remote())

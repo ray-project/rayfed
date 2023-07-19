@@ -209,9 +209,9 @@ def validate_address(address: str) -> None:
     raise ValueError(error_msg)
 
 
-def validate_cluster_info(cluster: dict):
+def validate_addresses(addresses: dict):
     """
-    Validate whether the cluster information is in correct forms.
+    Validate whether the addresses is in correct forms.
     """
-    for _, info in cluster.items():
+    for _, info in addresses.items():
         validate_address(info['address'])

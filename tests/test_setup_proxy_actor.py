@@ -25,7 +25,7 @@ from fed.config import CrossSiloMessageConfig
 
 def run(party):
     compatible_utils.init_ray(address='local', resources={"127.0.0.1": 2})
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
@@ -36,7 +36,7 @@ def run(party):
          "127.0.0.1": 1
     }
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         cross_silo_send_resource_label=sender_proxy_resources,
         cross_silo_recv_resource_label=receiver_proxy_resources,
@@ -51,7 +51,7 @@ def run(party):
 
 def run_failure(party):
     compatible_utils.init_ray(address='local', resources={"127.0.0.1": 1})
-    cluster = {
+    addresses = {
         'alice': {'address': '127.0.0.1:11010'},
         'bob': {'address': '127.0.0.1:11011'},
     }
@@ -63,7 +63,7 @@ def run_failure(party):
     }
     with pytest.raises(ray.exceptions.GetTimeoutError):
         fed.init(
-            cluster=cluster,
+            addresses=addresses,
             party=party,
             global_cross_silo_message_config=CrossSiloMessageConfig(
                 send_resource_label=sender_proxy_resources,
