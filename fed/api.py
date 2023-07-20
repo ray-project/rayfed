@@ -74,8 +74,6 @@ def init(
                         # If not provided, the `address` will be used.
                         'address_to_listen_on': '0.0.0.0:10002',
                         # (Optional) The party specific metadata sent with grpc requests
-                        # TODO(qwang): Move it!!!
-                        'grpc_metadata': (('token', 'bob-token'),),
                     },
                     'carol': {
                         # The address that can be connected by other parties.
@@ -84,8 +82,6 @@ def init(
                         # If not provided, the `address` will be used.
                         'listening_on': '0.0.0.0:10003',
                         # (Optional) The party specific metadata sent with grpc requests
-                        # TODO(qwang): Move it!!!
-                        'grpc_metadata': (('token', 'carol-token'),),
                     },
                 }
         party: optional; self party.
