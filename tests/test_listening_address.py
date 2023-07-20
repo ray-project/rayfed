@@ -37,10 +37,20 @@ class My:
 def run(party, is_inner_party):
     compatible_utils.init_ray(address='local')
     addresses = {
-        'alice': {'address': '127.0.0.1:11012', 'listening_on': '0.0.0.0:11012'},
-        'bob': {'address': '127.0.0.1:11011', 'listening_on': '0.0.0.0:11011'},
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
-    fed.init(addresses=addresses, party=party)
+
+    listening_address =  '0.0.0.0:11012' if party == 'alice' else '0.0.0.0:11011'
+    fed.init(
+        addresses=addresses,
+        party=party,
+        config={
+            "cross_silo_message": {
+                "listening_address": listening_address,
+            }
+        },
+    )
 
     o = f.party("alice").remote()
     actor_location = "alice" if is_inner_party else "bob"
@@ -66,7 +76,6 @@ def test_listen_addr():
     assert p_alice.exitcode == 0 and p_bob.exitcode == 0
 
 
-def test_listen_used_addr():
     def run(party):
         import socket
 
@@ -83,18 +92,31 @@ def test_listen_used_addr():
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind(("127.0.0.1", occupied_port))
 
+        # addresses = {
+        #     'alice': {
+        #         'address': '127.0.0.1:11012',
+        #         'listen_addr': f'0.0.0.0:{occupied_port}'},
+        #     'bob': {
+        #         'address': '127.0.0.1:11011',
+        #         'listen_addr': '0.0.0.0:11011'},
+        # }
         addresses = {
-            'alice': {
-                'address': '127.0.0.1:11012',
-                'listen_addr': f'0.0.0.0:{occupied_port}'},
-            'bob': {
-                'address': '127.0.0.1:11011',
-                'listen_addr': '0.0.0.0:11011'},
+            'alice': '127.0.0.1:11012',
+            'bob': '127.0.0.1:11011', 
         }
 
         # Starting grpc server on an used port will cause AssertionError
         with pytest.raises(AssertionError):
-            fed.init(addresses=addresses, party=party)
+            listening_address =  '0.0.0.0:11012' if party == 'alice' else '0.0.0.0:11011'
+            fed.init(
+                addresses=addresses,
+                party=party,
+                config={
+                    "cross_silo_message": {
+                        "listening_address": listening_address,
+                    } 
+                },
+            )
 
         import time
 
@@ -103,7 +125,50 @@ def test_listen_used_addr():
         fed.shutdown()
         ray.shutdown()
 
-    p_alice = multiprocessing.Process(target=run, args=('alice',))
+
+def _run(party):
+    import socket
+
+    compatible_utils.init_ray(address='local')
+    occupied_port = 11020
+    # NOTE(NKcqx): Firstly try to bind IPv6 because the grpc server will do so.
+    # Otherwise this UT will false because socket bind $occupied_port
+    # on IPv4 address while grpc server listendn Ipv6 address.
+    try:
+        s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        # Pre-occuping the port
+        s.bind(("::", occupied_port))
+    except OSError:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("127.0.0.1", occupied_port))
+
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011', 
+    }
+
+    # Starting grpc server on an used port will cause AssertionError
+    with pytest.raises(AssertionError):
+        listening_address =  '0.0.0.0:11012' if party == 'alice' else '0.0.0.0:11011'
+        fed.init(
+            addresses=addresses,
+            party=party,
+            config={
+                "cross_silo_message": {
+                    "listening_address": listening_address,
+                } 
+            },
+        )
+
+    import time
+
+    time.sleep(5)
+    s.close()
+    fed.shutdown()
+    ray.shutdown()
+
+def test_listen_used_addr():
+    p_alice = multiprocessing.Process(target=_run, args=('alice',))
     p_alice.start()
     p_alice.join()
     assert p_alice.exitcode == 0

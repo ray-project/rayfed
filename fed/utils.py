@@ -213,5 +213,5 @@ def validate_addresses(addresses: dict):
     """
     Validate whether the addresses is in correct forms.
     """
-    for _, info in addresses.items():
-        validate_address(info['address'])
+    for _, address in addresses.items():
+        validate_address(address)

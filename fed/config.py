@@ -112,6 +112,9 @@ class CrossSiloMessageConfig:
     send_resource_label: Optional[Dict[str, str]] = None
     recv_resource_label: Optional[Dict[str, str]] = None
     http_header: Optional[Dict[str, str]] = None
+    # (Optional) The address this party is going to listen on.
+    # If not provided, the `address` will be used.
+    listening_address: str = None
 
     def __json__(self):
         return json.dumps(self.__dict__)

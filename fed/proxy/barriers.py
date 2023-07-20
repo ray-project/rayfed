@@ -185,9 +185,9 @@ def _start_receiver_proxy(
     # Not that this is now a threaded actor.
     # NOTE(NKcqx): This is not just addr, but a party dict containing 'address'
     party_addr = addresses[party]
-    listen_addr = party_addr.get('listen_addr', None)
-    if not listen_addr:
-        listen_addr = party_addr['address']
+    listening_address = proxy_config.listening_address
+    if not listening_address:
+        listen_addr = party_addr
 
     actor_options = copy.deepcopy(_DEFAULT_RECEIVER_PROXY_OPTIONS)
     if proxy_config is not None and proxy_config.recv_resource_label is not None:

@@ -63,25 +63,14 @@ def init(
                     'alice': {
                         # The address that can be connected by other parties.
                         'address': '127.0.0.1:10001',
-                        # (Optional) The address this party is going to listen on.
-                        # If not provided, the `address` will be used.
-                        'address_to_listen_on': '0.0.0.0:10001',
                     },
                     'bob': {
                         # The address that can be connected by other parties.
                         'address': '127.0.0.1:10002',
-                        # (Optional) The address this party is going to listen on.
-                        # If not provided, the `address` will be used.
-                        'address_to_listen_on': '0.0.0.0:10002',
-                        # (Optional) The party specific metadata sent with grpc requests
                     },
                     'carol': {
                         # The address that can be connected by other parties.
                         'address': '127.0.0.1:10003',
-                        # (Optional) The address this party is going to listen on.
-                        # If not provided, the `address` will be used.
-                        'listening_on': '0.0.0.0:10003',
-                        # (Optional) The party specific metadata sent with grpc requests
                     },
                 }
         party: optional; self party.
