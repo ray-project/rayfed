@@ -46,7 +46,7 @@ class FedActorHandle:
         # Raise an error if the method is invalid.
         getattr(self._body, method_name)
         call_node = FedActorMethod(
-            self._cluster,
+            self._addresses,
             self._party,
             self._node_party,
             self,

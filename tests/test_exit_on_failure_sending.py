@@ -71,7 +71,7 @@ def run(party, is_inner_party):
         addresses=addresses,
         party=party,
         logging_level='debug',
-        config = {
+        config={
             "cross_silo_message_config": cross_silo_message_config,
         },
     )

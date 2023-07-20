@@ -105,7 +105,7 @@ class GrpcSenderProxy(SenderProxy):
             data,
             upstream_seq_id,
             downstream_seq_id):
-        dest_addr = self._cluster[dest_party]['address']
+        dest_addr = self._addresses[dest_party]['address']
         grpc_metadata, grpc_channel_options = self.get_grpc_config_by_party(dest_party)
         tls_enabled = fed_utils.tls_enabled(self._tls_config)
         if dest_party not in self._stubs:
@@ -142,7 +142,7 @@ class GrpcSenderProxy(SenderProxy):
         grpc_metadata = self._grpc_metadata
         grpc_options = self._grpc_options
 
-        dest_party_msg_config = self._cluster[dest_party].get(
+        dest_party_msg_config = self._addresses[dest_party].get(
             'cross_silo_message_config', None)
         if dest_party_msg_config is not None:
             if dest_party_msg_config.http_header is not None:
