@@ -53,8 +53,8 @@ def run(party, is_inner_party):
 
     compatible_utils.init_ray(address='local')
     addresses = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
     retry_policy = {
         "maxAttempts": 2,
@@ -63,16 +63,16 @@ def run(party, is_inner_party):
         "backoffMultiplier": 1,
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
-    cross_silo_message_config = GrpcCrossSiloMessageConfig(
-        grpc_retry_policy=retry_policy,
-        exit_on_sending_failure=True
-    )
+
     fed.init(
         addresses=addresses,
         party=party,
         logging_level='debug',
         config={
-            "cross_silo_message_config": cross_silo_message_config,
+            'cross_silo_message': {
+                'grpc_retry_policy': retry_policy,
+                'exit_on_sending_failure': True,
+            },
         },
     )
 
