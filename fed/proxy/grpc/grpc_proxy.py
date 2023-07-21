@@ -214,7 +214,6 @@ class GrpcReceiverProxy(ReceiverProxy):
         self._lock = threading.Lock()
 
     async def start(self):
-        print(f"==================listen_addr={self._listen_addr}")
         port = self._listen_addr[self._listen_addr.index(':') + 1 :]
         try:
             await _run_grpc_server(

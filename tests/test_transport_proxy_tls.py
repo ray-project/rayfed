@@ -56,10 +56,10 @@ def test_n_to_1_transport():
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"
     party = 'test_party'
-    cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
+    addresses = {'test_party': SERVER_ADDRESS}
     config = GrpcCrossSiloMessageConfig()
     _start_receiver_proxy(
-        cluster_config,
+        addresses,
         party,
         logging_level='info',
         tls_config=tls_config,
@@ -67,7 +67,7 @@ def test_n_to_1_transport():
         proxy_config=config
     )
     _start_sender_proxy(
-        cluster_config,
+        addresses,
         party,
         logging_level='info',
         tls_config=tls_config,
