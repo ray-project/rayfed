@@ -27,8 +27,8 @@ def dummpy():
 def run(party):
     compatible_utils.init_ray(address='local')
     addresses = {
-        'alice': {'address': '127.0.0.1:11019'},
-        'bob': {'address': '127.0.0.1:11018'},
+        'alice': '127.0.0.1:11019',
+        'bob': '127.0.0.1:11018',
     }
     fed.init(
         addresses=addresses,

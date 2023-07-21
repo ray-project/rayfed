@@ -26,8 +26,8 @@ from fed.config import CrossSiloMessageConfig
 def run(party):
     compatible_utils.init_ray(address='local', resources={"127.0.0.1": 2})
     addresses = {
-        'alice': {'address': '127.0.0.1:11010'},
-        'bob': {'address': '127.0.0.1:11011'},
+        'alice': '127.0.0.1:11010',
+        'bob': '127.0.0.1:11011',
     }
     sender_proxy_resources = {
         "127.0.0.1": 1
@@ -52,8 +52,8 @@ def run(party):
 def run_failure(party):
     compatible_utils.init_ray(address='local', resources={"127.0.0.1": 1})
     addresses = {
-        'alice': {'address': '127.0.0.1:11010'},
-        'bob': {'address': '127.0.0.1:11011'},
+        'alice': '127.0.0.1:11010',
+        'bob': '127.0.0.1:11011',
     }
     sender_proxy_resources = {
         "127.0.0.2": 1  # Insufficient resource

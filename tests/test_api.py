@@ -23,7 +23,7 @@ import fed.config as fed_config
 def run():
     compatible_utils.init_ray(address='local')
     addresses = {
-        'alice': {'address': '127.0.0.1:11012'},
+        'alice': '127.0.0.1:11012',
     }
     fed.init(addresses=addresses, party="alice")
     config = fed_config.get_cluster_config()
@@ -44,7 +44,7 @@ def test_miss_party_name_on_actor():
     def run():
         compatible_utils.init_ray(address='local')
         addresses = {
-            'alice': {'address': '127.0.0.1:11012'},
+            'alice': '127.0.0.1:11012',
         }
         fed.init(addresses=addresses, party="alice")
 

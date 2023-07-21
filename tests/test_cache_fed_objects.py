@@ -33,8 +33,8 @@ def g(x, index):
 def run(party):
     compatible_utils.init_ray(address='local')
     addresses = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
     fed.init(addresses=addresses, party=party)
 
