@@ -96,7 +96,8 @@ def test_listen_used_address():
             'alice': '127.0.0.1:11012',
             'bob': '127.0.0.1:11011',
         }
-        listening_address = f'0.0.0.0:{occupied_port}' if party == 'alice' else '0.0.0.0:11011'
+        listening_address = f'0.0.0.0:{occupied_port}' \
+            if party == 'alice' else '0.0.0.0:11011'
 
         # Starting grpc server on an used port will cause AssertionError
         with pytest.raises(AssertionError):
@@ -127,4 +128,4 @@ if __name__ == "__main__":
     # import sys
 
     # sys.exit(pytest.main(["-sv", __file__]))
-    test_listen_used_addr()
+    test_listen_used_address()
