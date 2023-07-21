@@ -20,8 +20,6 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import CrossSiloMessageConfig
-
 
 def run(party):
     compatible_utils.init_ray(address='local', resources={"127.0.0.1": 2})
@@ -65,11 +63,13 @@ def run_failure(party):
         fed.init(
             addresses=addresses,
             party=party,
-            global_cross_silo_message_config=CrossSiloMessageConfig(
-                send_resource_label=sender_proxy_resources,
-                recv_resource_label=receiver_proxy_resources,
-                timeout_in_ms=10*1000,
-            )
+            config={
+                'cross_silo_message': {
+                    'send_resource_label': sender_proxy_resources,
+                    'recv_resource_label': receiver_proxy_resources,
+                    'timeout_in_ms': 10*1000,
+                }
+            }
         )
 
     fed.shutdown()

@@ -50,7 +50,6 @@ def init(
     logging_level: str = 'info',
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
-    **kwargs,
 ):
     """
     Initialize a RayFed client.
