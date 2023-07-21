@@ -19,8 +19,6 @@ import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
 
-from fed.config import GrpcCrossSiloMessageConfig
-
 import signal
 
 import os
