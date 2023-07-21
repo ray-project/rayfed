@@ -27,17 +27,9 @@ def run(party):
         'alice': '127.0.0.1:11010',
         'bob': '127.0.0.1:11011',
     }
-    sender_proxy_resources = {
-        "127.0.0.1": 1
-    }
-    receiver_proxy_resources = {
-         "127.0.0.1": 1
-    }
     fed.init(
         addresses=addresses,
         party=party,
-        cross_silo_send_resource_label=sender_proxy_resources,
-        cross_silo_recv_resource_label=receiver_proxy_resources,
     )
 
     assert ray.get_actor("SenderProxyActor") is not None
