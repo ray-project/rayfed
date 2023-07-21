@@ -8,12 +8,12 @@ import fed._private.compatible_utils as compatible_utils
 
 def run(party):
     compatible_utils.init_ray("local")
-    cluster = {
-        'alice': {'address': '127.0.0.1:11010', 'listen_addr': '0.0.0.0:11010'},
-        'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11010',
+        'bob': '127.0.0.1:11011',
     }
     assert compatible_utils.kv is None
-    fed.init(cluster=cluster, party=party)
+    fed.init(addresses=addresses, party=party)
     assert compatible_utils.kv
     assert not compatible_utils.kv.put(b"test_key", b"test_val")
     assert compatible_utils.kv.get(b"test_key") == b"test_val"

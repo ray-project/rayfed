@@ -36,11 +36,11 @@ class My:
 
 def run(party, is_inner_party):
     compatible_utils.init_ray(address='local')
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
-    fed.init(cluster=cluster, party=party)
+    fed.init(addresses=addresses, party=party)
 
     o = f.party("alice").remote()
     actor_location = "alice" if is_inner_party else "bob"

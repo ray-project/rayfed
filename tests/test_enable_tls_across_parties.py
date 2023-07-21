@@ -48,11 +48,11 @@ def _run(party: str):
         "key": os.path.join(cert_dir, "server.key"),
     }
 
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
-    fed.init(cluster=cluster, party=party, tls_config=cert_config)
+    fed.init(addresses=addresses, party=party, tls_config=cert_config)
 
     my1 = My.party("alice").remote()
     my2 = My.party("bob").remote()

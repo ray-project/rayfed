@@ -20,26 +20,16 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import CrossSiloMessageConfig
-
 
 def run(party):
     compatible_utils.init_ray(address='local', resources={"127.0.0.1": 2})
-    cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
-        'bob': {'address': '127.0.0.1:11011'},
-    }
-    sender_proxy_resources = {
-        "127.0.0.1": 1
-    }
-    receiver_proxy_resources = {
-         "127.0.0.1": 1
+    addresses = {
+        'alice': '127.0.0.1:11010',
+        'bob': '127.0.0.1:11011',
     }
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
-        cross_silo_send_resource_label=sender_proxy_resources,
-        cross_silo_recv_resource_label=receiver_proxy_resources,
     )
 
     assert ray.get_actor("SenderProxyActor") is not None
@@ -51,9 +41,9 @@ def run(party):
 
 def run_failure(party):
     compatible_utils.init_ray(address='local', resources={"127.0.0.1": 1})
-    cluster = {
-        'alice': {'address': '127.0.0.1:11010'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11010',
+        'bob': '127.0.0.1:11011',
     }
     sender_proxy_resources = {
         "127.0.0.2": 1  # Insufficient resource
@@ -63,13 +53,15 @@ def run_failure(party):
     }
     with pytest.raises(ray.exceptions.GetTimeoutError):
         fed.init(
-            cluster=cluster,
+            addresses=addresses,
             party=party,
-            global_cross_silo_message_config=CrossSiloMessageConfig(
-                send_resource_label=sender_proxy_resources,
-                recv_resource_label=receiver_proxy_resources,
-                timeout_in_ms=10*1000,
-            )
+            config={
+                'cross_silo_message': {
+                    'send_resource_label': sender_proxy_resources,
+                    'recv_resource_label': receiver_proxy_resources,
+                    'timeout_in_ms': 10*1000,
+                }
+            }
         )
 
     fed.shutdown()

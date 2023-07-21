@@ -25,14 +25,14 @@ class FedActorHandle:
     def __init__(
         self,
         fed_class_task_id,
-        cluster,
+        addresses,
         cls,
         party,
         node_party,
         options,
     ) -> None:
         self._fed_class_task_id = fed_class_task_id
-        self._cluster = cluster
+        self._addresses = addresses
         self._body = cls
         self._party = party
         self._node_party = node_party
@@ -46,7 +46,7 @@ class FedActorHandle:
         # Raise an error if the method is invalid.
         getattr(self._body, method_name)
         call_node = FedActorMethod(
-            self._cluster,
+            self._addresses,
             self._party,
             self._node_party,
             self,
@@ -90,13 +90,13 @@ class FedActorHandle:
 class FedActorMethod:
     def __init__(
         self,
-        cluster,
+        addresses,
         party,
         node_party,
         fed_actor_handle,
         method_name,
     ) -> None:
-        self._cluster = cluster
+        self._addresses = addresses
         self._party = party  # Current party
         self._node_party = node_party
         self._fed_actor_handle = fed_actor_handle

@@ -19,8 +19,6 @@ import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
 
-from fed.config import GrpcCrossSiloMessageConfig
-
 import signal
 
 import os
@@ -48,13 +46,13 @@ class My:
         return self._value
 
 
-def run(party, is_inner_party):
+def run(party):
     signal.signal(signal.SIGTERM, signal_handler)
 
     compatible_utils.init_ray(address='local')
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
     retry_policy = {
         "maxAttempts": 2,
@@ -63,15 +61,17 @@ def run(party, is_inner_party):
         "backoffMultiplier": 1,
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
-    cross_silo_message_config = GrpcCrossSiloMessageConfig(
-        grpc_retry_policy=retry_policy,
-        exit_on_sending_failure=True
-    )
+
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         logging_level='debug',
-        global_cross_silo_message_config=cross_silo_message_config
+        config={
+            'cross_silo_message': {
+                'grpc_retry_policy': retry_policy,
+                'exit_on_sending_failure': True,
+            },
+        },
     )
 
     o = f.party("alice").remote()
@@ -83,7 +83,7 @@ def run(party, is_inner_party):
 
 
 def test_exit_when_failure_on_sending():
-    p_alice = multiprocessing.Process(target=run, args=('alice', True))
+    p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_alice.start()
     p_alice.join()
     assert p_alice.exitcode == 0

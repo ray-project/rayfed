@@ -20,8 +20,6 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import GrpcCrossSiloMessageConfig
-
 
 @fed.remote
 def f():
@@ -39,9 +37,9 @@ class My:
 
 def run(party, is_inner_party):
     compatible_utils.init_ray(address='local')
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
     retry_policy = {
         "maxAttempts": 4,
@@ -51,11 +49,11 @@ def run(party, is_inner_party):
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
-        global_cross_silo_message_config=GrpcCrossSiloMessageConfig(
-            grpc_retry_policy=retry_policy
-        )
+        config={'cross_silo_message': {
+            'grpc_retry_policy': retry_policy,
+        }},
     )
 
     o = f.party("alice").remote()

@@ -19,8 +19,6 @@ import fed._private.compatible_utils as compatible_utils
 import multiprocessing
 import numpy
 
-from fed.config import CrossSiloMessageConfig
-
 
 @fed.remote
 def generate_wrong_type():
@@ -42,20 +40,23 @@ def pass_arg(d):
 
 def run(party):
     compatible_utils.init_ray(address='local')
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
     allowed_list = {
                 "numpy.core.numeric": ["*"],
                 "numpy": ["dtype"],
     }
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
-        global_cross_silo_message_config=CrossSiloMessageConfig(
-            serializing_allowed_list=allowed_list
-        ))
+        config={
+            "cross_silo_message": {
+                'serializing_allowed_list': allowed_list
+            }
+        },
+    )
 
     # Test passing an allowed type.
     o1 = generate_allowed_type.party("alice").remote()

@@ -112,6 +112,9 @@ class CrossSiloMessageConfig:
     send_resource_label: Optional[Dict[str, str]] = None
     recv_resource_label: Optional[Dict[str, str]] = None
     http_header: Optional[Dict[str, str]] = None
+    # (Optional) The address this party is going to listen on.
+    # If not provided, the `address` will be used.
+    listening_address: str = None
 
     def __json__(self):
         return json.dumps(self.__dict__)
@@ -132,7 +135,10 @@ class CrossSiloMessageConfig:
             CrossSiloMessageConfig: An instance of CrossSiloMessageConfig.
         """
         # Get the attributes of the class
-        attrs = {attr for attr, _ in cls.__annotations__.items()}
+
+        data = data or {}
+        all_annotations = {**cls.__annotations__, **cls.__base__.__annotations__}
+        attrs = {attr for attr, _ in all_annotations.items()}
         # Filter the dictionary to only include keys that are attributes of the class
         filtered_data = {key: value for key, value in data.items() if key in attrs}
         return cls(**filtered_data)

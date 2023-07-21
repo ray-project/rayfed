@@ -20,19 +20,19 @@ import ray
 from fed.proxy.barriers import ping_others
 
 
-cluster = {
-    'alice': {'address': '127.0.0.1:11012'},
-    'bob': {'address': '127.0.0.1:11011'},
+addresses = {
+    'alice': '127.0.0.1:11012',
+    'bob': '127.0.0.1:11011',
 }
 
 
 def test_ping_non_started_party():
     def run(party):
         compatible_utils.init_ray(address='local')
-        fed.init(cluster=cluster, party=party)
+        fed.init(addresses=addresses, party=party)
         if (party == 'alice'):
             with pytest.raises(RuntimeError):
-                ping_others(cluster, party, 5)
+                ping_others(addresses, party, 5)
 
         fed.shutdown()
         ray.shutdown()
@@ -45,9 +45,9 @@ def test_ping_non_started_party():
 def test_ping_started_party():
     def run(party):
         compatible_utils.init_ray(address='local')
-        fed.init(cluster=cluster, party=party)
+        fed.init(addresses=addresses, party=party)
         if (party == 'alice'):
-            ping_success = ping_others(cluster, party, 5)
+            ping_success = ping_others(addresses, party, 5)
             assert ping_success is True
 
         fed.shutdown()

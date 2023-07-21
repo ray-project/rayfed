@@ -22,12 +22,12 @@ import fed.config as fed_config
 
 def run():
     compatible_utils.init_ray(address='local')
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
     }
-    fed.init(cluster=cluster, party="alice")
+    fed.init(addresses=addresses, party="alice")
     config = fed_config.get_cluster_config()
-    assert config.cluster_addresses == cluster
+    assert config.cluster_addresses == addresses
     assert config.current_party == "alice"
     fed.shutdown()
     ray.shutdown()
@@ -40,25 +40,26 @@ def test_fed_apis():
     assert p_alice.exitcode == 0
 
 
+def _run():
+    compatible_utils.init_ray(address='local')
+    addresses = {
+        'alice': '127.0.0.1:11012',
+    }
+    fed.init(addresses=addresses, party="alice")
+
+    @fed.remote
+    class MyActor:
+        pass
+
+    with pytest.raises(ValueError):
+        MyActor.remote()
+
+    fed.shutdown()
+    ray.shutdown()
+
+
 def test_miss_party_name_on_actor():
-    def run():
-        compatible_utils.init_ray(address='local')
-        cluster = {
-            'alice': {'address': '127.0.0.1:11012'},
-        }
-        fed.init(cluster=cluster, party="alice")
-
-        @fed.remote
-        class MyActor:
-            pass
-
-        with pytest.raises(ValueError):
-            MyActor.remote()
-
-        fed.shutdown()
-        ray.shutdown()
-
-    p_alice = multiprocessing.Process(target=run)
+    p_alice = multiprocessing.Process(target=_run)
     p_alice.start()
     p_alice.join()
     assert p_alice.exitcode == 0

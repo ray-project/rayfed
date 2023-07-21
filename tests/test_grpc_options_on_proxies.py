@@ -18,8 +18,6 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import GrpcCrossSiloMessageConfig
-
 
 @fed.remote
 def dummpy():
@@ -28,18 +26,18 @@ def dummpy():
 
 def run(party):
     compatible_utils.init_ray(address='local')
-    cluster = {
-        'alice': {'address': '127.0.0.1:11019'},
-        'bob': {'address': '127.0.0.1:11018'},
+    addresses = {
+        'alice': '127.0.0.1:11019',
+        'bob': '127.0.0.1:11018',
     }
     fed.init(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
-        global_cross_silo_message_config=GrpcCrossSiloMessageConfig(
-            grpc_channel_options=[(
-                'grpc.max_send_message_length', 100
-            )]
-        )
+        config={
+            "cross_silo_message": {
+                "grpc_channel_options": [('grpc.max_send_message_length', 100)],
+            },
+        },
     )
 
     def _assert_on_proxy(proxy_actor):

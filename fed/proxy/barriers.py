@@ -58,7 +58,7 @@ def pop_from_two_dim_dict(the_dict, key_a, key_b):
 class SenderProxyActor:
     def __init__(
         self,
-        cluster: Dict,
+        addresses: Dict,
         party: str,
         tls_config: Dict = None,
         logging_level: str = None,
@@ -72,13 +72,13 @@ class SenderProxyActor:
         )
 
         self._stats = {"send_op_count": 0}
-        self._cluster = cluster
+        self._addresses = addresses
         self._party = party
         self._tls_config = tls_config
         job_config = fed_config.get_job_config()
         cross_silo_message_config = job_config.cross_silo_message_config
         self._proxy_instance: SenderProxy = proxy_cls(
-            cluster, party, tls_config, cross_silo_message_config)
+            addresses, party, tls_config, cross_silo_message_config)
 
     async def is_ready(self):
         res = await self._proxy_instance.is_ready()
@@ -93,8 +93,8 @@ class SenderProxyActor:
     ):
         self._stats["send_op_count"] += 1
         assert (
-            dest_party in self._cluster
-        ), f'Failed to find {dest_party} in cluster {self._cluster}.'
+            dest_party in self._addresses
+        ), f'Failed to find {dest_party} in addresses {self._addresses}.'
         send_log_msg = (
             f'send data to seq_id {downstream_seq_id} of {dest_party} '
             f'from {upstream_seq_id}'
@@ -115,8 +115,8 @@ class SenderProxyActor:
     async def _get_stats(self):
         return self._stats
 
-    async def _get_cluster_info(self):
-        return self._cluster
+    async def _get_addresses_info(self):
+        return self._addresses
 
     async def _get_proxy_config(self, dest_party=None):
         return await self._proxy_instance.get_proxy_config(dest_party)
@@ -126,7 +126,7 @@ class SenderProxyActor:
 class ReceiverProxyActor:
     def __init__(
         self,
-        listen_addr: str,
+        listening_address: str,
         party: str,
         logging_level: str,
         tls_config=None,
@@ -139,13 +139,13 @@ class ReceiverProxyActor:
             party_val=party,
         )
         self._stats = {"receive_op_count": 0}
-        self._listen_addr = listen_addr
+        self._listening_address = listening_address
         self._party = party
         self._tls_config = tls_config
         job_config = fed_config.get_job_config()
         cross_silo_message_config = job_config.cross_silo_message_config
         self._proxy_instance: ReceiverProxy = proxy_cls(
-            listen_addr, party, tls_config, cross_silo_message_config)
+            listening_address, party, tls_config, cross_silo_message_config)
 
     async def start(self):
         await self._proxy_instance.start()
@@ -173,7 +173,7 @@ _DEFAULT_RECEIVER_PROXY_OPTIONS = {
 
 
 def _start_receiver_proxy(
-    cluster: str,
+    addresses: str,
     party: str,
     logging_level: str,
     tls_config=None,
@@ -184,10 +184,10 @@ def _start_receiver_proxy(
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
     # NOTE(NKcqx): This is not just addr, but a party dict containing 'address'
-    party_addr = cluster[party]
-    listen_addr = party_addr.get('listen_addr', None)
-    if not listen_addr:
-        listen_addr = party_addr['address']
+    party_addr = addresses[party]
+    listening_address = proxy_config.listening_address
+    if not listening_address:
+        listening_address = party_addr
 
     actor_options = copy.deepcopy(_DEFAULT_RECEIVER_PROXY_OPTIONS)
     if proxy_config is not None and proxy_config.recv_resource_label is not None:
@@ -198,7 +198,7 @@ def _start_receiver_proxy(
     receiver_proxy_actor = ReceiverProxyActor.options(
         name=f"ReceiverProxyActor-{party}", **actor_options
     ).remote(
-        listen_addr=listen_addr,
+        listening_address=listening_address,
         party=party,
         tls_config=tls_config,
         logging_level=logging_level,
@@ -218,7 +218,7 @@ _DEFAULT_SENDER_PROXY_OPTIONS = {
 
 
 def _start_sender_proxy(
-    cluster: Dict,
+    addresses: Dict,
     party: str,
     logging_level: str,
     tls_config: Dict = None,
@@ -242,7 +242,7 @@ def _start_sender_proxy(
         name="SenderProxyActor", **actor_options)
 
     _SENDER_PROXY_ACTOR = _SENDER_PROXY_ACTOR.remote(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         tls_config=tls_config,
         logging_level=logging_level,
@@ -276,9 +276,9 @@ def recv(party: str, src_party: str, upstream_seq_id, curr_seq_id):
     return receiver_proxy.get_data.remote(src_party, upstream_seq_id, curr_seq_id)
 
 
-def ping_others(cluster: Dict[str, Dict], self_party: str, max_retries=3600):
+def ping_others(addresses: Dict[str, Dict], self_party: str, max_retries=3600):
     """Ping other parties until all are ready or timeout."""
-    others = [party for party in cluster if not party == self_party]
+    others = [party for party in addresses if not party == self_party]
     tried = 0
 
     while tried < max_retries and others:

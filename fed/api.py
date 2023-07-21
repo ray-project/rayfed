@@ -15,7 +15,7 @@
 import functools
 import inspect
 import logging
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Union
 
 import cloudpickle
 import ray
@@ -35,7 +35,7 @@ from fed.proxy.barriers import (
     _start_sender_proxy,
 )
 from fed.proxy.grpc.grpc_proxy import SenderProxy, ReceiverProxy
-from fed.config import CrossSiloMessageConfig
+from fed.config import GrpcCrossSiloMessageConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -43,50 +43,28 @@ logger = logging.getLogger(__name__)
 
 
 def init(
-    cluster: Dict = None,
+    addresses: Dict = None,
     party: str = None,
+    config: Dict = {},
     tls_config: Dict = None,
     logging_level: str = 'info',
-    enable_waiting_for_other_parties_ready: bool = False,
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
-    global_cross_silo_message_config: Optional[CrossSiloMessageConfig] = None,
-    **kwargs,
 ):
     """
     Initialize a RayFed client.
 
     Args:
-        cluster: optional; a dict describes the cluster config. E.g.
+        addresses: optional; a dict describes the addresses configurations. E.g.
 
             .. code:: python
                 {
-                    'alice': {
-                        # The address for other parties.
-                        'address': '127.0.0.1:10001',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10001',
-                        'cross_silo_message_config': CrossSiloMessageConfig
-                    },
-                    'bob': {
-                        # The address for other parties.
-                        'address': '127.0.0.1:10002',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10002',
-                        # (Optional) The party specific metadata sent with grpc requests
-                        'grpc_metadata': (('token', 'bob-token'),),
-                    },
-                    'carol': {
-                        # The address for other parties.
-                        'address': '127.0.0.1:10003',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10003',
-                        # (Optional) The party specific metadata sent with grpc requests
-                        'grpc_metadata': (('token', 'carol-token'),),
-                    },
+                    # The address that can be connected to `alice` by other parties.
+                    'alice': '127.0.0.1:10001',
+                    # The address that can be connected to `bob` by other parties.
+                    'bob': '127.0.0.1:10002',
+                    # The address that can be connected to `carol` by other parties.
+                    'carol': '127.0.0.1:10003',
                 }
         party: optional; self party.
         tls_config: optional; a dict describes the tls config. E.g.
@@ -109,29 +87,24 @@ def init(
                 }
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
-        enable_waiting_for_other_parties_ready: ping other parties until they
-            are all ready if True.
-        global_cross_silo_message_config: Global cross-silo message related
-            configs that are applied to all connections. Supported configs
-            can refer to CrossSiloMessageConfig in config.py.
 
     Examples:
         >>> import fed
         >>> import ray
         >>> ray.init(address='local')
-        >>> cluster = {
-        >>>    'alice': {'address': '127.0.0.1:10001'},
-        >>>    'bob': {'address': '127.0.0.1:10002'},
-        >>>    'carol': {'address': '127.0.0.1:10003'},
+        >>> addresses = {
+        >>>    'alice': '127.0.0.1:10001',
+        >>>    'bob': '127.0.0.1:10002',
+        >>>    'carol': '127.0.0.1:10003',
         >>> }
         >>> # Start as alice.
-        >>> fed.init(cluster=cluster, self_party='alice')
+        >>> fed.init(addresses=addresses, party='alice')
     """
-    assert cluster, "Cluster should be provided."
+    assert addresses, "Addresses should be provided."
     assert party, "Party should be provided."
-    assert party in cluster, f"Party {party} is not in cluster {cluster}."
+    assert party in addresses, f"Party {party} is not in the addresses {addresses}."
 
-    fed_utils.validate_cluster_info(cluster)
+    fed_utils.validate_addresses(addresses)
 
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
@@ -139,20 +112,21 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    global_cross_silo_message_config = \
-        global_cross_silo_message_config or CrossSiloMessageConfig()
+    cross_silo_message_dict = config.get("cross_silo_message", {})
+    cross_silo_message_config = GrpcCrossSiloMessageConfig.from_dict(
+        cross_silo_message_dict)
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
 
     cluster_config = {
-        constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
+        constants.KEY_OF_CLUSTER_ADDRESSES: addresses,
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,
     }
 
     job_config = {
         constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG:
-            global_cross_silo_message_config,
+            cross_silo_message_config,
     }
     compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
                             cloudpickle.dumps(cluster_config))
@@ -170,7 +144,7 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     get_global_context().get_cleanup_manager().start(
-        exit_when_failure_sending=global_cross_silo_message_config.exit_on_sending_failure) # noqa
+        exit_when_failure_sending=cross_silo_message_config.exit_on_sending_failure) # noqa
 
     if receiver_proxy_cls is None:
         logger.debug(
@@ -179,12 +153,12 @@ def init(
         from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
         receiver_proxy_cls = GrpcReceiverProxy
     _start_receiver_proxy(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
         proxy_cls=receiver_proxy_cls,
-        proxy_config=global_cross_silo_message_config
+        proxy_config=cross_silo_message_config
     )
 
     if sender_proxy_cls is None:
@@ -194,17 +168,18 @@ def init(
         from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
         sender_proxy_cls = GrpcSenderProxy
     _start_sender_proxy(
-        cluster=cluster,
+        addresses=addresses,
         party=party,
         logging_level=logging_level,
         tls_config=tls_config,
         proxy_cls=sender_proxy_cls,
-        proxy_config=global_cross_silo_message_config
+        # TODO(qwang): proxy_config -> cross_silo_message_config
+        proxy_config=cross_silo_message_config
     )
 
-    if enable_waiting_for_other_parties_ready:
+    if config.get("barrier_on_initializing", False):
         # TODO(zhouaihui): can be removed after we have a better retry strategy.
-        ping_others(cluster=cluster, self_party=party, max_retries=3600)
+        ping_others(addresses=addresses, self_party=party, max_retries=3600)
 
 
 def shutdown():
@@ -216,9 +191,9 @@ def shutdown():
     logger.info('Shutdowned rayfed.')
 
 
-def _get_cluster():
+def _get_addresses():
     """
-    Get the RayFed cluster configration.
+    Get the RayFed addresses configration.
     """
     return fed_config.get_cluster_config().cluster_addresses
 
@@ -290,7 +265,7 @@ class FedRemoteClass:
         fed_class_task_id = get_global_context().next_seq_id()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
-            _get_cluster(),
+            _get_addresses(),
             self._cls,
             _get_party(),
             self._party,
@@ -341,7 +316,7 @@ def get(
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
-    cluster = _get_cluster()
+    addresses = _get_addresses()
     current_party = _get_party()
     is_individual_id = isinstance(fed_objects, FedObject)
     if is_individual_id:
@@ -357,7 +332,7 @@ def get(
             assert ray_object_ref is not None
             ray_refs.append(ray_object_ref)
 
-            for party_name in cluster:
+            for party_name in addresses:
                 if party_name == current_party:
                     continue
                 else:

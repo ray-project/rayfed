@@ -42,15 +42,15 @@ def agg_fn(obj1, obj2):
     return f"agg-{obj1}-{obj2}"
 
 
-cluster = {
-    'alice': {'address': '127.0.0.1:11012'},
-    'bob': {'address': '127.0.0.1:11011'},
+addresses = {
+    'alice': '127.0.0.1:11012',
+    'bob': '127.0.0.1:11011',
 }
 
 
 def run(party):
     ray.init(address='local')
-    fed.init(cluster=cluster, party=party)
+    fed.init(addresses=addresses, party=party)
     print(f"Running the script in party {party}")
 
     ds1, ds2 = [123, 789]

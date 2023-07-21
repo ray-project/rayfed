@@ -107,11 +107,11 @@ The above codes:
 def main(party):
     ray.init(address='local')
 
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
-    fed.init(cluster=cluster, party=party)
+    fed.init(addresses=addresses, party=party)
 ```
 This first declares a two-party cluster, whose addresses corresponding to '127.0.0.1:11012' in 'alice' and '127.0.0.1:11011' in 'bob'.
 And then, the `fed.init` create a cluster in the specified party.
@@ -145,11 +145,11 @@ def aggregate(val1, val2):
 def main(party):
     ray.init(address='local')
 
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
-    fed.init(cluster=cluster, party=party)
+    fed.init(addresses=addresses, party=party)
 
     actor_alice = MyActor.party("alice").remote(1)
     actor_bob = MyActor.party("bob").remote(1)
