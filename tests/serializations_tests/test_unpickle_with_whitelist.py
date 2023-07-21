@@ -19,8 +19,6 @@ import fed._private.compatible_utils as compatible_utils
 import multiprocessing
 import numpy
 
-from fed.config import CrossSiloMessageConfig
-
 
 @fed.remote
 def generate_wrong_type():
