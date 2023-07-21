@@ -60,18 +60,12 @@ def init(
 
             .. code:: python
                 {
-                    'alice': {
-                        # The address that can be connected by other parties.
-                        'address': '127.0.0.1:10001',
-                    },
-                    'bob': {
-                        # The address that can be connected by other parties.
-                        'address': '127.0.0.1:10002',
-                    },
-                    'carol': {
-                        # The address that can be connected by other parties.
-                        'address': '127.0.0.1:10003',
-                    },
+                    # The address that can be connected to `alice` by other parties.
+                    'alice': '127.0.0.1:10001',
+                    # The address that can be connected to `bob` by other parties.
+                    'bob': '127.0.0.1:10002',
+                    # The address that can be connected to `carol` by other parties.
+                    'carol': '127.0.0.1:10003',
                 }
         party: optional; self party.
         tls_config: optional; a dict describes the tls config. E.g.
@@ -100,9 +94,9 @@ def init(
         >>> import ray
         >>> ray.init(address='local')
         >>> addresses = {
-        >>>    'alice': {'address': '127.0.0.1:10001'},
-        >>>    'bob': {'address': '127.0.0.1:10002'},
-        >>>    'carol': {'address': '127.0.0.1:10003'},
+        >>>    'alice': '127.0.0.1:10001',
+        >>>    'bob': '127.0.0.1:10002',
+        >>>    'carol': '127.0.0.1:10003',
         >>> }
         >>> # Start as alice.
         >>> fed.init(addresses=addresses, party='alice')

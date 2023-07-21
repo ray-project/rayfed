@@ -53,9 +53,9 @@ def run(party, is_inner_party):
     fed.init(
         addresses=addresses,
         party=party,
-        global_cross_silo_message_config=GrpcCrossSiloMessageConfig(
-            grpc_retry_policy=retry_policy
-        )
+        config={'cross_silo_message': {
+            'grpc_retry_policy': retry_policy, 
+        }},
     )
 
     o = f.party("alice").remote()

@@ -9,8 +9,8 @@ import fed._private.compatible_utils as compatible_utils
 def run(party):
     compatible_utils.init_ray("local")
     addresses = {
-        'alice': {'address': '127.0.0.1:11010', 'listen_addr': '0.0.0.0:11010'},
-        'bob': {'address': '127.0.0.1:11011', 'listen_addr': '0.0.0.0:11011'},
+        'alice': '127.0.0.1:11010',
+        'bob': '127.0.0.1:11011',
     }
     assert compatible_utils.kv is None
     fed.init(addresses=addresses, party=party)
