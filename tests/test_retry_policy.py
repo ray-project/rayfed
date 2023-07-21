@@ -20,8 +20,6 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
-from fed.config import GrpcCrossSiloMessageConfig
-
 
 @fed.remote
 def f():
@@ -54,7 +52,7 @@ def run(party, is_inner_party):
         addresses=addresses,
         party=party,
         config={'cross_silo_message': {
-            'grpc_retry_policy': retry_policy, 
+            'grpc_retry_policy': retry_policy,
         }},
     )
 
