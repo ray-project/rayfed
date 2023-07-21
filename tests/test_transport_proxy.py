@@ -58,17 +58,17 @@ def test_n_to_1_transport():
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
-    cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
+    addresses = {'test_party': SERVER_ADDRESS}
     config = GrpcCrossSiloMessageConfig()
     _start_receiver_proxy(
-        cluster_config,
+        addresses,
         party,
         logging_level='info',
         proxy_cls=GrpcReceiverProxy,
         proxy_config=config
     )
     _start_sender_proxy(
-        cluster_config,
+        addresses,
         party,
         logging_level='info',
         proxy_cls=GrpcSenderProxy,
@@ -148,15 +148,16 @@ class TestReceiverProxyActor:
 
 
 def _test_start_receiver_proxy(
-    cluster: str,
+    addresses: str,
     party: str,
     logging_level: str,
     expected_metadata: dict,
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
-    party_addr = cluster[party]
-    listen_addr = party_addr.get('listen_addr', None)
+    party_addr = addresses[party]
+    listen_addr = party_addr
+    print(f"160======listen_addr={listen_addr}")
     if not listen_addr:
         listen_addr = party_addr['address']
 
@@ -195,7 +196,7 @@ def test_send_grpc_with_meta():
 
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
-    cluster_config = {'test_party': {'address': SERVER_ADDRESS}}
+    cluster_config = {'test_party': SERVER_ADDRESS}
     _test_start_receiver_proxy(
         cluster_config, party, logging_level='info',
         expected_metadata=metadata,
@@ -241,9 +242,9 @@ def test_send_grpc_with_party_specific_meta():
     party = 'test_party'
     cluster_parties_config = {
         'test_party': {
-            'address': SERVER_ADDRESS,
-            'cross_silo_message_config': CrossSiloMessageConfig(
-                http_header={"token": "test-party-token"})
+            'cross_silo_message': CrossSiloMessageConfig(
+                http_header={"token": "test-party-token"},
+                listening_address=SERVER_ADDRESS,)
         }
     }
     _test_start_receiver_proxy(
