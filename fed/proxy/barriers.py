@@ -126,7 +126,7 @@ class SenderProxyActor:
 class ReceiverProxyActor:
     def __init__(
         self,
-        listen_addr: str,
+        listening_address: str,
         party: str,
         logging_level: str,
         tls_config=None,
@@ -139,13 +139,13 @@ class ReceiverProxyActor:
             party_val=party,
         )
         self._stats = {"receive_op_count": 0}
-        self._listen_addr = listen_addr
+        self._listening_address = listening_address
         self._party = party
         self._tls_config = tls_config
         job_config = fed_config.get_job_config()
         cross_silo_message_config = job_config.cross_silo_message_config
         self._proxy_instance: ReceiverProxy = proxy_cls(
-            listen_addr, party, tls_config, cross_silo_message_config)
+            listening_address, party, tls_config, cross_silo_message_config)
 
     async def start(self):
         await self._proxy_instance.start()
@@ -187,7 +187,7 @@ def _start_receiver_proxy(
     party_addr = addresses[party]
     listening_address = proxy_config.listening_address
     if not listening_address:
-        listen_addr = party_addr
+        listening_address = party_addr
 
     actor_options = copy.deepcopy(_DEFAULT_RECEIVER_PROXY_OPTIONS)
     if proxy_config is not None and proxy_config.recv_resource_label is not None:
@@ -198,7 +198,7 @@ def _start_receiver_proxy(
     receiver_proxy_actor = ReceiverProxyActor.options(
         name=f"ReceiverProxyActor-{party}", **actor_options
     ).remote(
-        listen_addr=listen_addr,
+        listening_address=listening_address,
         party=party,
         tls_config=tls_config,
         logging_level=logging_level,
