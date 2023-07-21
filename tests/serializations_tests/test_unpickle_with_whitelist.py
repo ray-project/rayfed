@@ -53,9 +53,12 @@ def run(party):
     fed.init(
         addresses=addresses,
         party=party,
-        global_cross_silo_message_config=CrossSiloMessageConfig(
-            serializing_allowed_list=allowed_list
-        ))
+        config={
+            "cross_silo_message": {
+                'serializing_allowed_list': allowed_list
+            }
+        },
+    )
 
     # Test passing an allowed type.
     o1 = generate_allowed_type.party("alice").remote()
