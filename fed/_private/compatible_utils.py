@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import abc
+import cloudpickle
 import ray
 import fed._private.constants as fed_constants
 
@@ -97,8 +98,9 @@ class AbstractInternalKv(abc.ABC):
 class InternalKv(AbstractInternalKv):
     """The internal kv class for non Ray client mode.
     """
-    def __init__(self) -> None:
+    def __init__(self, job_id) -> None:
         super().__init__()
+        self._job_id = job_id
 
     def initialize(self):
         try:
@@ -114,15 +116,29 @@ class InternalKv(AbstractInternalKv):
         return ray_internal_kv._initialize_internal_kv(gcs_client)
 
     def put(self, k, v):
-        return ray_internal_kv._internal_kv_put(k, v)
+        content = ray_internal_kv._internal_kv_get(self._job_id)
+        if content is None:
+            content =  {}
+        else:
+            content = cloudpickle.loads(content)
+            content[k] = v
+        return ray_internal_kv._internal_kv_put(self._job_id, cloudpickle.dumps(content))
 
     def get(self, k):
-        return ray_internal_kv._internal_kv_get(k)
+        content = ray_internal_kv._internal_kv_get(self._job_id)
+        content = cloudpickle.loads(content)
+        return content.get(k, None)
 
     def delete(self, k):
-        return ray_internal_kv._internal_kv_del(k)
+        content = self.get(self._job_id)
+        if k in content:
+            del content[k]
+            self.put(self._job_id, content)
+            return 1
+        return 0
 
     def reset(self):
+        ray_internal_kv._internal_kv_del(self._job_id)
         return ray_internal_kv._internal_kv_reset()
 
     def _ping(self):
@@ -157,25 +173,23 @@ class ClientModeInternalKv(AbstractInternalKv):
         return ray.get(o)
 
 
-def _init_internal_kv():
+def _init_internal_kv(job_id):
     """An internal API that initialize the internal kv object."""
     global kv
     if kv is None:
         from ray._private.client_mode_hook import is_client_mode_enabled
         if is_client_mode_enabled:
             kv_actor = ray.remote(InternalKv).options(
-                name="_INTERNAL_KV_ACTOR").remote()
+                name="_INTERNAL_KV_ACTOR").remote(job_id)
             response = kv_actor._ping.remote()
             ray.get(response)
-        kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
+        kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv(job_id)
         kv.initialize()
 
 
 def _clear_internal_kv():
     global kv
     if kv is not None:
-        kv.delete(constants.KEY_OF_CLUSTER_CONFIG)
-        kv.delete(constants.KEY_OF_JOB_CONFIG)
         kv.reset()
         from ray._private.client_mode_hook import is_client_mode_enabled
         if is_client_mode_enabled:

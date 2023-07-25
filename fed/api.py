@@ -26,7 +26,11 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
-from fed._private.global_context import get_global_context, clear_global_context
+from fed._private.global_context import (
+    init_global_context,
+    get_global_context,
+    clear_global_context
+)
 from fed.proxy.barriers import (
     ping_others,
     recv,
@@ -50,6 +54,7 @@ def init(
     logging_level: str = 'info',
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
+    job_id: str = 'anonymous'
 ):
     """
     Initialize a RayFed client.
@@ -87,7 +92,11 @@ def init(
                 }
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
-
+        job_id: optional; the job id of the current job. Note that, the job id
+            must be identical in all parties, otherwise, messages will be ignored
+            because of the job id mismatch. If the job id is not provided, messages
+            of this job will not be distinguished from other jobs, which should
+            only be used in the single job scenario or simulation mode.
     Examples:
         >>> import fed
         >>> import ray
@@ -105,7 +114,7 @@ def init(
     assert party in addresses, f"Party {party} is not in the addresses {addresses}."
 
     fed_utils.validate_addresses(addresses)
-
+    init_global_context(job_id=job_id)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
@@ -116,7 +125,7 @@ def init(
     cross_silo_message_config = GrpcCrossSiloMessageConfig.from_dict(
         cross_silo_message_dict)
     # A Ray private accessing, should be replaced in public API.
-    compatible_utils._init_internal_kv()
+    compatible_utils._init_internal_kv(job_id)
 
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: addresses,
