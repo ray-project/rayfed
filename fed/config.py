@@ -51,23 +51,23 @@ _cluster_config = None
 _job_config = None
 
 
-def get_cluster_config():
+def get_cluster_config(job_id: str = None):
     """This function is not thread safe to use."""
     global _cluster_config
     if _cluster_config is None:
-        compatible_utils._init_internal_kv()
-        compatible_utils.kv.initialize()
+        assert job_id is not None, "Initializing internal kv need to provide job_id."
+        compatible_utils._init_internal_kv(job_id)
         raw_dict = compatible_utils.kv.get(fed_constants.KEY_OF_CLUSTER_CONFIG)
         _cluster_config = ClusterConfig(raw_dict)
     return _cluster_config
 
 
-def get_job_config():
+def get_job_config(job_id: str = None):
     """This config still acts like cluster config for now"""
     global _job_config
     if _job_config is None:
-        compatible_utils._init_internal_kv()
-        compatible_utils.kv.initialize()
+        assert job_id is not None, "Initializing internal kv need to provide job_id."
+        compatible_utils._init_internal_kv(job_id)
         raw_dict = compatible_utils.kv.get(fed_constants.KEY_OF_JOB_CONFIG)
         _job_config = JobConfig(raw_dict)
     return _job_config

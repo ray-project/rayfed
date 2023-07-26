@@ -67,6 +67,14 @@ def _get_gcs_address_from_ray_worker():
         return ray.worker._global_node.gcs_address
 
 
+def wrap_kv_key(job_id, key):
+    """Add an prefix to the key to avoid conflict with other jobs.
+    """
+    if (type(key) == bytes):
+        key = key.decode("utf-8")
+    return f"RAYFED#{job_id}#{key}".encode("utf-8")
+
+
 class AbstractInternalKv(abc.ABC):
     """ An abstract class that represents for bridging Ray internal kv in
     both Ray client mode and non Ray client mode.
@@ -98,7 +106,7 @@ class AbstractInternalKv(abc.ABC):
 class InternalKv(AbstractInternalKv):
     """The internal kv class for non Ray client mode.
     """
-    def __init__(self, job_id) -> None:
+    def __init__(self, job_id:str) -> None:
         super().__init__()
         self._job_id = job_id
 
@@ -116,29 +124,18 @@ class InternalKv(AbstractInternalKv):
         return ray_internal_kv._initialize_internal_kv(gcs_client)
 
     def put(self, k, v):
-        content = ray_internal_kv._internal_kv_get(self._job_id)
-        if content is None:
-            content =  {}
-        else:
-            content = cloudpickle.loads(content)
-            content[k] = v
-        return ray_internal_kv._internal_kv_put(self._job_id, cloudpickle.dumps(content))
+        return ray_internal_kv._internal_kv_put(
+            wrap_kv_key(self._job_id, k), v)
 
     def get(self, k):
-        content = ray_internal_kv._internal_kv_get(self._job_id)
-        content = cloudpickle.loads(content)
-        return content.get(k, None)
+        return ray_internal_kv._internal_kv_get(
+            wrap_kv_key(self._job_id, k))
 
     def delete(self, k):
-        content = self.get(self._job_id)
-        if k in content:
-            del content[k]
-            self.put(self._job_id, content)
-            return 1
-        return 0
+        return ray_internal_kv._internal_kv_del(
+            wrap_kv_key(self._job_id, k))
 
     def reset(self):
-        ray_internal_kv._internal_kv_del(self._job_id)
         return ray_internal_kv._internal_kv_reset()
 
     def _ping(self):
@@ -190,6 +187,8 @@ def _init_internal_kv(job_id):
 def _clear_internal_kv():
     global kv
     if kv is not None:
+        kv.delete(constants.KEY_OF_CLUSTER_CONFIG)
+        kv.delete(constants.KEY_OF_JOB_CONFIG)
         kv.reset()
         from ray._private.client_mode_hook import is_client_mode_enabled
         if is_client_mode_enabled:

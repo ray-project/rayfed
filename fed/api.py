@@ -148,7 +148,7 @@ def init(
         logging_level=logging_level,
         logging_format=constants.RAYFED_LOG_FMT,
         date_format=constants.RAYFED_DATE_FMT,
-        party_val=_get_party(),
+        party_val=_get_party(job_id),
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
@@ -200,25 +200,25 @@ def shutdown():
     logger.info('Shutdowned rayfed.')
 
 
-def _get_addresses():
+def _get_addresses(job_id: str=None):
     """
     Get the RayFed addresses configration.
     """
-    return fed_config.get_cluster_config().cluster_addresses
+    return fed_config.get_cluster_config(job_id).cluster_addresses
 
 
-def _get_party():
+def _get_party(job_id: str=None):
     """
     A private util function to get the current party name.
     """
-    return fed_config.get_cluster_config().current_party
+    return fed_config.get_cluster_config(job_id).current_party
 
 
-def _get_tls():
+def _get_tls(job_id: str=None):
     """
     Get the tls configurations on this party.
     """
-    return fed_config.get_cluster_config().tls_config
+    return fed_config.get_cluster_config(job_id).tls_config
 
 
 class FedRemoteFunction:
@@ -272,11 +272,12 @@ class FedRemoteClass:
 
     def remote(self, *cls_args, **cls_kwargs):
         fed_class_task_id = get_global_context().next_seq_id()
+        job_id = get_global_context().job_id()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
-            _get_addresses(),
+            _get_addresses(job_id),
             self._cls,
-            _get_party(),
+            _get_party(job_id),
             self._party,
             self._options,
         )
@@ -325,8 +326,9 @@ def get(
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
-    addresses = _get_addresses()
-    current_party = _get_party()
+    job_id = get_global_context().job_id()
+    addresses = _get_addresses(job_id)
+    current_party = _get_party(job_id)
     is_individual_id = isinstance(fed_objects, FedObject)
     if is_individual_id:
         fed_objects = [fed_objects]
@@ -381,7 +383,8 @@ def get(
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):
-    current_party = _get_party()
+    job_id = get_global_context().job_id()
+    current_party = _get_party(job_id)
     if actor._node_party == current_party:
         handler = actor._actor_handle
         ray.kill(handler, no_restart=no_restart)

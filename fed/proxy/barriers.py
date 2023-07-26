@@ -60,6 +60,7 @@ class SenderProxyActor:
         self,
         addresses: Dict,
         party: str,
+        job_id: str,
         tls_config: Dict = None,
         logging_level: str = None,
         proxy_cls=None
@@ -74,8 +75,9 @@ class SenderProxyActor:
         self._stats = {"send_op_count": 0}
         self._addresses = addresses
         self._party = party
+        self._job_id = job_id
         self._tls_config = tls_config
-        job_config = fed_config.get_job_config()
+        job_config = fed_config.get_job_config(job_id)
         cross_silo_message_config = job_config.cross_silo_message_config
         self._proxy_instance: SenderProxy = proxy_cls(
             addresses, party, tls_config, cross_silo_message_config)
@@ -128,6 +130,7 @@ class ReceiverProxyActor:
         self,
         listening_address: str,
         party: str,
+        job_id: str,
         logging_level: str,
         tls_config=None,
         proxy_cls=None,
@@ -141,8 +144,9 @@ class ReceiverProxyActor:
         self._stats = {"receive_op_count": 0}
         self._listening_address = listening_address
         self._party = party
+        self._job_id = job_id
         self._tls_config = tls_config
-        job_config = fed_config.get_job_config()
+        job_config = fed_config.get_job_config(job_id)
         cross_silo_message_config = job_config.cross_silo_message_config
         self._proxy_instance: ReceiverProxy = proxy_cls(
             listening_address, party, tls_config, cross_silo_message_config)
@@ -200,6 +204,7 @@ def _start_receiver_proxy(
     ).remote(
         listening_address=listening_address,
         party=party,
+        job_id=get_global_context().job_id(),
         tls_config=tls_config,
         logging_level=logging_level,
         proxy_cls=proxy_cls
@@ -241,14 +246,16 @@ def _start_sender_proxy(
     _SENDER_PROXY_ACTOR = SenderProxyActor.options(
         name="SenderProxyActor", **actor_options)
 
+    job_id = get_global_context().job_id()
     _SENDER_PROXY_ACTOR = _SENDER_PROXY_ACTOR.remote(
         addresses=addresses,
         party=party,
+        job_id=job_id,
         tls_config=tls_config,
         logging_level=logging_level,
         proxy_cls=proxy_cls
     )
-    timeout = get_job_config().cross_silo_message_config.timeout_in_ms / 1000
+    timeout = get_job_config(job_id).cross_silo_message_config.timeout_in_ms / 1000
     assert ray.get(_SENDER_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
     logger.info("SenderProxyActor has successfully created.")
 
