@@ -80,7 +80,7 @@ class SenderProxyActor:
         job_config = fed_config.get_job_config(job_id)
         cross_silo_message_config = job_config.cross_silo_message_config
         self._proxy_instance: SenderProxy = proxy_cls(
-            addresses, party, tls_config, cross_silo_message_config)
+            addresses, party, job_id, tls_config, cross_silo_message_config)
 
     async def is_ready(self):
         res = await self._proxy_instance.is_ready()
@@ -149,7 +149,7 @@ class ReceiverProxyActor:
         job_config = fed_config.get_job_config(job_id)
         cross_silo_message_config = job_config.cross_silo_message_config
         self._proxy_instance: ReceiverProxy = proxy_cls(
-            listening_address, party, tls_config, cross_silo_message_config)
+            listening_address, party, job_id, tls_config, cross_silo_message_config)
 
     async def start(self):
         await self._proxy_instance.start()

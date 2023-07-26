@@ -21,7 +21,6 @@ import threading
 import json
 from typing import Dict
 
-
 import fed.utils as fed_utils
 
 from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
@@ -89,10 +88,11 @@ class GrpcSenderProxy(SenderProxy):
             self,
             cluster: Dict,
             party: str,
+            job_id: str,
             tls_config: Dict,
             proxy_config: CrossSiloMessageConfig = None
     ) -> None:
-        super().__init__(cluster, party, tls_config, proxy_config)
+        super().__init__(cluster, party, job_id, tls_config, proxy_config)
         self._grpc_metadata = proxy_config.http_header or {}
         self._grpc_options = copy.deepcopy(_DEFAULT_GRPC_CHANNEL_OPTIONS)
         self._grpc_options.update(parse_grpc_options(self._proxy_config))
@@ -131,6 +131,7 @@ class GrpcSenderProxy(SenderProxy):
             stub=self._stubs[dest_party],
             upstream_seq_id=upstream_seq_id,
             downstream_seq_id=downstream_seq_id,
+            job_id=self._job_id,
             timeout=timeout,
             metadata=grpc_metadata,
         )
@@ -172,6 +173,7 @@ async def send_data_grpc(
     upstream_seq_id,
     downstream_seq_id,
     timeout,
+    job_id,
     metadata=None,
 ):
     data = cloudpickle.dumps(data)
@@ -179,6 +181,7 @@ async def send_data_grpc(
         data=data,
         upstream_seq_id=str(upstream_seq_id),
         downstream_seq_id=str(downstream_seq_id),
+        job_id=job_id,
     )
     # Waiting for the reply from downstream.
     response = await stub.SendData(
@@ -198,10 +201,11 @@ class GrpcReceiverProxy(ReceiverProxy):
             self,
             listen_addr: str,
             party: str,
+            job_id: str,
             tls_config: Dict,
             proxy_config: CrossSiloMessageConfig
     ) -> None:
-        super().__init__(listen_addr, party, tls_config, proxy_config)
+        super().__init__(listen_addr, party, job_id, tls_config, proxy_config)
         self._grpc_options = copy.deepcopy(_DEFAULT_GRPC_CHANNEL_OPTIONS)
         self._grpc_options.update(parse_grpc_options(self._proxy_config))
 
@@ -216,12 +220,23 @@ class GrpcReceiverProxy(ReceiverProxy):
     async def start(self):
         port = self._listen_addr[self._listen_addr.index(':') + 1 :]
         try:
+            print(f"[Debug] params list: "
+                  f"port: {port}, "
+                  f"self._events: {self._events}, "
+                  f"self._all_data: {self._all_data}, "
+                  f"self._party: {self._party}, "
+                  f"self._lock: {self._lock}, "
+                  f"self._job_id: {self._job_id}, "
+                  f"self._server_ready_future: {self._server_ready_future}, "
+                  f"self._tls_config: {self._tls_config}, "
+                  f"self._grpc_options: {fed_utils.dict2tuple(self._grpc_options)}")
             await _run_grpc_server(
                 port,
                 self._events,
                 self._all_data,
                 self._party,
                 self._lock,
+                self._job_id,
                 self._server_ready_future,
                 self._tls_config,
                 fed_utils.dict2tuple(self._grpc_options),
@@ -266,13 +281,17 @@ class GrpcReceiverProxy(ReceiverProxy):
 
 
 class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
-    def __init__(self, all_events, all_data, party, lock):
+    def __init__(self, all_events, all_data, party, lock, job_id):
         self._events = all_events
         self._all_data = all_data
         self._party = party
         self._lock = lock
+        self._job_id = job_id
 
-    async def SendData(self, request, context):
+    async def SendData(self, request):
+        job_id = request.job_id
+        if job_id != self._job_id:
+            return fed_pb2.SendDataResponse(result="ERROR")
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
@@ -298,13 +317,13 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
 
 
 async def _run_grpc_server(
-    port, event, all_data, party, lock,
+    port, event, all_data, party, lock, job_id,
     server_ready_future, tls_config=None, grpc_options=None
 ):
     print(f"ReceiveProxy binding port {port}, options: {grpc_options}...")
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
-        SendDataService(event, all_data, party, lock), server
+        SendDataService(event, all_data, party, lock, job_id), server
     )
 
     tls_enabled = fed_utils.tls_enabled(tls_config)
