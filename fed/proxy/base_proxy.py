@@ -24,7 +24,7 @@ class SenderProxy(abc.ABC):
         addresses: Dict,
         party: str,
         tls_config: Dict,
-        proxy_config: CrossSiloMessageConfig = None
+        proxy_config: CrossSiloMessageConfig = None,
     ) -> None:
         self._addresses = addresses
         self._party = party
@@ -32,13 +32,7 @@ class SenderProxy(abc.ABC):
         self._proxy_config = proxy_config
 
     @abc.abstractmethod
-    async def send(
-        self,
-        dest_party,
-        data,
-        upstream_seq_id,
-        downstream_seq_id
-    ):
+    async def send(self, dest_party, data, upstream_seq_id, downstream_seq_id):
         pass
 
     async def is_ready(self):
@@ -50,11 +44,11 @@ class SenderProxy(abc.ABC):
 
 class ReceiverProxy(abc.ABC):
     def __init__(
-            self,
-            listen_addr: str,
-            party: str,
-            tls_config: Dict,
-            proxy_config: CrossSiloMessageConfig = None
+        self,
+        listen_addr: str,
+        party: str,
+        tls_config: Dict,
+        proxy_config: CrossSiloMessageConfig = None,
     ) -> None:
         self._listen_addr = listen_addr
         self._party = party
@@ -66,15 +60,43 @@ class ReceiverProxy(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def get_data(
-            self,
-            src_party,
-            upstream_seq_id,
-            curr_seq_id):
+    async def get_data(self, src_party, upstream_seq_id, curr_seq_id):
         pass
 
     async def is_ready(self):
         return True
 
     async def get_proxy_config(self):
+        return self._proxy_config
+
+
+class SenderReceiverProxy(abc.ABC):
+    def __init__(
+        self,
+        addresses: Dict,
+        self_party: str,
+        tls_config: Dict,
+        proxy_config: CrossSiloMessageConfig = None,
+    ) -> None:
+        self._addresses = addresses
+        self._party = self_party
+        self._tls_config = tls_config
+        self._proxy_config = proxy_config
+
+    @abc.abstractmethod
+    def start(self):
+        pass
+
+    def is_ready(self):
+        return True
+
+    @abc.abstractmethod
+    def get_data(self, src_party, upstream_seq_id, curr_seq_id):
+        pass
+
+    @abc.abstractmethod
+    def send(self, dest_party, data, upstream_seq_id, downstream_seq_id):
+        pass
+
+    def get_proxy_config(self):
         return self._proxy_config

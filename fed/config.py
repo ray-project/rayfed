@@ -1,5 +1,3 @@
-
-
 """This module should be cached locally due to all configurations
    are mutable.
 """
@@ -10,11 +8,12 @@ import cloudpickle
 import json
 
 from typing import Dict, List, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 
 class ClusterConfig:
     """A local cache of cluster configuration items."""
+
     def __init__(self, raw_bytes: bytes) -> None:
         self._data = cloudpickle.loads(raw_bytes)
 
@@ -39,10 +38,8 @@ class JobConfig:
             self._data = cloudpickle.loads(raw_bytes)
 
     @property
-    def cross_silo_message_config(self):
-        return self._data.get(
-            fed_constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG,
-            CrossSiloMessageConfig())
+    def cross_silo_comm_config_dict(self) -> Dict:
+        return self._data.get(fed_constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT, {})
 
 
 # A module level cache for the cluster configurations.
@@ -103,7 +100,9 @@ class CrossSiloMessageConfig:
         http_header: The HTTP header, e.g. metadata in grpc, sent with the RPC request.
             This won't override basic tcp headers, such as `user-agent`, but concat
             them together.
+        max_concurrency: the max_concurrency of the sender/receiver proxy actor.
     """
+
     proxy_max_restarts: int = None
     timeout_in_ms: int = 60000
     messages_max_size_in_bytes: int = None
@@ -112,9 +111,7 @@ class CrossSiloMessageConfig:
     send_resource_label: Optional[Dict[str, str]] = None
     recv_resource_label: Optional[Dict[str, str]] = None
     http_header: Optional[Dict[str, str]] = None
-    # (Optional) The address this party is going to listen on.
-    # If not provided, the `address` will be used.
-    listening_address: str = None
+    max_concurrency: Optional[int] = None
 
     def __json__(self):
         return json.dumps(self.__dict__)
@@ -125,7 +122,7 @@ class CrossSiloMessageConfig:
         return cls(**data)
 
     @classmethod
-    def from_dict(cls, data: Dict):
+    def from_dict(cls, data: Dict) -> 'CrossSiloMessageConfig':
         """Initialize CrossSiloMessageConfig from a dictionary.
 
         Args:
@@ -135,10 +132,8 @@ class CrossSiloMessageConfig:
             CrossSiloMessageConfig: An instance of CrossSiloMessageConfig.
         """
         # Get the attributes of the class
-
         data = data or {}
-        all_annotations = {**cls.__annotations__, **cls.__base__.__annotations__}
-        attrs = {attr for attr, _ in all_annotations.items()}
+        attrs = [field.name for field in fields(cls)]
         # Filter the dictionary to only include keys that are attributes of the class
         filtered_data = {key: value for key, value in data.items() if key in attrs}
         return cls(**filtered_data)
@@ -170,5 +165,6 @@ class GrpcCrossSiloMessageConfig(CrossSiloMessageConfig):
                     ('grpc.max_send_message_length', 50 * 1024 * 1024)
                 ]
     """
+
     grpc_channel_options: List = None
     grpc_retry_policy: Dict[str, str] = None

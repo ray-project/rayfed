@@ -18,6 +18,8 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
 
+from fed.proxy.barriers import receiver_proxy_actor_name, sender_proxy_actor_name
+
 
 @fed.remote
 def dummpy():
@@ -34,7 +36,7 @@ def run(party):
         addresses=addresses,
         party=party,
         config={
-            "cross_silo_message": {
+            "cross_silo_comm": {
                 "grpc_channel_options": [('grpc.max_send_message_length', 100)],
             },
         },
@@ -46,8 +48,8 @@ def run(party):
         assert ("grpc.max_send_message_length", 100) in options
         assert ('grpc.so_reuseport', 0) in options
 
-    sender_proxy = ray.get_actor("SenderProxyActor")
-    receiver_proxy = ray.get_actor(f"ReceiverProxyActor-{party}")
+    sender_proxy = ray.get_actor(sender_proxy_actor_name())
+    receiver_proxy = ray.get_actor(receiver_proxy_actor_name())
     _assert_on_proxy(sender_proxy)
     _assert_on_proxy(receiver_proxy)
 

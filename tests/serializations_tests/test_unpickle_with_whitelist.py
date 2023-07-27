@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-import fed
-import ray
-import fed._private.compatible_utils as compatible_utils
 import multiprocessing
+
 import numpy
+import pytest
+import ray
+
+import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 @fed.remote
@@ -45,17 +47,13 @@ def run(party):
         'bob': '127.0.0.1:11011',
     }
     allowed_list = {
-                "numpy.core.numeric": ["*"],
-                "numpy": ["dtype"],
+        "numpy.core.numeric": ["*"],
+        "numpy": ["dtype"],
     }
     fed.init(
         addresses=addresses,
         party=party,
-        config={
-            "cross_silo_message": {
-                'serializing_allowed_list': allowed_list
-            }
-        },
+        config={"cross_silo_comm": {'serializing_allowed_list': allowed_list}},
     )
 
     # Test passing an allowed type.
@@ -82,7 +80,6 @@ def run(party):
 
 
 def test_restricted_loads():
-
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()

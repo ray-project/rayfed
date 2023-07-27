@@ -47,8 +47,8 @@ class CleanupManager:
         self._check_send_thread = None
         self._monitor_thread = None
 
-    def start(self, exit_when_failure_sending=False):
-        self._exit_when_failure_sending = exit_when_failure_sending
+    def start(self, exit_on_sending_failure=False):
+        self._exit_on_sending_failure = exit_on_sending_failure
 
         def __check_func():
             self._check_sending_objs()
@@ -98,7 +98,7 @@ class CleanupManager:
             except Exception as e:
                 logger.warn(f'Failed to send {obj_ref} with error: {e}')
                 res = False
-            if not res and self._exit_when_failure_sending:
+            if not res and self._exit_on_sending_failure:
                 logger.warn('Signal self to exit.')
                 _signal_exit()
                 break

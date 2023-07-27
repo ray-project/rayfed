@@ -20,61 +20,6 @@ import fed
 import fed._private.compatible_utils as compatible_utils
 
 
-@fed.remote
-def f():
-    return 100
-
-
-@fed.remote
-class My:
-    def __init__(self, value) -> None:
-        self._value = value
-
-    def get_value(self):
-        return self._value
-
-
-def run(party, is_inner_party):
-    compatible_utils.init_ray(address='local')
-    addresses = {
-        'alice': '127.0.0.1:11012',
-        'bob': '127.0.0.1:11011',
-    }
-    listening_address = '0.0.0.0:11012' if party == 'alice' else '0.0.0.0:11011'
-    fed.init(
-        addresses=addresses,
-        party=party,
-        config={
-            'cross_silo_message': {
-                'listening_address': listening_address
-            }
-        },
-    )
-
-    o = f.party("alice").remote()
-    actor_location = "alice" if is_inner_party else "bob"
-    my = My.party(actor_location).remote(o)
-    val = my.get_value.remote()
-    result = fed.get(val)
-    assert result == 100
-    assert fed.get(o) == 100
-    import time
-
-    time.sleep(5)
-    fed.shutdown()
-    ray.shutdown()
-
-
-def test_listening_address():
-    p_alice = multiprocessing.Process(target=run, args=('alice', True))
-    p_bob = multiprocessing.Process(target=run, args=('bob', True))
-    p_alice.start()
-    p_bob.start()
-    p_alice.join()
-    p_bob.join()
-    assert p_alice.exitcode == 0 and p_bob.exitcode == 0
-
-
 def _run(party):
     import socket
 
@@ -92,22 +37,15 @@ def _run(party):
         s.bind(("127.0.0.1", occupied_port))
 
     addresses = {
-        'alice': '127.0.0.1:11012',
+        'alice': f'127.0.0.1:{occupied_port}',
         'bob': '127.0.0.1:11011',
     }
-    listening_address = f'0.0.0.0:{occupied_port}' \
-        if party == 'alice' else '0.0.0.0:11011'
 
     # Starting grpc server on an used port will cause AssertionError
     with pytest.raises(AssertionError):
         fed.init(
             addresses=addresses,
             party=party,
-            config={
-                'cross_silo_message': {
-                    'listening_address': listening_address
-                }
-            },
         )
 
     import time
