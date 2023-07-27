@@ -213,7 +213,7 @@ def _start_receiver_proxy(
         if proxy_config.recv_resource_label is not None:
             actor_options.update({"resources": proxy_config.recv_resource_label})
         if proxy_config.max_concurrency:
-            actor_options.update("max_concurrency", proxy_config.max_concurrency)
+            actor_options.update({"max_concurrency", proxy_config.max_concurrency})
 
     logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
 
@@ -264,7 +264,7 @@ def _start_sender_proxy(
         if proxy_config.send_resource_label:
             actor_options.update({"resources": proxy_config.send_resource_label})
         if proxy_config.max_concurrency:
-            actor_options.update("max_concurrency", proxy_config.max_concurrency)
+            actor_options.update({"max_concurrency", proxy_config.max_concurrency})
 
     logger.debug(f"Starting SenderProxyActor with options: {actor_options}")
     global _SENDER_PROXY_ACTOR
@@ -385,7 +385,7 @@ def _start_sender_receiver_proxy(
                 }
             )
         if proxy_config.max_concurrency:
-            actor_options.update("max_concurrency", proxy_config.max_concurrency)
+            actor_options.update({"max_concurrency", proxy_config.max_concurrency})
 
     logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
 
