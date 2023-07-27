@@ -24,7 +24,9 @@ from typing import Dict
 
 import fed.utils as fed_utils
 
-from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
+from fed.config import CrossSiloMessageConfig
+from fed.extenal.grpc_config import GrpcCrossSiloMessageConfig
+
 import fed._private.compatible_utils as compatible_utils
 from fed.proxy.grpc.grpc_options import _DEFAULT_GRPC_CHANNEL_OPTIONS, _GRPC_SERVICE
 from fed.proxy.barriers import (
@@ -61,25 +63,24 @@ def parse_grpc_options(proxy_config: CrossSiloMessageConfig):
         dict: A dictionary containing the gRPC channel options.
     """
     grpc_channel_options = {}
-    if proxy_config is not None and isinstance(
-            proxy_config, GrpcCrossSiloMessageConfig):
-        if isinstance(proxy_config, GrpcCrossSiloMessageConfig):
-            if proxy_config.grpc_channel_options is not None:
-                grpc_channel_options.update(proxy_config.grpc_channel_options)
-            if proxy_config.grpc_retry_policy is not None:
-                grpc_channel_options.update({
-                    'grpc.service_config':
-                    json.dumps(
+    assert proxy_config is not None
+    grpc_proxy_config = GrpcCrossSiloMessageConfig.from_dict(proxy_config.external_config)
+    if grpc_proxy_config.grpc_channel_options is not None:
+        grpc_channel_options.update(grpc_proxy_config.grpc_channel_options)
+    if grpc_proxy_config.grpc_retry_policy is not None:
+        grpc_channel_options.update({
+            'grpc.service_config':
+            json.dumps(
+                {
+                    'methodConfig': [
                         {
-                            'methodConfig': [
-                                {
-                                    'name': [{'service': _GRPC_SERVICE}],
-                                    'retryPolicy': proxy_config.grpc_retry_policy,
-                                }
-                            ]
+                            'name': [{'service': _GRPC_SERVICE}],
+                            'retryPolicy': grpc_proxy_config.grpc_retry_policy,
                         }
-                    ),
-                })
+                    ]
+                }
+            ),
+        })
 
     return grpc_channel_options
 

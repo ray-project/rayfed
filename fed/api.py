@@ -35,7 +35,7 @@ from fed.proxy.barriers import (
     _start_sender_proxy,
 )
 from fed.proxy.grpc.grpc_proxy import SenderProxy, ReceiverProxy
-from fed.config import GrpcCrossSiloMessageConfig
+from fed.config import CrossSiloMessageConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -113,7 +113,7 @@ def init(
         ), 'Cert or key are not in tls_config.'
 
     cross_silo_message_dict = config.get("cross_silo_message", {})
-    cross_silo_message_config = GrpcCrossSiloMessageConfig.from_dict(
+    cross_silo_message_config = CrossSiloMessageConfig.from_dict(
         cross_silo_message_dict)
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv()
