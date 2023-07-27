@@ -165,8 +165,10 @@ def init(
     else:
         if receiver_proxy_cls is None:
             logger.debug(
-                "There is no receiver proxy class specified, it uses `GrpcRecvProxy` by "
-                "default."
+                (
+                    "There is no receiver proxy class specified, "
+                    "it uses `GrpcRecvProxy` by default."
+                )
             )
             from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
 
