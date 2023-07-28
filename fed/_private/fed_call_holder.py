@@ -46,7 +46,8 @@ class FedCallHolder:
         submit_ray_task_func,
         options={},
     ) -> None:
-        self._party = fed_config.get_cluster_config().current_party
+        job_id = get_global_context().job_id()
+        self._party = fed_config.get_cluster_config(job_id).current_party
         self._node_party = node_party
         self._options = options
         self._submit_ray_task_func = submit_ray_task_func
