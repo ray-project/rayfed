@@ -286,7 +286,7 @@ def _start_sender_proxy(
 
 _SENDER_RECEIVER_PROXY_ACTOR = None
 _DEFAULT_SENDER_RECEIVER_PROXY_OPTIONS = {
-    "max_concurrency": 100,
+    "max_concurrency": 1,
 }
 
 
