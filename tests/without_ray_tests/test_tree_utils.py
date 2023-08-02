@@ -21,7 +21,7 @@ import fed.tree_util as tree_utils
 
 def test_flatten_none():
     li, tree_def = tree_utils.tree_flatten(None)
-    assert type(li) == list
+    assert isinstance(li, list)
     assert len(li) == 1
     res = tree_utils.tree_unflatten(li, tree_def)
     assert res is None
@@ -31,7 +31,7 @@ def test_flatten_single_primivite_elements():
 
     def _assert_flatten_single_element(target: Any):
         li, tree_def = tree_utils.tree_flatten(target)
-        assert type(li) == list
+        assert isinstance(li, list)
         assert len(li) == 1
         res = tree_utils.tree_unflatten(li, tree_def)
         assert res == target
@@ -46,7 +46,7 @@ def test_flatten_single_simple_containers():
     def _assert_flatten_single_simple_container(target: Union[List, Tuple, Dict]):
         container_len = len(target)
         li, tree_def = tree_utils.tree_flatten(target)
-        assert type(li) == list
+        assert isinstance(li, list)
         assert len(li) == container_len
         res = tree_utils.tree_unflatten(li, tree_def)
         assert res == target
