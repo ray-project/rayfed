@@ -37,8 +37,8 @@ if compatible_utils._compare_version_strings(
     from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
     from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
 else:
-    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
-    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
+    from fed.grpc import fed_pb2 as fed_pb2
+    from fed.grpc import fed_pb2_grpc as fed_pb2_grpc
 
 
 def test_n_to_1_transport():
