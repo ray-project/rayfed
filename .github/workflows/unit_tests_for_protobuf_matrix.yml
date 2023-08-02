@@ -1,4 +1,4 @@
-name: test for protobuf3
+name: test for protobuf
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  run-unit-tests-on-for-protobuf3:
+  run-unit-tests-on-for-protobuf:
     strategy:
         matrix:
           protobuf_ver: [3.19, 3.20, 4.21]
