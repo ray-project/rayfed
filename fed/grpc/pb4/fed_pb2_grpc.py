@@ -16,7 +16,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import fed.grpc.fed_pb2 as fed__pb2
+import fed.grpc.pb4.fed_pb2 as fed__4__pb2
 
 
 class GrpcServiceStub(object):
@@ -30,8 +30,8 @@ class GrpcServiceStub(object):
         """
         self.SendData = channel.unary_unary(
                 '/GrpcService/SendData',
-                request_serializer=fed__pb2.SendDataRequest.SerializeToString,
-                response_deserializer=fed__pb2.SendDataResponse.FromString,
+                request_serializer=fed__4__pb2.SendDataRequest.SerializeToString,
+                response_deserializer=fed__4__pb2.SendDataResponse.FromString,
                 )
 
 
@@ -49,8 +49,8 @@ def add_GrpcServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'SendData': grpc.unary_unary_rpc_method_handler(
                     servicer.SendData,
-                    request_deserializer=fed__pb2.SendDataRequest.FromString,
-                    response_serializer=fed__pb2.SendDataResponse.SerializeToString,
+                    request_deserializer=fed__4__pb2.SendDataRequest.FromString,
+                    response_serializer=fed__4__pb2.SendDataResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -74,7 +74,7 @@ class GrpcService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/GrpcService/SendData',
-            fed__pb2.SendDataRequest.SerializeToString,
-            fed__pb2.SendDataResponse.FromString,
+            fed__4__pb2.SendDataRequest.SerializeToString,
+            fed__4__pb2.SendDataResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

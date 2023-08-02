@@ -36,11 +36,11 @@ from fed.proxy.barriers import (
 from fed.proxy.base_proxy import SenderProxy, ReceiverProxy
 if compatible_utils._compare_version_strings(
         fed_utils.get_package_version('protobuf'), '4.0.0'):
-    from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
-    from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
+    from fed.grpc.pb4 import fed_pb2 as fed_pb2
+    from fed.grpc.pb4 import fed_pb2_grpc as fed_pb2_grpc
 else:
-    from fed.grpc import fed_pb2 as fed_pb2
-    from fed.grpc import fed_pb2_grpc as fed_pb2_grpc
+    from fed.grpc.pb3 import fed_pb2 as fed_pb2
+    from fed.grpc.pb3 import fed_pb2_grpc as fed_pb2_grpc
 
 
 logger = logging.getLogger(__name__)

@@ -2,8 +2,6 @@
 exclude =
   fed_pb2_grpc.py
   fed_pb2.py
-  fed_pb2_grpc_in_protobuf4.py
-  fed_pb2_in_protobuf4.py
   build
   py3
 max-line-length = 88
