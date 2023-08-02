@@ -1,4 +1,4 @@
-name: test for protobuf4
+name: test for protobuf3
 
 on:
   push:
