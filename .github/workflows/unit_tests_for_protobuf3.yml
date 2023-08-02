@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  run-unit-tests-on-for-protobuf4:
+  run-unit-tests-on-for-protobuf3:
     strategy:
         protobuf_ver: [3.19, 3.20]
 
