@@ -10,7 +10,7 @@ jobs:
   run-unit-tests-on-for-protobuf:
     strategy:
         matrix:
-          protobuf_ver: ["3.19", "3.20", "4.21"]
+          protobuf_ver: ["3.19", "3.20", "4.23"]
 
     timeout-minutes: 60
     runs-on: ubuntu-latest
