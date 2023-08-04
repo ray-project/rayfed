@@ -32,13 +32,12 @@ from fed.proxy.barriers import (
 from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy, GrpcSenderProxy
 
 if compatible_utils._compare_version_strings(
-    fed_utils.get_package_version('protobuf'), '4.0.0'
-):
-    from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
-    from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
+        fed_utils.get_package_version('protobuf'), '4.0.0'):
+    from fed.grpc.pb4 import fed_pb2 as fed_pb2
+    from fed.grpc.pb4 import fed_pb2_grpc as fed_pb2_grpc
 else:
-    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
-    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
+    from fed.grpc.pb3 import fed_pb2 as fed_pb2
+    from fed.grpc.pb3 import fed_pb2_grpc as fed_pb2_grpc
 
 
 def test_n_to_1_transport():
