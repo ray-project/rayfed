@@ -15,9 +15,11 @@
 import multiprocessing
 
 import pytest
-import fed
 import ray
+
+import fed
 import fed._private.compatible_utils as compatible_utils
+from fed.proxy.barriers import receiver_proxy_actor_name, sender_proxy_actor_name
 
 
 @fed.remote
@@ -48,11 +50,11 @@ def run(party):
     assert c == "hello2"
 
     if party == "bob":
-        proxy_actor = ray.get_actor(f"ReceiverProxyActor-{party}")
+        proxy_actor = ray.get_actor(receiver_proxy_actor_name())
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["receive_op_count"] == 1
     if party == "alice":
-        proxy_actor = ray.get_actor("SenderProxyActor")
+        proxy_actor = ray.get_actor(sender_proxy_actor_name())
         stats = ray.get(proxy_actor._get_stats.remote())
         assert stats["send_op_count"] == 1
     fed.shutdown()

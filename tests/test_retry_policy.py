@@ -51,7 +51,7 @@ def run(party, is_inner_party):
     fed.init(
         addresses=addresses,
         party=party,
-        config={'cross_silo_message': {
+        config={'cross_silo_comm': {
             'grpc_retry_policy': retry_policy,
         }},
     )
