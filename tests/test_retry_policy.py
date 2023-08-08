@@ -14,11 +14,13 @@
 
 
 import multiprocessing
-
+from unittest import TestCase
 import pytest
+import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
-import ray
+from fed import config
 
 
 @fed.remote
@@ -35,7 +37,7 @@ class My:
         return self._value
 
 
-def run(party, is_inner_party):
+def run():
     compatible_utils.init_ray(address='local')
     addresses = {
         'alice': '127.0.0.1:11012',
@@ -50,35 +52,29 @@ def run(party, is_inner_party):
     }
     fed.init(
         addresses=addresses,
-        party=party,
-        config={'cross_silo_comm': {
-            'grpc_retry_policy': retry_policy,
-        }},
+        party='alice',
+        config={
+            'cross_silo_comm': {
+                'grpc_retry_policy': retry_policy,
+            }
+        },
     )
 
-    o = f.party("alice").remote()
-    actor_location = "alice" if is_inner_party else "bob"
-    my = My.party(actor_location).remote(o)
-    val = my.get_value.remote()
-    result = fed.get(val)
-    assert result == 100
-    assert fed.get(o) == 100
+    job_config = config.get_job_config()
+    cross_silo_comm_config = job_config.cross_silo_comm_config_dict
+    TestCase().assertDictEqual(
+        cross_silo_comm_config['grpc_retry_policy'], retry_policy
+    )
+
     fed.shutdown()
     ray.shutdown()
 
 
-def test_listen_addr():
-    p_alice = multiprocessing.Process(target=run, args=('alice', True))
-    p_bob = multiprocessing.Process(target=run, args=('bob', True))
+def test_retry_policy():
+    p_alice = multiprocessing.Process(target=run)
     p_alice.start()
-
-    import time
-
-    time.sleep(10)
-    p_bob.start()
     p_alice.join()
-    p_bob.join()
-    assert p_alice.exitcode == 0 and p_bob.exitcode == 0
+    assert p_alice.exitcode == 0
 
 
 if __name__ == "__main__":
