@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tfed.proto\"c\n\x0fSendDataRequest\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\x12\x17\n\x0fupstream_seq_id\x18\x02 \x01(\t\x12\x19\n\x11\x64ownstream_seq_id\x18\x03 \x01(\t\x12\x0e\n\x06job_id\x18\x04 \x01(\t\"\"\n\x10SendDataResponse\x12\x0e\n\x06result\x18\x01 \x01(\t2@\n\x0bGrpcService\x12\x31\n\x08SendData\x12\x10.SendDataRequest\x1a\x11.SendDataResponse\"\x00\x42\x03\x80\x01\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\tfed.proto\"e\n\x0fSendDataRequest\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\x12\x17\n\x0fupstream_seq_id\x18\x02 \x01(\t\x12\x19\n\x11\x64ownstream_seq_id\x18\x03 \x01(\t\x12\x10\n\x08job_name\x18\x04 \x01(\t\"\"\n\x10SendDataResponse\x12\x0e\n\x06result\x18\x01 \x01(\t2@\n\x0bGrpcService\x12\x31\n\x08SendData\x12\x10.SendDataRequest\x1a\x11.SendDataResponse\"\x00\x42\x03\x80\x01\x01\x62\x06proto3')
 
 
 
@@ -40,9 +40,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   DESCRIPTOR._serialized_options = b'\200\001\001'
   _SENDDATAREQUEST._serialized_start=13
-  _SENDDATAREQUEST._serialized_end=112
-  _SENDDATARESPONSE._serialized_start=114
-  _SENDDATARESPONSE._serialized_end=148
-  _GRPCSERVICE._serialized_start=150
-  _GRPCSERVICE._serialized_end=214
+  _SENDDATAREQUEST._serialized_end=114
+  _SENDDATARESPONSE._serialized_start=116
+  _SENDDATARESPONSE._serialized_end=150
+  _GRPCSERVICE._serialized_start=152
+  _GRPCSERVICE._serialized_end=216
 # @@protoc_insertion_point(module_scope)

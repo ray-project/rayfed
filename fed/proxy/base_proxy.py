@@ -23,7 +23,7 @@ class SenderProxy(abc.ABC):
         self,
         addresses: Dict,
         party: str,
-        job_id: str,
+        job_name: str,
         tls_config: Dict,
         proxy_config: CrossSiloMessageConfig = None,
     ) -> None:
@@ -31,7 +31,7 @@ class SenderProxy(abc.ABC):
         self._party = party
         self._tls_config = tls_config
         self._proxy_config = proxy_config
-        self._job_id = job_id
+        self._job_name = job_name
 
     @abc.abstractmethod
     async def send(self, dest_party, data, upstream_seq_id, downstream_seq_id):
@@ -49,7 +49,7 @@ class ReceiverProxy(abc.ABC):
         self,
         listen_addr: str,
         party: str,
-        job_id: str,
+        job_name: str,
         tls_config: Dict,
         proxy_config: CrossSiloMessageConfig = None
     ) -> None:
@@ -57,7 +57,7 @@ class ReceiverProxy(abc.ABC):
         self._party = party
         self._tls_config = tls_config
         self._proxy_config = proxy_config
-        self._job_id = job_id
+        self._job_name = job_name
 
     @abc.abstractmethod
     def start(self):

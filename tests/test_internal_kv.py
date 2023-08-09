@@ -13,7 +13,7 @@ def run(party):
         'bob': '127.0.0.1:11011',
     }
     assert compatible_utils.kv is None
-    fed.init(addresses=addresses, party=party, job_id="test_job_id")
+    fed.init(addresses=addresses, party=party, job_name="test_job_name")
     assert compatible_utils.kv
     assert not compatible_utils.kv.put(b"test_key", b"test_val")
     assert compatible_utils.kv.get(b"test_key") == b"test_val"
@@ -21,7 +21,7 @@ def run(party):
     # Test that a prefix key name is added under the hood.
     assert ray_internal_kv._internal_kv_get(b"test_key") is None
     assert ray_internal_kv._internal_kv_get(
-        b"RAYFED#test_job_id#test_key") == b"test_val"
+        b"RAYFED#test_job_name#test_key") == b"test_val"
 
     time.sleep(5)
     fed.shutdown()
