@@ -92,6 +92,7 @@ class SenderProxyActor:
             logging_format=constants.RAYFED_LOG_FMT,
             date_format=constants.RAYFED_DATE_FMT,
             party_val=party,
+            job_name=job_name,
         )
 
         self._stats = {"send_op_count": 0}
@@ -163,6 +164,7 @@ class ReceiverProxyActor:
             logging_format=constants.RAYFED_LOG_FMT,
             date_format=constants.RAYFED_DATE_FMT,
             party_val=party,
+            job_name=job_name,
         )
         self._stats = {"receive_op_count": 0}
         self._listening_address = listening_address
@@ -303,6 +305,7 @@ class SenderReceiverProxyActor:
         self,
         addresses: Dict,
         party: str,
+        job_name: str,
         tls_config: Dict = None,
         logging_level: str = None,
         proxy_cls: SenderReceiverProxy = None,
@@ -312,6 +315,7 @@ class SenderReceiverProxyActor:
             logging_format=constants.RAYFED_LOG_FMT,
             date_format=constants.RAYFED_DATE_FMT,
             party_val=party,
+            job_name=job_name,
         )
 
         self._stats = {'send_op_count': 0, 'receive_op_count': 0}
@@ -396,6 +400,7 @@ def _start_sender_receiver_proxy(
 
     logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
 
+    job_name = get_global_context().job_name()
     global _SENDER_RECEIVER_PROXY_ACTOR
     global _RECEIVER_PROXY_ACTOR_NAME
     _SENDER_RECEIVER_PROXY_ACTOR = SenderReceiverProxyActor.options(
@@ -403,6 +408,7 @@ def _start_sender_receiver_proxy(
     ).remote(
         addresses=addresses,
         party=party,
+        job_name=job_name,
         tls_config=tls_config,
         logging_level=logging_level,
         proxy_cls=proxy_cls,

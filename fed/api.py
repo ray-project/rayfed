@@ -151,6 +151,7 @@ def init(
         logging_format=constants.RAYFED_LOG_FMT,
         date_format=constants.RAYFED_DATE_FMT,
         party_val=_get_party(job_name),
+        job_name=job_name
     )
 
     logger.info(f'Started rayfed with {cluster_config}')

@@ -27,7 +27,7 @@ KEY_OF_TLS_CONFIG = "TLS_CONFIG"
 
 KEY_OF_CROSS_SILO_COMM_CONFIG_DICT = "CROSS_SILO_COMM_CONFIG_DICT"
 
-RAYFED_LOG_FMT = "%(asctime)s %(levelname)s %(filename)s:%(lineno)s [%(party)s] --  %(message)s" # noqa
+RAYFED_LOG_FMT = "%(asctime)s %(levelname)s %(filename)s:%(lineno)s [%(party)s] -- [%(jobname)s] %(message)s" # noqa
 
 RAYFED_DATE_FMT = "%Y-%m-%d %H:%M:%S"
 
