@@ -35,11 +35,11 @@ from fed.proxy.barriers import (
 from fed.proxy.base_proxy import SenderProxy, ReceiverProxy
 if compatible_utils._compare_version_strings(
         fed_utils.get_package_version('protobuf'), '4.0.0'):
-    from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
-    from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
+    from fed.grpc.pb4 import fed_pb2 as fed_pb2
+    from fed.grpc.pb4 import fed_pb2_grpc as fed_pb2_grpc
 else:
-    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
-    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
+    from fed.grpc.pb3 import fed_pb2 as fed_pb2
+    from fed.grpc.pb3 import fed_pb2_grpc as fed_pb2_grpc
 
 
 logger = logging.getLogger(__name__)
@@ -90,8 +90,9 @@ class GrpcSenderProxy(SenderProxy):
             party: str,
             job_id: str,
             tls_config: Dict,
-            proxy_config: CrossSiloMessageConfig = None
+            proxy_config: Dict = None
     ) -> None:
+        proxy_config = GrpcCrossSiloMessageConfig.from_dict(proxy_config)
         super().__init__(cluster, party, job_id, tls_config, proxy_config)
         self._grpc_metadata = proxy_config.http_header or {}
         self._grpc_options = copy.deepcopy(_DEFAULT_GRPC_CHANNEL_OPTIONS)
@@ -203,8 +204,9 @@ class GrpcReceiverProxy(ReceiverProxy):
             party: str,
             job_id: str,
             tls_config: Dict,
-            proxy_config: CrossSiloMessageConfig
+            proxy_config: Dict
     ) -> None:
+        proxy_config = GrpcCrossSiloMessageConfig.from_dict(proxy_config)
         super().__init__(listen_addr, party, job_id, tls_config, proxy_config)
         self._grpc_options = copy.deepcopy(_DEFAULT_GRPC_CHANNEL_OPTIONS)
         self._grpc_options.update(parse_grpc_options(self._proxy_config))
@@ -320,7 +322,7 @@ async def _run_grpc_server(
     port, event, all_data, party, lock, job_id,
     server_ready_future, tls_config=None, grpc_options=None
 ):
-    print(f"ReceiveProxy binding port {port}, options: {grpc_options}...")
+    logger.info(f"ReceiveProxy binding port {port}, options: {grpc_options}...")
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
         SendDataService(event, all_data, party, lock, job_id), server

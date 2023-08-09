@@ -67,9 +67,10 @@ def run(party):
         party=party,
         logging_level='debug',
         config={
-            'cross_silo_message': {
+            'cross_silo_comm': {
                 'grpc_retry_policy': retry_policy,
                 'exit_on_sending_failure': True,
+                'timeout_ms': 20 * 1000,
             },
         },
     )

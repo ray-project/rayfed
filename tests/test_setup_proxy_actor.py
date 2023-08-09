@@ -16,9 +16,11 @@
 import multiprocessing
 
 import pytest
+import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
-import ray
+from fed.proxy.barriers import receiver_proxy_actor_name, sender_proxy_actor_name
 
 
 def run(party):
@@ -32,8 +34,8 @@ def run(party):
         party=party,
     )
 
-    assert ray.get_actor("SenderProxyActor") is not None
-    assert ray.get_actor(f"ReceiverProxyActor-{party}") is not None
+    assert ray.get_actor(sender_proxy_actor_name()) is not None
+    assert ray.get_actor(receiver_proxy_actor_name()) is not None
 
     fed.shutdown()
     ray.shutdown()
@@ -45,23 +47,19 @@ def run_failure(party):
         'alice': '127.0.0.1:11010',
         'bob': '127.0.0.1:11011',
     }
-    sender_proxy_resources = {
-        "127.0.0.2": 1  # Insufficient resource
-    }
-    receiver_proxy_resources = {
-        "127.0.0.2": 1  # Insufficient resource
-    }
+    sender_proxy_resources = {"127.0.0.2": 1}  # Insufficient resource
+    receiver_proxy_resources = {"127.0.0.2": 1}  # Insufficient resource
     with pytest.raises(ray.exceptions.GetTimeoutError):
         fed.init(
             addresses=addresses,
             party=party,
             config={
-                'cross_silo_message': {
+                'cross_silo_comm': {
                     'send_resource_label': sender_proxy_resources,
                     'recv_resource_label': receiver_proxy_resources,
-                    'timeout_in_ms': 10*1000,
+                    'timeout_in_ms': 10 * 1000,
                 }
-            }
+            },
         )
 
     fed.shutdown()

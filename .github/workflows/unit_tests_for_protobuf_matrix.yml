@@ -1,4 +1,4 @@
-name: test for protobuf4
+name: test for protobuf
 
 on:
   push:
@@ -7,7 +7,10 @@ on:
     branches: [ main ]
 
 jobs:
-  run-unit-tests-on-for-protobuf4:
+  run-unit-tests-on-for-protobuf:
+    strategy:
+        matrix:
+          protobuf_ver: ["3.19", "3.20", "4.23"]
 
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -29,7 +32,7 @@ jobs:
             . py3/bin/activate
             which python
             pip install pytest torch cloudpickle cryptography
-            pip install "protobuf>=4.0"
+            pip install protobuf==${{ matrix.protobuf_ver }}
             pip install ray==2.4.0
 
     - name: Build and test

@@ -13,29 +13,31 @@
 # limitations under the License.
 
 import asyncio
+
 import cloudpickle
+import grpc
 import pytest
 import ray
-import grpc
 
-import fed.utils as fed_utils
 import fed._private.compatible_utils as compatible_utils
+import fed.utils as fed_utils
+from fed._private import constants, global_context
 from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
-from fed._private import constants
-from fed._private import global_context
 from fed.proxy.barriers import (
-    send,
     _start_receiver_proxy,
-    _start_sender_proxy
+    _start_sender_proxy,
+    receiver_proxy_actor_name,
+    send,
 )
-from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy, GrpcReceiverProxy
+from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy, GrpcSenderProxy
+
 if compatible_utils._compare_version_strings(
         fed_utils.get_package_version('protobuf'), '4.0.0'):
-    from fed.grpc import fed_pb2_in_protobuf4 as fed_pb2
-    from fed.grpc import fed_pb2_grpc_in_protobuf4 as fed_pb2_grpc
+    from fed.grpc.pb4 import fed_pb2 as fed_pb2
+    from fed.grpc.pb4 import fed_pb2_grpc as fed_pb2_grpc
 else:
-    from fed.grpc import fed_pb2_in_protobuf3 as fed_pb2
-    from fed.grpc import fed_pb2_grpc_in_protobuf3 as fed_pb2_grpc
+    from fed.grpc.pb3 import fed_pb2 as fed_pb2
+    from fed.grpc.pb3 import fed_pb2_grpc as fed_pb2_grpc
 
 
 def test_n_to_1_transport():
@@ -52,32 +54,32 @@ def test_n_to_1_transport():
         constants.KEY_OF_TLS_CONFIG: "",
     }
     compatible_utils._init_internal_kv()
-    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
-                            cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(
+        constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
+    )
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
     party = 'test_party'
     addresses = {'test_party': SERVER_ADDRESS}
-    config = GrpcCrossSiloMessageConfig()
     _start_receiver_proxy(
         addresses,
         party,
         logging_level='info',
         proxy_cls=GrpcReceiverProxy,
-        proxy_config=config
+        proxy_config={},
     )
     _start_sender_proxy(
         addresses,
         party,
         logging_level='info',
         proxy_cls=GrpcSenderProxy,
-        proxy_config=config
+        proxy_config={},
     )
 
     sent_objs = []
     get_objs = []
-    receiver_proxy_actor = ray.get_actor(f"ReceiverProxyActor-{party}")
+    receiver_proxy_actor = ray.get_actor(receiver_proxy_actor_name())
     for i in range(NUM_DATA):
         sent_obj = send(party, f"data-{i}", i, i + 1)
         sent_objs.append(sent_obj)
@@ -109,8 +111,13 @@ class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
 
 
 async def _test_run_grpc_server(
-    port, event, all_data, party, lock, tls_config=None, grpc_options=None,
-    expected_metadata=None
+    port,
+    event,
+    all_data,
+    party,
+    lock,
+    grpc_options=None,
+    expected_metadata=None,
 ):
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
@@ -149,25 +156,15 @@ class TestReceiverProxyActor:
 
 def _test_start_receiver_proxy(
     addresses: str,
-    config: dict,
     party: str,
-    logging_level: str,
     expected_metadata: dict,
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
     address = addresses[party]
-    listening_address = config['cross_silo_message'].get('listening_address', None)
-    if not listening_address:
-        listening_address = address
-
     receiver_proxy_actor = TestReceiverProxyActor.options(
-        name=f"ReceiverProxyActor-{party}", max_concurrency=1000
-    ).remote(
-        listen_addr=listening_address,
-        party=party,
-        expected_metadata=expected_metadata
-    )
+        name=receiver_proxy_actor_name(), max_concurrency=1000
+    ).remote(listen_addr=address, party=party, expected_metadata=expected_metadata)
     receiver_proxy_actor.run_grpc_server.remote()
     assert ray.get(receiver_proxy_actor.is_ready.remote())
 
@@ -180,18 +177,15 @@ def test_send_grpc_with_meta():
         constants.KEY_OF_TLS_CONFIG: "",
     }
     metadata = {"key": "value"}
-    sender_proxy_config = CrossSiloMessageConfig(
-        http_header=metadata
-    )
+    config = {'http_header': metadata}
     job_config = {
-        constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG:
-            sender_proxy_config,
+        constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: config,
     }
     compatible_utils._init_internal_kv()
-    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
-                            cloudpickle.dumps(cluster_config))
-    compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG,
-                            cloudpickle.dumps(job_config))
+    compatible_utils.kv.put(
+        constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
+    )
+    compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
     global_context.get_global_context().get_cleanup_manager().start()
 
     SERVER_ADDRESS = "127.0.0.1:12344"
@@ -199,9 +193,7 @@ def test_send_grpc_with_meta():
     addresses = {party_name: SERVER_ADDRESS}
     _test_start_receiver_proxy(
         addresses,
-        {'cross_silo_message': {}},
         party_name,
-        logging_level='info',
         expected_metadata=metadata,
     )
     _start_sender_proxy(
@@ -209,7 +201,8 @@ def test_send_grpc_with_meta():
         party_name,
         logging_level='info',
         proxy_cls=GrpcSenderProxy,
-        proxy_config=GrpcCrossSiloMessageConfig())
+        proxy_config={},
+    )
     sent_objs = []
     sent_obj = send(party_name, "data", 0, 1)
     sent_objs.append(sent_obj)

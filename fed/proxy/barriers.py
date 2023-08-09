@@ -12,21 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import logging
 import time
-import copy
-from typing import Dict, Optional
+from typing import Dict
 
 import ray
 
 import fed.config as fed_config
-from fed.config import get_job_config
-from fed.proxy.base_proxy import SenderProxy, ReceiverProxy
-from fed.utils import setup_logger
 from fed._private import constants
 from fed._private.global_context import get_global_context
+from fed.proxy.base_proxy import ReceiverProxy, SenderProxy, SenderReceiverProxy
+from fed.utils import setup_logger
 
 logger = logging.getLogger(__name__)
+
+_SENDER_PROXY_ACTOR_NAME = 'SenderProxyActor'
+_RECEIVER_PROXY_ACTOR_NAME = 'ReceiverProxyActor'
+
+
+def sender_proxy_actor_name() -> str:
+    global _SENDER_PROXY_ACTOR_NAME
+    return _SENDER_PROXY_ACTOR_NAME
+
+
+def set_sender_proxy_actor_name(name: str):
+    global _SENDER_PROXY_ACTOR_NAME
+    _SENDER_PROXY_ACTOR_NAME = name
+
+
+def receiver_proxy_actor_name() -> str:
+    global _RECEIVER_PROXY_ACTOR_NAME
+    return _RECEIVER_PROXY_ACTOR_NAME
+
+
+def set_receiver_proxy_actor_name(name: str):
+    global _RECEIVER_PROXY_ACTOR_NAME
+    _RECEIVER_PROXY_ACTOR_NAME = name
 
 
 def key_exists_in_two_dim_dict(the_dict, key_a, key_b) -> bool:
@@ -63,7 +85,7 @@ class SenderProxyActor:
         job_id: str,
         tls_config: Dict = None,
         logging_level: str = None,
-        proxy_cls=None
+        proxy_cls=None,
     ):
         setup_logger(
             logging_level=logging_level,
@@ -78,9 +100,9 @@ class SenderProxyActor:
         self._job_id = job_id
         self._tls_config = tls_config
         job_config = fed_config.get_job_config(job_id)
-        cross_silo_message_config = job_config.cross_silo_message_config
+        cross_silo_comm_config = job_config.cross_silo_comm_config_dict
         self._proxy_instance: SenderProxy = proxy_cls(
-            addresses, party, job_id, tls_config, cross_silo_message_config)
+            addresses, party, job_id, tls_config, cross_silo_comm_config)
 
     async def is_ready(self):
         res = await self._proxy_instance.is_ready()
@@ -107,7 +129,8 @@ class SenderProxyActor:
         )
         try:
             response = await self._proxy_instance.send(
-                dest_party, data, upstream_seq_id, downstream_seq_id)
+                dest_party, data, upstream_seq_id, downstream_seq_id
+            )
         except Exception as e:
             logger.error(f'Failed to {send_log_msg}, error: {e}')
             return False
@@ -147,9 +170,9 @@ class ReceiverProxyActor:
         self._job_id = job_id
         self._tls_config = tls_config
         job_config = fed_config.get_job_config(job_id)
-        cross_silo_message_config = job_config.cross_silo_message_config
+        cross_silo_comm_config = job_config.cross_silo_comm_config_dict
         self._proxy_instance: ReceiverProxy = proxy_cls(
-            listening_address, party, job_id, tls_config, cross_silo_message_config)
+            listening_address, party, job_id, tls_config, cross_silo_comm_config)
 
     async def start(self):
         await self._proxy_instance.start()
@@ -161,7 +184,8 @@ class ReceiverProxyActor:
     async def get_data(self, src_party, upstream_seq_id, curr_seq_id):
         self._stats["receive_op_count"] += 1
         data = await self._proxy_instance.get_data(
-            src_party, upstream_seq_id, curr_seq_id)
+            src_party, upstream_seq_id, curr_seq_id
+        )
         return data
 
     async def _get_stats(self):
@@ -182,36 +206,34 @@ def _start_receiver_proxy(
     logging_level: str,
     tls_config=None,
     proxy_cls=None,
-    proxy_config: Optional[fed_config.CrossSiloMessageConfig] = None
+    proxy_config: Dict = None,
+    ready_timeout_second: int = 60,
 ):
-
-    # Create RecevrProxyActor
-    # Not that this is now a threaded actor.
-    # NOTE(NKcqx): This is not just addr, but a party dict containing 'address'
-    party_addr = addresses[party]
-    listening_address = proxy_config.listening_address
-    if not listening_address:
-        listening_address = party_addr
-
     actor_options = copy.deepcopy(_DEFAULT_RECEIVER_PROXY_OPTIONS)
-    if proxy_config is not None and proxy_config.recv_resource_label is not None:
-        actor_options.update({"resources": proxy_config.recv_resource_label})
+    if proxy_config:
+        proxy_config = fed_config.CrossSiloMessageConfig.from_dict(proxy_config)
+        if proxy_config.recv_resource_label is not None:
+            actor_options.update({"resources": proxy_config.recv_resource_label})
+        if proxy_config.max_concurrency:
+            actor_options.update({"max_concurrency": proxy_config.max_concurrency})
 
     logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
 
+    global _RECEIVER_PROXY_ACTOR_NAME
     receiver_proxy_actor = ReceiverProxyActor.options(
-        name=f"ReceiverProxyActor-{party}", **actor_options
+        name=_RECEIVER_PROXY_ACTOR_NAME, **actor_options
     ).remote(
-        listening_address=listening_address,
+        listening_address=addresses[party],
         party=party,
         job_id=get_global_context().job_id(),
         tls_config=tls_config,
         logging_level=logging_level,
-        proxy_cls=proxy_cls
+        proxy_cls=proxy_cls,
     )
     receiver_proxy_actor.start.remote()
-    timeout = proxy_config.timeout_in_ms / 1000 if proxy_config is not None else 60
-    server_state = ray.get(receiver_proxy_actor.is_ready.remote(), timeout=timeout)
+    server_state = ray.get(
+        receiver_proxy_actor.is_ready.remote(), timeout=ready_timeout_second
+    )
     assert server_state[0], server_state[1]
     logger.info("Succeeded to create receiver proxy actor.")
 
@@ -228,23 +250,31 @@ def _start_sender_proxy(
     logging_level: str,
     tls_config: Dict = None,
     proxy_cls=None,
-    proxy_config: Optional[fed_config.CrossSiloMessageConfig] = None
+    proxy_config: Dict = None,
+    ready_timeout_second: int = 60,
 ):
-    # Create SenderProxyActor
-    global _SENDER_PROXY_ACTOR
-
+    if proxy_config:
+        proxy_config = fed_config.GrpcCrossSiloMessageConfig.from_dict(proxy_config)
     actor_options = copy.deepcopy(_DEFAULT_SENDER_PROXY_OPTIONS)
-    if proxy_config and proxy_config.proxy_max_restarts:
-        actor_options.update({
-            "max_task_retries": proxy_config.proxy_max_restarts,
-            "max_restarts": 1,
-            })
-    if proxy_config and proxy_config.send_resource_label:
-        actor_options.update({"resources": proxy_config.send_resource_label})
+    if proxy_config:
+        if proxy_config.proxy_max_restarts:
+            actor_options.update(
+                {
+                    "max_task_retries": proxy_config.proxy_max_restarts,
+                    "max_restarts": 1,
+                }
+            )
+        if proxy_config.send_resource_label:
+            actor_options.update({"resources": proxy_config.send_resource_label})
+        if proxy_config.max_concurrency:
+            actor_options.update({"max_concurrency": proxy_config.max_concurrency})
 
     logger.debug(f"Starting SenderProxyActor with options: {actor_options}")
+    global _SENDER_PROXY_ACTOR
+    global _SENDER_PROXY_ACTOR_NAME
     _SENDER_PROXY_ACTOR = SenderProxyActor.options(
-        name="SenderProxyActor", **actor_options)
+        name=_SENDER_PROXY_ACTOR_NAME, **actor_options
+    )
 
     job_id = get_global_context().job_id()
     _SENDER_PROXY_ACTOR = _SENDER_PROXY_ACTOR.remote(
@@ -253,11 +283,136 @@ def _start_sender_proxy(
         job_id=job_id,
         tls_config=tls_config,
         logging_level=logging_level,
-        proxy_cls=proxy_cls
+        proxy_cls=proxy_cls,
     )
-    timeout = get_job_config(job_id).cross_silo_message_config.timeout_in_ms / 1000
-    assert ray.get(_SENDER_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
+    timeout = fed_config.get_job_config(job_id).cross_silo_message_config.timeout_in_ms / 1000
+    # assert ray.get(_SENDER_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
+    assert ray.get(_SENDER_PROXY_ACTOR.is_ready.remote(), timeout=ready_timeout_second)
     logger.info("SenderProxyActor has successfully created.")
+
+
+_SENDER_RECEIVER_PROXY_ACTOR = None
+_DEFAULT_SENDER_RECEIVER_PROXY_OPTIONS = {
+    "max_concurrency": 1,
+}
+
+
+@ray.remote
+class SenderReceiverProxyActor:
+    def __init__(
+        self,
+        addresses: Dict,
+        party: str,
+        tls_config: Dict = None,
+        logging_level: str = None,
+        proxy_cls: SenderReceiverProxy = None,
+    ):
+        setup_logger(
+            logging_level=logging_level,
+            logging_format=constants.RAYFED_LOG_FMT,
+            date_format=constants.RAYFED_DATE_FMT,
+            party_val=party,
+        )
+
+        self._stats = {'send_op_count': 0, 'receive_op_count': 0}
+        self._addresses = addresses
+        self._party = party
+        self._tls_config = tls_config
+        job_config = fed_config.get_job_config()
+        cross_silo_comm_config = job_config.cross_silo_comm_config_dict
+        self._proxy_instance = proxy_cls(
+            addresses, party, tls_config, cross_silo_comm_config
+        )
+
+    def is_ready(self):
+        return self._proxy_instance.is_ready()
+
+    def start(self):
+        self._proxy_instance.start()
+
+    def get_data(self, src_party, upstream_seq_id, curr_seq_id):
+        self._stats["receive_op_count"] += 1
+        data = self._proxy_instance.get_data(src_party, upstream_seq_id, curr_seq_id)
+        return data
+
+    def send(
+        self,
+        dest_party,
+        data,
+        upstream_seq_id,
+        downstream_seq_id,
+    ):
+        self._stats["send_op_count"] += 1
+        assert (
+            dest_party in self._addresses
+        ), f'Failed to find {dest_party} in cluster {self._addresses}.'
+        send_log_msg = (
+            f'send data to seq_id {downstream_seq_id} of {dest_party} '
+            f'from {upstream_seq_id}'
+        )
+        logger.debug(
+            f'Sending {send_log_msg} with{"out" if not self._tls_config else ""}'
+            ' credentials.'
+        )
+        try:
+            response = self._proxy_instance.send(
+                dest_party, data, upstream_seq_id, downstream_seq_id
+            )
+        except Exception as e:
+            logger.error(f'Failed to {send_log_msg}, error: {e}')
+            return False
+        logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
+        return True  # True indicates it's sent successfully.
+
+    def _get_stats(self):
+        return self._stats
+
+    def _get_proxy_config(self, dest_party=None):
+        return self._proxy_instance.get_proxy_config(dest_party)
+
+
+def _start_sender_receiver_proxy(
+    addresses: str,
+    party: str,
+    logging_level: str,
+    tls_config=None,
+    proxy_cls=None,
+    proxy_config: Dict = None,
+    ready_timeout_second: int = 60,
+):
+    global _DEFAULT_SENDER_RECEIVER_PROXY_OPTIONS
+    actor_options = copy.deepcopy(_DEFAULT_SENDER_RECEIVER_PROXY_OPTIONS)
+    if proxy_config:
+        proxy_config = fed_config.CrossSiloMessageConfig.from_dict(proxy_config)
+        if proxy_config.proxy_max_restarts:
+            actor_options.update(
+                {
+                    "max_task_retries": proxy_config.proxy_max_restarts,
+                    "max_restarts": 1,
+                }
+            )
+        if proxy_config.max_concurrency:
+            actor_options.update({"max_concurrency": proxy_config.max_concurrency})
+
+    logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
+
+    global _SENDER_RECEIVER_PROXY_ACTOR
+    global _RECEIVER_PROXY_ACTOR_NAME
+    _SENDER_RECEIVER_PROXY_ACTOR = SenderReceiverProxyActor.options(
+        name=_RECEIVER_PROXY_ACTOR_NAME, **actor_options
+    ).remote(
+        addresses=addresses,
+        party=party,
+        tls_config=tls_config,
+        logging_level=logging_level,
+        proxy_cls=proxy_cls,
+    )
+    _SENDER_RECEIVER_PROXY_ACTOR.start.remote()
+    server_state = ray.get(
+        _SENDER_RECEIVER_PROXY_ACTOR.is_ready.remote(), timeout=ready_timeout_second
+    )
+    assert server_state[0], server_state[1]
+    logger.info("Succeeded to create receiver proxy actor.")
 
 
 def send(
@@ -266,7 +421,8 @@ def send(
     upstream_seq_id,
     downstream_seq_id,
 ):
-    sender_proxy = ray.get_actor("SenderProxyActor")
+    global _SENDER_PROXY_ACTOR_NAME
+    sender_proxy = ray.get_actor(_SENDER_PROXY_ACTOR_NAME)
     res = sender_proxy.send.remote(
         dest_party=dest_party,
         data=data,
@@ -279,7 +435,8 @@ def send(
 
 def recv(party: str, src_party: str, upstream_seq_id, curr_seq_id):
     assert party, 'Party can not be None.'
-    receiver_proxy = ray.get_actor(f"ReceiverProxyActor-{party}")
+    global _RECEIVER_PROXY_ACTOR_NAME
+    receiver_proxy = ray.get_actor(_RECEIVER_PROXY_ACTOR_NAME)
     return receiver_proxy.get_data.remote(src_party, upstream_seq_id, curr_seq_id)
 
 
@@ -300,12 +457,11 @@ def ping_others(addresses: Dict[str, Dict], self_party: str, max_retries=3600):
         _, _unready = ray.wait(list(_party_ping_obj.values()), timeout=1)
 
         # Keep the unready party for the next ping.
-        others = [
-            other for other in others if _party_ping_obj[other] in _unready
-        ]
+        others = [other for other in others if _party_ping_obj[other] in _unready]
         if others:
             time.sleep(2)
     if others:
-        raise RuntimeError(f"Failed to wait for parties: {others} to start, "
-                           "abort `fed.init`.")
+        raise RuntimeError(
+            f"Failed to wait for parties: {others} to start, " "abort `fed.init`."
+        )
     return True

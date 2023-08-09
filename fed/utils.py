@@ -16,9 +16,9 @@ import logging
 import re
 import sys
 
-import fed
 import ray
 
+import fed
 from fed._private.compatible_utils import _compare_version_strings
 from fed.fed_object import FedObject
 
@@ -36,9 +36,11 @@ def get_package_version(package_name: str) -> str:
     curr_python_version = sys.version.split(" ")[0]
     if _compare_version_strings(curr_python_version, '3.7.99'):
         import importlib.metadata
+
         return importlib.metadata.version(package_name)
     else:
         import pkg_resources
+
         return pkg_resources.get_distribution(package_name).version
 
 
@@ -168,13 +170,14 @@ def dict2tuple(dic):
     Convert a dictionary to a two-dimensional tuple, for example:
     {'key': 'value'} => (('key', 'value'), ).
     """
-    if (dic is None or isinstance(dic, tuple)):
+    if dic is None or isinstance(dic, tuple):
         return dic
-    elif (isinstance(dic, dict)):
+    elif isinstance(dic, dict):
         return tuple((k, v) for k, v in dic.items())
     else:
-        logger.warn(f"Unable to convert type {type(dic)} to tuple"
-                    f"skip converting {dic}.")
+        logger.warn(
+            f"Unable to convert type {type(dic)} to tuple" f"skip converting {dic}."
+        )
         return dic
 
 
@@ -201,11 +204,13 @@ def validate_address(address: str) -> None:
     if re.match(link_pattern, address):
         return
 
-    error_msg = ("The address format is invalid. It should be in one of the following formats:\n" # noqa
-                "- `local` for starting a new cluster, or `localhost` for connecting a local cluster.\n" # noqa
-                "- 'ip:port' format, where the IP needs to follow the IP address specifications and the port is a number.\n" # noqa
-                "- 'hostname:port' format, where the hostname is a string and the port is a number.\n" # noqa
-                "- An HTTPS or HTTP link starting with 'https://' or 'http://'.") # noqa
+    error_msg = (
+        "The address format is invalid. It should be in one of the following formats:\n"  # noqa
+        "- `local` for starting a new cluster, or `localhost` for connecting a local cluster.\n"  # noqa
+        "- 'ip:port' format, where the IP needs to follow the IP address specifications and the port is a number.\n"  # noqa
+        "- 'hostname:port' format, where the hostname is a string and the port is a number.\n"  # noqa
+        "- An HTTPS or HTTP link starting with 'https://' or 'http://'."
+    )  # noqa
     raise ValueError(error_msg)
 
 
@@ -213,5 +218,8 @@ def validate_addresses(addresses: dict):
     """
     Validate whether the addresses is in correct forms.
     """
-    for _, address in addresses.items():
+    for address in addresses.values():
+        assert (
+            isinstance(address, str) and address
+        ), f'Address should be string but got {address}.'
         validate_address(address)

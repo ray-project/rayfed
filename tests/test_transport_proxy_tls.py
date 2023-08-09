@@ -19,11 +19,14 @@ import pytest
 import ray
 
 import fed._private.compatible_utils as compatible_utils
-from fed._private import constants
-from fed._private import global_context
-from fed.proxy.barriers import send, _start_receiver_proxy, _start_sender_proxy
-from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy, GrpcReceiverProxy
-from fed.config import GrpcCrossSiloMessageConfig
+from fed._private import constants, global_context
+from fed.proxy.barriers import (
+    _start_receiver_proxy,
+    _start_sender_proxy,
+    receiver_proxy_actor_name,
+    send,
+)
+from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy, GrpcSenderProxy
 
 
 def test_n_to_1_transport():
@@ -50,21 +53,21 @@ def test_n_to_1_transport():
 
     global_context.get_global_context().get_cleanup_manager().start()
     compatible_utils._init_internal_kv()
-    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
-                            cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(
+        constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
+    )
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"
     party = 'test_party'
     addresses = {'test_party': SERVER_ADDRESS}
-    config = GrpcCrossSiloMessageConfig()
     _start_receiver_proxy(
         addresses,
         party,
         logging_level='info',
         tls_config=tls_config,
         proxy_cls=GrpcReceiverProxy,
-        proxy_config=config
+        proxy_config={},
     )
     _start_sender_proxy(
         addresses,
@@ -72,12 +75,12 @@ def test_n_to_1_transport():
         logging_level='info',
         tls_config=tls_config,
         proxy_cls=GrpcSenderProxy,
-        proxy_config=config
+        proxy_config={},
     )
 
     sent_objs = []
     get_objs = []
-    receiver_proxy_actor = ray.get_actor(f"ReceiverProxyActor-{party}")
+    receiver_proxy_actor = ray.get_actor(receiver_proxy_actor_name())
     for i in range(NUM_DATA):
         sent_obj = send(
             party,

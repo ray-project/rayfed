@@ -37,9 +37,12 @@ from fed.proxy.barriers import (
     send,
     _start_receiver_proxy,
     _start_sender_proxy,
+    _start_sender_receiver_proxy,
+    set_receiver_proxy_actor_name,
+    set_sender_proxy_actor_name,
 )
-from fed.proxy.grpc.grpc_proxy import SenderProxy, ReceiverProxy
-from fed.config import GrpcCrossSiloMessageConfig
+from fed.proxy.base_proxy import SenderProxy, ReceiverProxy, SenderReceiverProxy
+from fed.config import CrossSiloMessageConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
 
@@ -54,6 +57,7 @@ def init(
     logging_level: str = 'info',
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
+    receiver_sender_proxy_cls: SenderReceiverProxy = None,
     job_id: str = 'anonymous'
 ):
     """
@@ -121,9 +125,7 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    cross_silo_message_dict = config.get("cross_silo_message", {})
-    cross_silo_message_config = GrpcCrossSiloMessageConfig.from_dict(
-        cross_silo_message_dict)
+    cross_silo_comm_dict = config.get("cross_silo_comm", {})
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv(job_id)
 
@@ -134,11 +136,11 @@ def init(
     }
 
     job_config = {
-        constants.KEY_OF_CROSS_SILO_MESSAGE_CONFIG:
-            cross_silo_message_config,
+        constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: cross_silo_comm_dict,
     }
-    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
-                            cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(
+        constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
+    )
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
@@ -152,39 +154,61 @@ def init(
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
+    cross_silo_comm_config = CrossSiloMessageConfig.from_dict(cross_silo_comm_dict)
     get_global_context().get_cleanup_manager().start(
-        exit_when_failure_sending=cross_silo_message_config.exit_on_sending_failure) # noqa
-
-    if receiver_proxy_cls is None:
-        logger.debug(
-            "There is no receiver proxy class specified, it uses `GrpcRecvProxy` by "
-            "default.")
-        from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
-        receiver_proxy_cls = GrpcReceiverProxy
-    _start_receiver_proxy(
-        addresses=addresses,
-        party=party,
-        logging_level=logging_level,
-        tls_config=tls_config,
-        proxy_cls=receiver_proxy_cls,
-        proxy_config=cross_silo_message_config
+        exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure
     )
+    if receiver_sender_proxy_cls is not None:
+        proxy_actor_name = 'sender_recevier_actor'
+        set_sender_proxy_actor_name(proxy_actor_name)
+        set_receiver_proxy_actor_name(proxy_actor_name)
+        _start_sender_receiver_proxy(
+            addresses=addresses,
+            party=party,
+            logging_level=logging_level,
+            tls_config=tls_config,
+            proxy_cls=receiver_sender_proxy_cls,
+            proxy_config=cross_silo_comm_dict,
+            ready_timeout_second=cross_silo_comm_config.timeout_in_ms / 1000,
+        )
+    else:
+        if receiver_proxy_cls is None:
+            logger.debug(
+                (
+                    "There is no receiver proxy class specified, "
+                    "it uses `GrpcRecvProxy` by default."
+                )
+            )
+            from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
 
-    if sender_proxy_cls is None:
-        logger.debug(
-            "There is no sender proxy class specified, it uses `GrpcRecvProxy` by "
-            "default.")
-        from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
-        sender_proxy_cls = GrpcSenderProxy
-    _start_sender_proxy(
-        addresses=addresses,
-        party=party,
-        logging_level=logging_level,
-        tls_config=tls_config,
-        proxy_cls=sender_proxy_cls,
-        # TODO(qwang): proxy_config -> cross_silo_message_config
-        proxy_config=cross_silo_message_config
-    )
+            receiver_proxy_cls = GrpcReceiverProxy
+        _start_receiver_proxy(
+            addresses=addresses,
+            party=party,
+            logging_level=logging_level,
+            tls_config=tls_config,
+            proxy_cls=receiver_proxy_cls,
+            proxy_config=cross_silo_comm_dict,
+            ready_timeout_second=cross_silo_comm_config.timeout_in_ms / 1000,
+        )
+
+        if sender_proxy_cls is None:
+            logger.debug(
+                "There is no sender proxy class specified, it uses `GrpcRecvProxy` by "
+                "default."
+            )
+            from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
+
+            sender_proxy_cls = GrpcSenderProxy
+        _start_sender_proxy(
+            addresses=addresses,
+            party=party,
+            logging_level=logging_level,
+            tls_config=tls_config,
+            proxy_cls=sender_proxy_cls,
+            proxy_config=cross_silo_comm_dict,
+            ready_timeout_second=cross_silo_comm_config.timeout_in_ms / 1000,
+        )
 
     if config.get("barrier_on_initializing", False):
         # TODO(zhouaihui): can be removed after we have a better retry strategy.
