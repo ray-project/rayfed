@@ -285,7 +285,7 @@ def _start_sender_proxy(
         logging_level=logging_level,
         proxy_cls=proxy_cls,
     )
-    timeout = fed_config.get_job_config(job_id).cross_silo_message_config.timeout_in_ms / 1000
+    # timeout = fed_config.get_job_config(job_id).cross_silo_comm_config_dict.timeout_in_ms / 1000
     # assert ray.get(_SENDER_PROXY_ACTOR.is_ready.remote(), timeout=timeout)
     assert ray.get(_SENDER_PROXY_ACTOR.is_ready.remote(), timeout=ready_timeout_second)
     logger.info("SenderProxyActor has successfully created.")

@@ -290,7 +290,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         self._lock = lock
         self._job_id = job_id
 
-    async def SendData(self, request):
+    async def SendData(self, request, context):
         job_id = request.job_id
         if job_id != self._job_id:
             return fed_pb2.SendDataResponse(result="ERROR")
