@@ -32,3 +32,7 @@ RAYFED_LOG_FMT = "%(asctime)s %(levelname)s %(filename)s:%(lineno)s [%(party)s] 
 RAYFED_DATE_FMT = "%Y-%m-%d %H:%M:%S"
 
 RAY_VERSION_2_0_0_STR = "2.0.0"
+
+RAYFED_DEFAULT_JOB_NAME = "Anonymous"
+
+RAYFED_JOB_KV_DATA_KEY_FMT = "RAYFED#{}#{}"

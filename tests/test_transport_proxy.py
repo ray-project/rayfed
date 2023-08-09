@@ -46,14 +46,15 @@ def test_n_to_1_transport():
     N receivers to `get_data` from receiver proxy at that time.
     """
     compatible_utils.init_ray(address='local')
-
+    test_job_name = 'test_n_to_1_transport'
+    global_context.init_global_context(test_job_name)
     global_context.get_global_context().get_cleanup_manager().start()
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: "",
     }
-    compatible_utils._init_internal_kv()
+    compatible_utils._init_internal_kv(test_job_name)
     compatible_utils.kv.put(
         constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
     )
@@ -97,10 +98,14 @@ def test_n_to_1_transport():
 
 
 class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
-    def __init__(self, all_events, all_data, party, lock, expected_metadata):
+    def __init__(self, all_events, all_data, party, lock,
+                 expected_metadata, expected_jobname):
         self.expected_metadata = expected_metadata or {}
+        self._expected_jobname = expected_jobname or ""
 
     async def SendData(self, request, context):
+        job_name = request.job_name
+        assert self._expected_jobname == job_name
         metadata = dict(context.invocation_metadata())
         for k, v in self.expected_metadata.items():
             assert k in metadata
@@ -118,10 +123,13 @@ async def _test_run_grpc_server(
     lock,
     grpc_options=None,
     expected_metadata=None,
+    expected_jobname=None,
 ):
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
-        TestSendDataService(event, all_data, party, lock, expected_metadata), server
+        TestSendDataService(event, all_data, party, lock,
+                            expected_metadata, expected_jobname),
+        server
     )
     server.add_insecure_port(f'[::]:{port}')
     await server.start()
@@ -135,10 +143,12 @@ class TestReceiverProxyActor:
         listen_addr: str,
         party: str,
         expected_metadata: dict,
+        expected_jobname: str,
     ):
         self._listen_addr = listen_addr
         self._party = party
         self._expected_metadata = expected_metadata
+        self._expected_jobname = expected_jobname
 
     async def run_grpc_server(self):
         return await _test_run_grpc_server(
@@ -148,6 +158,7 @@ class TestReceiverProxyActor:
             self._party,
             None,
             expected_metadata=self._expected_metadata,
+            expected_jobname=self._expected_jobname
         )
 
     async def is_ready(self):
@@ -158,13 +169,16 @@ def _test_start_receiver_proxy(
     addresses: str,
     party: str,
     expected_metadata: dict,
+    expected_jobname: str,
 ):
     # Create RecevrProxyActor
     # Not that this is now a threaded actor.
     address = addresses[party]
     receiver_proxy_actor = TestReceiverProxyActor.options(
         name=receiver_proxy_actor_name(), max_concurrency=1000
-    ).remote(listen_addr=address, party=party, expected_metadata=expected_metadata)
+    ).remote(listen_addr=address, party=party,
+             expected_metadata=expected_metadata,
+             expected_jobname=expected_jobname)
     receiver_proxy_actor.run_grpc_server.remote()
     assert ray.get(receiver_proxy_actor.is_ready.remote())
 
@@ -181,7 +195,9 @@ def test_send_grpc_with_meta():
     job_config = {
         constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: config,
     }
-    compatible_utils._init_internal_kv()
+    test_job_name = 'test_send_grpc_with_meta'
+    global_context.init_global_context(test_job_name)
+    compatible_utils._init_internal_kv(test_job_name)
     compatible_utils.kv.put(
         constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
     )
@@ -195,6 +211,7 @@ def test_send_grpc_with_meta():
         addresses,
         party_name,
         expected_metadata=metadata,
+        expected_jobname=test_job_name
     )
     _start_sender_proxy(
         addresses,

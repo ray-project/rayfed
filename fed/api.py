@@ -58,7 +58,7 @@ def init(
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
     receiver_sender_proxy_cls: SenderReceiverProxy = None,
-    job_name: str = 'anonymous'
+    job_name: str = constants.RAYFED_DEFAULT_JOB_NAME
 ):
     """
     Initialize a RayFed client.

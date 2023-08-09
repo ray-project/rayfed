@@ -72,7 +72,8 @@ def wrap_kv_key(job_name, key):
     """
     if (type(key) == bytes):
         key = key.decode("utf-8")
-    return f"RAYFED#{job_name}#{key}".encode("utf-8")
+    return constants.RAYFED_JOB_KV_DATA_KEY_FMT.format(
+            job_name, key).encode("utf-8")
 
 
 class AbstractInternalKv(abc.ABC):
