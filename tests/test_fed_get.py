@@ -47,7 +47,8 @@ def mean(x, y):
 
 
 def run(party):
-    compatible_utils.init_ray(address='local')
+    address = '127.0.0.1:11012' if party == 'alice' else '127.0.0.1:11011'
+    compatible_utils.init_ray(address=address)
     addresses = {
         'alice': '127.0.0.1:11012',
         'bob': '127.0.0.1:11011',
