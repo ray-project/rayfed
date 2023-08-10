@@ -50,6 +50,7 @@ def run():
         "backoffMultiplier": 1,
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
+    test_job_name = 'test_retry_policy'
     fed.init(
         addresses=addresses,
         party='alice',
@@ -60,7 +61,7 @@ def run():
         },
     )
 
-    job_config = config.get_job_config()
+    job_config = config.get_job_config(test_job_name)
     cross_silo_comm_config = job_config.cross_silo_comm_config_dict
     TestCase().assertDictEqual(
         cross_silo_comm_config['grpc_retry_policy'], retry_policy

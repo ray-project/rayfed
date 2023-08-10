@@ -94,6 +94,7 @@ def test_n_to_1_transport():
 
     global_context.get_global_context().get_cleanup_manager().graceful_stop()
     global_context.clear_global_context()
+    compatible_utils._clear_internal_kv()
     ray.shutdown()
 
 
@@ -218,7 +219,7 @@ def test_send_grpc_with_meta():
         party_name,
         logging_level='info',
         proxy_cls=GrpcSenderProxy,
-        proxy_config={},
+        proxy_config=config,
     )
     sent_objs = []
     sent_obj = send(party_name, "data", 0, 1)
