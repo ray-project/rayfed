@@ -6,6 +6,7 @@ import time
 import fed._private.compatible_utils as compatible_utils
 import ray.experimental.internal_kv as ray_internal_kv
 
+
 def run(party):
     compatible_utils.init_ray("local")
     addresses = {

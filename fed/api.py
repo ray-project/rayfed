@@ -225,21 +225,21 @@ def shutdown():
     logger.info('Shutdowned rayfed.')
 
 
-def _get_addresses(job_name: str=None):
+def _get_addresses(job_name: str = None):
     """
     Get the RayFed addresses configration.
     """
     return fed_config.get_cluster_config(job_name).cluster_addresses
 
 
-def _get_party(job_name: str=None):
+def _get_party(job_name: str = None):
     """
     A private util function to get the current party name.
     """
     return fed_config.get_cluster_config(job_name).current_party
 
 
-def _get_tls(job_name: str=None):
+def _get_tls(job_name: str = None):
     """
     Get the tls configurations on this party.
     """

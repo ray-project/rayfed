@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import abc
-import cloudpickle
 import ray
 import fed._private.constants as fed_constants
 
@@ -107,7 +106,7 @@ class AbstractInternalKv(abc.ABC):
 class InternalKv(AbstractInternalKv):
     """The internal kv class for non Ray client mode.
     """
-    def __init__(self, job_name:str) -> None:
+    def __init__(self, job_name: str) -> None:
         super().__init__()
         self._job_name = job_name
 

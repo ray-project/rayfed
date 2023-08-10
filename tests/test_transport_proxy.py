@@ -108,7 +108,7 @@ class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
         assert self._expected_jobname == job_name
         metadata = dict(context.invocation_metadata())
         for k, v in self.expected_metadata.items():
-            assert k in metadata
+            assert k in metadata, f"{k} not in {metadata.keys()}"
             assert v == metadata[k]
         event = asyncio.Event()
         event.set()
