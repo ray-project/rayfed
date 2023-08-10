@@ -62,6 +62,8 @@ def run(party):
     for epoch in range(epochs):
         w1 = alice_model.train.remote()
         w2 = bob_model.train.remote()
+        print(f"==========================")
+        print(f"==========================")
         new_weights = mean.party("alice").remote(w1, w2)
         result = fed.get(new_weights)
         alice_model.set_weights.remote(new_weights)

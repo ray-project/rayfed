@@ -270,11 +270,16 @@ class FedRemoteFunction:
             ray.remote(self._func_body).options(**self._options).remote(*args, **kwargs)
         )
 
+# class A:
+#     pass
+
+# self._ray_actor_handle = ray.remote(A).remote()
 
 class FedRemoteClass:
     def __init__(self, func_or_class) -> None:
         self._party = None
         self._cls = func_or_class
+        # self._client_actor_handle_class = ray.
         self._options = {}
 
     def party(self, party: str):

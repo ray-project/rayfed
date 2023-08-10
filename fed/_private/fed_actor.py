@@ -71,7 +71,7 @@ class FedActorHandle:
 
         if self._party == self._node_party:
             ray_actor_handle = self._actor_handle # rename to _ray_actor_handle
-            ray_wrappered_method = ray_actor_handle.__getattr__(m)
+            ray_wrappered_method = ray_actor_handle.__getattribute__(method_name)
             return FedActorMethod(
                 self._addresses,
                 self._party,
@@ -117,7 +117,8 @@ class FedActorHandle:
         # a.f.remote() -> grpc client_server 
         # a.f
 
-        ray_object_ref = ray.remote(_ray_wrappered_method)
+        # ray_object_ref = ray.remote(_ray_wrappered_method)
+        ray_object_ref = _ray_wrappered_method.remote(*args, **kwargs)
 
         # ray_object_ref = self._actor_handle._actor_method_call(
         #     method_name,
