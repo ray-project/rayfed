@@ -69,7 +69,7 @@ def _get_gcs_address_from_ray_worker():
 def wrap_kv_key(job_name, key):
     """Add an prefix to the key to avoid conflict with other jobs.
     """
-    if (type(key) == bytes):
+    if (isinstance(key, bytes)):
         key = key.decode("utf-8")
     return constants.RAYFED_JOB_KV_DATA_KEY_FMT.format(
             job_name, key).encode("utf-8")

@@ -50,7 +50,7 @@ def test_n_to_1_transport():
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: tls_config,
     }
-
+    global_context.init_global_context(test_job_name)
     global_context.get_global_context().get_cleanup_manager().start()
     compatible_utils._init_internal_kv(test_job_name)
     compatible_utils.kv.put(
