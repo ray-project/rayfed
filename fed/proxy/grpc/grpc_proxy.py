@@ -222,16 +222,6 @@ class GrpcReceiverProxy(ReceiverProxy):
     async def start(self):
         port = self._listen_addr[self._listen_addr.index(':') + 1 :]
         try:
-            print(f"[Debug] params list: "
-                  f"port: {port}, "
-                  f"self._events: {self._events}, "
-                  f"self._all_data: {self._all_data}, "
-                  f"self._party: {self._party}, "
-                  f"self._lock: {self._lock}, "
-                  f"self._job_name: {self._job_name}, "
-                  f"self._server_ready_future: {self._server_ready_future}, "
-                  f"self._tls_config: {self._tls_config}, "
-                  f"self._grpc_options: {fed_utils.dict2tuple(self._grpc_options)}")
             await _run_grpc_server(
                 port,
                 self._events,
