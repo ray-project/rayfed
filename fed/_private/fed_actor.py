@@ -15,6 +15,7 @@
 import logging
 
 import ray
+from ray.util.client.common import ClientActorHandle
 from fed._private.fed_call_holder import FedCallHolder
 from fed.fed_object import FedObject
 
@@ -52,7 +53,7 @@ class FedActorHandle:
                 ray_wrappered_method = ray_actor_handle.__getattribute__(method_name)
             except AttributeError:
                 # The code path in Ray client mode.
-                assert isinstance(ray_actor_handle, ray.util.client.common.ClientActorHandle)
+                assert isinstance(ray_actor_handle, ClientActorHandle)
                 ray_wrappered_method = ray_actor_handle.__getattr__(method_name)
 
             return FedActorMethod(
