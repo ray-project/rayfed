@@ -37,22 +37,7 @@ class FedActorHandle:
         self._party = party
         self._node_party = node_party
         self._options = options
-        self._actor_handle = None
-
-# # ray.remote() ray public
-# # def f:
-# # ray.remote(f) == f.remote()
-# # ray.remote(A) == A.remote()
-# # a.f.remote() == ray.remote(a.f)    placehold
-# # a.f ---> ray object
-
-# def __getattr__(m: native_method):
-#     if m.party() == current_party:
-#         ray_actor_handle == self._ray_actor_handle
-#         ray_method = ray_actor_handle.__getattr__(m)
-#         return ray_method
-#     else:
-#         # placehold
+        self._ray_actor_handle = None
 
     def __getattr__(self, method_name: str):
         # User trying to call .bind() without a bind class method
@@ -62,7 +47,7 @@ class FedActorHandle:
         getattr(self._body, method_name)
 
         if self._party == self._node_party:
-            ray_actor_handle = self._actor_handle # rename to _ray_actor_handle
+            ray_actor_handle = self._ray_actor_handle
             try:
                 ray_wrappered_method = ray_actor_handle.__getattribute__(method_name)
             except AttributeError:
@@ -112,21 +97,7 @@ class FedActorHandle:
             f"Actor method call: {method_name}, num_returns: {num_returns}"
         )
 
-        # a.f.remote() -> grpc client_server 
-        # a.f
-
-        # ray_object_ref = ray.remote(_ray_wrappered_method)
-        ray_object_ref = _ray_wrappered_method.remote(*args, **kwargs)
-
-        # ray_object_ref = self._actor_handle._actor_method_call(
-        #     method_name,
-        #     args=args,
-        #     kwargs=kwargs,
-        #     name="",
-        #     num_returns=num_returns,
-        #     concurrency_group_name="",
-        # )
-        return ray_object_ref
+        return _ray_wrappered_method.remote(*args, **kwargs)
 
 
 class FedActorMethod:
@@ -155,24 +126,6 @@ class FedActorMethod:
         self._options = options
         self._fed_call_holder.options(**options)
         return self
-
-# # ray.remote() ray public
-# # def f:
-# # ray.remote(f) == f.remote()
-# # ray.remote(A) == A.remote()
-# # a.f.remote() == ray.remote(a.f)    placehold
-# # a.f ---> ray object
-
-# def __getattr__(m: native_method):
-#     if m.party() == current_party:
-#         ray_actor_handle == self._ray_actor_handle
-#         ray_method = ray_actor_handle.__getattr__(m)
-#         return ray_method
-#     else:
-#         # placehold
-
-# a.f.remote()
-
 
     def _execute_impl(self, args, kwargs):
         
