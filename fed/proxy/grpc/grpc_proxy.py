@@ -283,7 +283,11 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
     async def SendData(self, request, context):
         job_name = request.job_name
         if job_name != self._job_name:
-            return fed_pb2.SendDataResponse(result=f"JobName mis-match, expected {self._job_name}, got {job_name}.")
+            logger.warning(f"Receive data from job {job_name}, ignore it. "
+                           f"The reason may be that the ReceiverProxy is listening "
+                           f"on the same address with that job.")
+            return fed_pb2.SendDataResponse(
+                result=f"JobName mis-match, expected {self._job_name}, got {job_name}.")
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(

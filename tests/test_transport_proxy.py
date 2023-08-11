@@ -109,7 +109,8 @@ class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
         assert self._expected_jobname == job_name
         metadata = dict(context.invocation_metadata())
         for k, v in self.expected_metadata.items():
-            assert k in metadata, f"{k} not in {metadata.keys()}"
+            assert k in metadata, \
+                f"The expected key {k} is not in the metadata keys: {metadata.keys()}."
             assert v == metadata[k]
         event = asyncio.Event()
         event.set()
@@ -153,7 +154,7 @@ class TestReceiverProxyActor:
 
     async def run_grpc_server(self):
         return await _test_run_grpc_server(
-            self._listen_addr[self._listen_addr.index(':') + 1 :],
+            self._listen_addr[self._listen_addr.index(':') + 1:],
             None,
             None,
             self._party,

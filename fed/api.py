@@ -96,11 +96,12 @@ def init(
                 }
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
-        job_name: optional; the job id of the current job. Note that, the job id
+        job_name: optional; the job name of the current job. Note that, the job name
             must be identical in all parties, otherwise, messages will be ignored
-            because of the job id mismatch. If the job id is not provided, messages
-            of this job will not be distinguished from other jobs, which should
-            only be used in the single job scenario or simulation mode.
+            because of the job name mismatch. If the job name is not provided, an
+            default fixed name will be assigned, therefore messages of all anonymous
+            jobs will be mixed together, which should only be used in the single job
+            scenario or test mode.
     Examples:
         >>> import fed
         >>> import ray

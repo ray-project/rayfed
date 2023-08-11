@@ -106,7 +106,7 @@ def run(party, job_name):
         time.sleep(86400)
 
 
-def test_multi_job_ignore_msg():
+def test_ignore_other_job_msg():
     p_alice = multiprocessing.Process(target=run, args=('alice', 'job1'))
     p_bob = multiprocessing.Process(target=run, args=('bob', 'job2'))
     p_alice.start()
