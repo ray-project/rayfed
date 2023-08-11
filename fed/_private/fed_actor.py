@@ -59,19 +59,17 @@ class FedActorHandle:
         if method_name == "remote" and "remote" not in dir(self._body):
             raise AttributeError(f".remote() cannot be used again on {type(self)} ")
         # Raise an error if the method is invalid.
-        m = getattr(self._body, method_name)
-
-        # call_node = FedActorMethod(
-        #     self._addresses,
-        #     self._party,
-        #     self._node_party,
-        #     self,
-        #     method_name,
-        # ).options(**self._options)
+        getattr(self._body, method_name)
 
         if self._party == self._node_party:
             ray_actor_handle = self._actor_handle # rename to _ray_actor_handle
-            ray_wrappered_method = ray_actor_handle.__getattribute__(method_name)
+            try:
+                ray_wrappered_method = ray_actor_handle.__getattribute__(method_name)
+            except AttributeError:
+                # The code path in Ray client mode.
+                assert isinstance(ray_actor_handle, ray.util.client.common.ClientActorHandle)
+                ray_wrappered_method = ray_actor_handle.__getattr__(method_name)
+
             return FedActorMethod(
                 self._addresses,
                 self._party,

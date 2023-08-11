@@ -47,11 +47,17 @@ def mean(x, y):
 
 
 def run(party):
-    address = '127.0.0.1:11012' if party == 'alice' else '127.0.0.1:11011'
+    import time
+    if party == 'alice':
+        time.sleep(1.4)
+    
+    address = 'ray://127.0.0.1:21012' if party == 'alice' else 'ray://127.0.0.1:21011'
     compatible_utils.init_ray(address=address)
+    
+    
     addresses = {
-        'alice': '127.0.0.1:11012',
-        'bob': '127.0.0.1:11011',
+        'alice': '127.0.0.1:31012',
+        'bob': '127.0.0.1:31011',
     }
     fed.init(addresses=addresses, party=party)
 
@@ -63,8 +69,6 @@ def run(party):
     for epoch in range(epochs):
         w1 = alice_model.train.remote()
         w2 = bob_model.train.remote()
-        print(f"==========================")
-        print(f"==========================")
         new_weights = mean.party("alice").remote(w1, w2)
         result = fed.get(new_weights)
         alice_model.set_weights.remote(new_weights)
