@@ -43,7 +43,7 @@ class TestGrpcSenderProxy(GrpcSenderProxy):
             self._stubs[dest_party] = stub
 
         timeout = self._proxy_config.timeout_in_ms / 1000
-        response = await send_data_grpc(
+        response: str = await send_data_grpc(
             data=data,
             stub=self._stubs[dest_party],
             upstream_seq_id=upstream_seq_id,
@@ -52,7 +52,7 @@ class TestGrpcSenderProxy(GrpcSenderProxy):
             timeout=timeout,
             metadata=grpc_metadata,
         )
-        assert response == "ERROR"
+        assert "JobName mis-match" in response
         # So that process can exit
         raise RuntimeError()
 
