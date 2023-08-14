@@ -66,13 +66,14 @@ def _get_gcs_address_from_ray_worker():
         return ray.worker._global_node.gcs_address
 
 
-def wrap_kv_key(job_name, key):
+def wrap_kv_key(job_name, key: str):
     """Add an prefix to the key to avoid conflict with other jobs.
     """
-    if (isinstance(key, bytes)):
-        key = key.decode("utf-8")
+    assert isinstance(key, str), \
+        f"The key of KV data must be `str` type, got {type(key)}."
+
     return constants.RAYFED_JOB_KV_DATA_KEY_FMT.format(
-            job_name, key).encode("utf-8")
+            job_name, key)
 
 
 class AbstractInternalKv(abc.ABC):

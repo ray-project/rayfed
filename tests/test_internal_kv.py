@@ -16,8 +16,8 @@ def run(party):
     assert compatible_utils.kv is None
     fed.init(addresses=addresses, party=party, job_name="test_job_name")
     assert compatible_utils.kv
-    assert not compatible_utils.kv.put(b"test_key", b"test_val")
-    assert compatible_utils.kv.get(b"test_key") == b"test_val"
+    assert not compatible_utils.kv.put("test_key", b"test_val")
+    assert compatible_utils.kv.get("test_key") == b"test_val"
 
     # Test that a prefix key name is added under the hood.
     assert ray_internal_kv._internal_kv_get(b"test_key") is None
