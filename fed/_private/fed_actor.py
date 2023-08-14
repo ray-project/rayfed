@@ -98,7 +98,13 @@ class FedActorHandle:
             f"Actor method call: {method_name}, num_returns: {num_returns}"
         )
 
-        return _ray_wrappered_method.remote(*args, **kwargs)
+        return _ray_wrappered_method.options(
+            name='',
+            num_returns=num_returns,
+        ).remote(
+            *args,
+            **kwargs,
+        )
 
 
 class FedActorMethod:
