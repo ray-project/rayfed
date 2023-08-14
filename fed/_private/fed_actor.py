@@ -74,7 +74,6 @@ class FedActorHandle:
                 None,
             ).options(**self._options)
 
-
     def _execute_impl(self, cls_args, cls_kwargs):
         """Executor of ClassNode by ray.remote()
 
@@ -90,7 +89,14 @@ class FedActorHandle:
                 .remote(*cls_args, **cls_kwargs)
             )
 
-    def _execute_remote_method(self, method_name, options, _ray_wrappered_method, args, kwargs):
+    def _execute_remote_method(
+            self,
+            method_name,
+            options,
+            _ray_wrappered_method,
+            args,
+            kwargs,
+    ):
         num_returns = 1
         if options and 'num_returns' in options:
             num_returns = options['num_returns']
@@ -135,7 +141,6 @@ class FedActorMethod:
         return self
 
     def _execute_impl(self, args, kwargs):
-        
         return self._fed_actor_handle._execute_remote_method(
             self._method_name, self._options, self._ray_wrappered_method, args, kwargs
         )
