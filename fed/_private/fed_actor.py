@@ -84,7 +84,7 @@ class FedActorHandle:
         current node is executed.
         """
         if self._node_party == self._party:
-            self._actor_handle = (
+            self._ray_actor_handle = (
                 ray.remote(self._body)
                 .options(**self._options)
                 .remote(*cls_args, **cls_kwargs)
