@@ -52,7 +52,8 @@ def run(party):
         time.sleep(1.4)
     
     address = 'ray://127.0.0.1:21012' if party == 'alice' else 'ray://127.0.0.1:21011'
-    compatible_utils.init_ray(address=address)
+    # compatible_utils.init_ray(address=address)
+    compatible_utils.init_ray(address='local')
     
     
     addresses = {
