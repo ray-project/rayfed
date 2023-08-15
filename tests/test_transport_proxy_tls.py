@@ -35,7 +35,7 @@ def test_n_to_1_transport():
     N receivers to `get_data` from receiver proxy at that time.
     """
     compatible_utils.init_ray(address='local')
-
+    test_job_name = 'test_n_to_1_transport'
     cert_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"
     )
@@ -50,9 +50,9 @@ def test_n_to_1_transport():
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: tls_config,
     }
-
+    global_context.init_global_context(test_job_name)
     global_context.get_global_context().get_cleanup_manager().start()
-    compatible_utils._init_internal_kv()
+    compatible_utils._init_internal_kv(test_job_name)
     compatible_utils.kv.put(
         constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
     )
@@ -99,6 +99,7 @@ def test_n_to_1_transport():
 
     global_context.get_global_context().get_cleanup_manager().graceful_stop()
     global_context.clear_global_context()
+    compatible_utils._clear_internal_kv()
     ray.shutdown()
 
 

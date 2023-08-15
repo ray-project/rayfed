@@ -46,7 +46,10 @@ class FedCallHolder:
         submit_ray_task_func,
         options={},
     ) -> None:
-        self._party = fed_config.get_cluster_config().current_party
+        # Note(NKcqx): FedCallHolder will only be created in driver process, where
+        # the GlobalContext must has been initialized.
+        job_name = get_global_context().job_name()
+        self._party = fed_config.get_cluster_config(job_name).current_party
         self._node_party = node_party
         self._options = options
         self._submit_ray_task_func = submit_ray_task_func

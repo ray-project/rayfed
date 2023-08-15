@@ -16,7 +16,8 @@ from fed.cleanup import CleanupManager
 
 
 class GlobalContext:
-    def __init__(self) -> None:
+    def __init__(self, job_name: str) -> None:
+        self._job_name = job_name
         self._seq_count = 0
         self._cleanup_manager = CleanupManager()
 
@@ -27,8 +28,17 @@ class GlobalContext:
     def get_cleanup_manager(self) -> CleanupManager:
         return self._cleanup_manager
 
+    def job_name(self) -> str:
+        return self._job_name
+
 
 _global_context = None
+
+
+def init_global_context(job_name: str) -> None:
+    global _global_context
+    if _global_context is None:
+        _global_context = GlobalContext(job_name)
 
 
 def get_global_context():
