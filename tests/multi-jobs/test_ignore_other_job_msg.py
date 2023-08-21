@@ -52,7 +52,7 @@ class TestGrpcSenderProxy(GrpcSenderProxy):
             timeout=timeout,
             metadata=grpc_metadata,
         )
-        assert response.code is 417
+        assert response.code == 417
         assert "JobName mis-match" in response.result
         # So that process can exit
         raise RuntimeError(response.result)
