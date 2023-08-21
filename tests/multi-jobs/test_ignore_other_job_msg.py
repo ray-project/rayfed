@@ -52,9 +52,10 @@ class TestGrpcSenderProxy(GrpcSenderProxy):
             timeout=timeout,
             metadata=grpc_metadata,
         )
-        assert "JobName mis-match" in response
+        assert response.code is 417
+        assert "JobName mis-match" in response.result
         # So that process can exit
-        raise RuntimeError()
+        raise RuntimeError(response.result)
 
 
 @fed.remote

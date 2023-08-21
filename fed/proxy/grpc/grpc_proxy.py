@@ -136,7 +136,8 @@ class GrpcSenderProxy(SenderProxy):
             timeout=timeout,
             metadata=grpc_metadata,
         )
-        return response
+        self.handle_response_error(response)
+        return response.result
 
     def get_grpc_config_by_party(self, dest_party):
         """Overide global config by party specific config
@@ -167,6 +168,17 @@ class GrpcSenderProxy(SenderProxy):
         proxy_config.update({'grpc_options': grpc_options})
         return proxy_config
 
+    def handle_response_error(self, response):
+        if response.code == 200:
+            return
+
+        if 400 <= response.code < 500:
+            # Request error should also be identified as a sending failure,
+            # though the request was physically sent.
+            logger.warning(f"Request was successfully sent but got error response, "
+                           f"code: {response.code}, message: {response.result}.")
+            raise RuntimeError(response.result)
+
 
 async def send_data_grpc(
     data,
@@ -192,9 +204,10 @@ async def send_data_grpc(
     )
     logger.debug(
         f'Received data response from seq_id {downstream_seq_id}, '
+        f'code: {response.code}, '
         f'result: {response.result}.'
     )
-    return response.result
+    return response
 
 
 class GrpcReceiverProxy(ReceiverProxy):
@@ -287,6 +300,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
                            f"The reason may be that the ReceiverProxy is listening "
                            f"on the same address with that job.")
             return fed_pb2.SendDataResponse(
+                code=417,
                 result=f"JobName mis-match, expected {self._job_name}, got {job_name}.")
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
@@ -309,7 +323,7 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
         event = get_from_two_dim_dict(self._events, upstream_seq_id, downstream_seq_id)
         event.set()
         logger.debug(f"Event set for {upstream_seq_id}")
-        return fed_pb2.SendDataResponse(result="OK")
+        return fed_pb2.SendDataResponse(code=200, result="OK")
 
 
 async def _run_grpc_server(

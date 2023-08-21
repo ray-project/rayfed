@@ -114,7 +114,7 @@ class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
             assert v == metadata[k]
         event = asyncio.Event()
         event.set()
-        return fed_pb2.SendDataResponse(result="OK")
+        return fed_pb2.SendDataResponse(code=200,result="OK")
 
 
 async def _test_run_grpc_server(
