@@ -14,5 +14,6 @@ message SendDataRequest {
 };
 
 message SendDataResponse {
-    string result = 1;
+    int32 code = 1;
+    string result = 2;
 };
