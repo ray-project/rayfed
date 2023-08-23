@@ -46,11 +46,10 @@ class MessageQueue:
                 res = self._msg_handler(message)
                 if not res:
                     break
-            logger.info(f"The message polling thread[{self._name}] was exited.")
 
         if self._thread is None or not self._thread.is_alive():
             logger.info(f"Starting new thread[{self._name}] for message polling.")
-            self._queue.clear()
+            self._queue = deque()
             self._thread = threading.Thread(target=_loop)
             self._thread.start()
 
@@ -87,6 +86,7 @@ class MessageQueue:
         else:
             if self._thread is not None:
                 self._thread._stop()
+        logger.info(f"The message polling thread[{self._name}] was exited.")
 
     def is_started(self):
         return self._thread is not None and self._thread.is_alive()

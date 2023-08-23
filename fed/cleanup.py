@@ -116,11 +116,11 @@ class CleanupManager:
         But the errors should be sent to other parties as many as possible
         so that they can exit in time too.
         """
-        # No need to send any data to other parties
-        self._sending_data_q.stop(graceful=False)
-        # Should wait for errors to broadcase
-        self._sending_error_q.stop()
-        os.kill(os.getpid(), signal.SIGTERM)
+        # # No need to send any data to other parties
+        # self._sending_data_q.stop(graceful=False)
+        # # Should wait for errors to broadcase
+        # self._sending_error_q.stop()
+        os.kill(os.getpid(), signal.SIGINT)
 
     def _process_data_message(self, message):
         """
@@ -150,7 +150,9 @@ class CleanupManager:
             # the stop command because this function is called inside
             # the data sending thread but it can't kill itself. The
             # data sending thread is exiting by the return value.
-            self._signal_exit()
+            # self._signal_exit()
+            # Notify main thread to clear all sub-threads
+            os.kill(os.getpid(), signal.SIGINT)
             # This will notify the queue to break the for-loop and
             # exit the thread.
             return False

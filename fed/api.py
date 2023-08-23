@@ -15,6 +15,7 @@
 import functools
 import inspect
 import logging
+import signal
 from typing import Any, Dict, List, Union
 
 import cloudpickle
@@ -48,6 +49,13 @@ from fed.utils import is_ray_object_refs, setup_logger
 
 logger = logging.getLogger(__name__)
 
+original_sigint = signal.getsignal(signal.SIGINT)
+
+def _signal_handler(signum, frame):
+    if signum == signal.SIGINT:
+        signal.signal(signal.SIGINT, original_sigint)
+        logger.warning("Receiving SIGINT, try to shutdown fed.")
+        shutdown()
 
 def init(
     addresses: Dict = None,
@@ -157,6 +165,7 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     cross_silo_comm_config = CrossSiloMessageConfig.from_dict(cross_silo_comm_dict)
+    signal.signal(signal.SIGINT, _signal_handler)
     get_global_context().get_cleanup_manager().start(
         exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure
     )
