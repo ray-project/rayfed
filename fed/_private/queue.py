@@ -74,6 +74,7 @@ class MessageQueue:
                     will break the for-loop
                 If False: forcelly kill the for-loop sub-thread
         """
+        # TODO: 这行代码是毒瘤，导致 stop 本身预期是同步调用，一定能把对应子线程 join 掉，但实际上不会。
         if threading.current_thread() == self._thread:
             logger.warning(f"Can't stop the message queue in the message"
                            f"polling thread[{self._name}], ignore it.")
