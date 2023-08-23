@@ -17,7 +17,9 @@ import os
 import signal
 import threading
 import time
-from collections import deque
+# from collections import deque
+from fed._private.queue import MessageQueue
+from ray.exceptions import RayError
 
 import ray
 
@@ -43,19 +45,19 @@ class CleanupManager:
     def __init__(self) -> None:
         # `deque()` is thread safe on `popleft` and `append` operations.
         # See https://docs.python.org/3/library/collections.html#deque-objects
-        self._sending_obj_refs_q = deque()
-        self._check_send_thread = None
+        self._sending_data_q = MessageQueue(
+            lambda msg: self._process_data_message(msg))
+        self._sending_error_q = MessageQueue(lambda msg: self._process_error_message(msg))
+
         self._monitor_thread = None
 
     def start(self, exit_on_sending_failure=False):
         self._exit_on_sending_failure = exit_on_sending_failure
 
-        def __check_func():
-            self._check_sending_objs()
-
-        self._check_send_thread = threading.Thread(target=__check_func)
-        self._check_send_thread.start()
+        self._sending_data_q.start()
         logger.info('Start check sending thread.')
+        self._sending_error_q.start()
+        logger.info('Start check error sending thread.')
 
         def _main_thread_monitor():
             main_thread = threading.main_thread()
@@ -67,27 +69,38 @@ class CleanupManager:
         logger.info('Start check sending monitor thread.')
 
     def graceful_stop(self):
-        assert self._check_send_thread is not None
-        self._notify_to_exit()
-        self._check_send_thread.join()
+        # NOTE(Nkcqx): MUST firstly stop the data queue, because it
+        # may still throw errors during the termination which need to
+        # be sent to the error queue.
+        self._sending_data_q.stop()
+        self._sending_error_q.stop()
 
     def _notify_to_exit(self):
-        # Sending the termination signal
-        self.push_to_sending(True)
-        logger.info('Notify check sending thread to exit.')
+        self.graceful_stop()
+        # # Sending the termination signal
+        # self.push_to_sending(True)
+        # logger.info('Notify check sending thread to exit.')
 
-    def push_to_sending(self, obj_ref: ray.ObjectRef):
-        self._sending_obj_refs_q.append(obj_ref)
+    def push_to_sending(self,
+                        obj_ref: ray.ObjectRef,
+                        upstream_seq_id: int,
+                        downstream_seq_id: int,
+                        is_error=False):
+        msg_pack = (obj_ref, upstream_seq_id, downstream_seq_id)
+        if (is_error):
+            self._sending_error_q.push(msg_pack)
+        else:
+            self._sending_data_q.push(msg_pack)
 
     def _check_sending_objs(self):
         def _signal_exit():
             os.kill(os.getpid(), signal.SIGTERM)
 
-        assert self._sending_obj_refs_q is not None
+        assert self._sending_data_q is not None
 
         while True:
             try:
-                obj_ref = self._sending_obj_refs_q.popleft()
+                obj_ref, upstream_seq_id,  downstream_seq_id = self._sending_data_q.popleft()
             except IndexError:
                 time.sleep(0.1)
                 continue
@@ -96,7 +109,11 @@ class CleanupManager:
             try:
                 res = ray.get(obj_ref)
             except Exception as e:
-                logger.warn(f'Failed to send {obj_ref} with error: {e}')
+                logger.warn(f'Failed to send {obj_ref} with error: {e},'
+                            f'upstream_seq_id: {upstream_seq_id},'
+                            f'downstream_seq_id: {downstream_seq_id}.')
+                if (isinstance(e, RayError) and e.cause()):
+                    pass
                 res = False
             if not res and self._exit_on_sending_failure:
                 logger.warn('Signal self to exit.')
@@ -104,3 +121,34 @@ class CleanupManager:
                 break
 
         logger.info('Check sending thread was exited.')
+
+    def _process_data_message(self, message):
+        def _signal_exit():
+            os.kill(os.getpid(), signal.SIGTERM)
+
+        obj_ref, upstream_seq_id, downstream_seq_id = message
+        try:
+            res = ray.get(obj_ref)
+        except Exception as e:
+            logger.warn(f'Failed to send {obj_ref} with error: {e},'
+                        f'upstream_seq_id: {upstream_seq_id},'
+                        f'downstream_seq_id: {downstream_seq_id}.')
+            if (isinstance(e, RayError) and e.cause()):
+                # TODO: Send error message
+                pass
+            res = False
+
+        if not res and self._exit_on_sending_failure:
+            # This will notify the queue to break the for-loop
+            return False
+
+
+    def _process_error_message(self, error_msg):
+        error_ref, upstream_seq_id, downstream_seq_id = error_msg
+        try:
+            res = ray.get(error_ref)
+        except Exception as e:
+            logger.warn(f"Failed to brodcast error {error_ref}, "
+                        f"this may cause other parties hang since "
+                        f"they can't sense this error and wait forever.")
+            return False

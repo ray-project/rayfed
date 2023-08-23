@@ -433,7 +433,8 @@ def send(
         upstream_seq_id=upstream_seq_id,
         downstream_seq_id=downstream_seq_id,
     )
-    get_global_context().get_cleanup_manager().push_to_sending(res)
+    get_global_context().get_cleanup_manager().push_to_sending(
+        res, upstream_seq_id, downstream_seq_id)
     return res
 
 
