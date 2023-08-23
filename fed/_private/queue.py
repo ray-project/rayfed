@@ -15,6 +15,10 @@
 import threading
 from collections import deque
 import time
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 STOP_SYMBOL = False
 
@@ -41,16 +45,21 @@ class MessageQueue:
                 res = self._msg_handler(message)
                 if not res:
                     break
+            logger.info(f"The message polling thread was exited.")
 
-        self._thread = threading.Thread(target=_loop)
-        self._thread.start()
+        if self._thread is None or not self._thread.is_alive():
+            logger.info(f"Starting new thread for message polling.")
+            self._queue.clear()
+            self._thread = threading.Thread(target=_loop)
+            self._thread.start()
 
     def push(self, message):
         self._queue.append(message)
 
     def notify_to_exit(self):
+        logger.info("Notify message polling thread to exit.")
         self.push(STOP_SYMBOL)
-    
+
     def stop(self, graceful=True):
         """
         Stop the message queue.
@@ -64,6 +73,10 @@ class MessageQueue:
                     will break the for-loop
                 If False: forcelly kill the for-loop sub-thread
         """
+        if threading.current_thread() == self._thread:
+            logger.warning(f"Can't stop the message queue in the message polling thread, ignore it.")
+            return
+
         if graceful:
             if self.is_started():
                 self.notify_to_exit()
@@ -72,6 +85,5 @@ class MessageQueue:
             if self._thread is not None:
                 self._thread._stop()
 
-
     def is_started(self):
-        return self._thread is not None
+        return self._thread is not None and self._thread.is_alive()

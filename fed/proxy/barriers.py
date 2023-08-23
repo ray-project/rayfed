@@ -424,7 +424,13 @@ def send(
     data,
     upstream_seq_id,
     downstream_seq_id,
+    is_error=False
 ):
+    """
+    Args:
+        is_error: Whether the `data` is an error object or not. Default is False.
+            If True, the data will be sent to the error message queue.
+    """
     global _SENDER_PROXY_ACTOR_NAME
     sender_proxy = ray.get_actor(_SENDER_PROXY_ACTOR_NAME)
     res = sender_proxy.send.remote(
@@ -434,7 +440,7 @@ def send(
         downstream_seq_id=downstream_seq_id,
     )
     get_global_context().get_cleanup_manager().push_to_sending(
-        res, upstream_seq_id, downstream_seq_id)
+        res, upstream_seq_id, downstream_seq_id, is_error)
     return res
 
 

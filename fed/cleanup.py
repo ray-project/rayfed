@@ -47,7 +47,9 @@ class CleanupManager:
         # See https://docs.python.org/3/library/collections.html#deque-objects
         self._sending_data_q = MessageQueue(
             lambda msg: self._process_data_message(msg))
-        self._sending_error_q = MessageQueue(lambda msg: self._process_error_message(msg))
+
+        self._sending_error_q = MessageQueue(
+            lambda msg: self._process_error_message(msg))
 
         self._monitor_thread = None
 
@@ -62,7 +64,7 @@ class CleanupManager:
         def _main_thread_monitor():
             main_thread = threading.main_thread()
             main_thread.join()
-            self._notify_to_exit()
+            self.graceful_stop()
 
         self._monitor_thread = threading.Thread(target=_main_thread_monitor)
         self._monitor_thread.start()
@@ -75,12 +77,6 @@ class CleanupManager:
         self._sending_data_q.stop()
         self._sending_error_q.stop()
 
-    def _notify_to_exit(self):
-        self.graceful_stop()
-        # # Sending the termination signal
-        # self.push_to_sending(True)
-        # logger.info('Notify check sending thread to exit.')
-
     def push_to_sending(self,
                         obj_ref: ray.ObjectRef,
                         upstream_seq_id: int,
@@ -92,40 +88,25 @@ class CleanupManager:
         else:
             self._sending_data_q.push(msg_pack)
 
-    def _check_sending_objs(self):
-        def _signal_exit():
-            os.kill(os.getpid(), signal.SIGTERM)
-
-        assert self._sending_data_q is not None
-
-        while True:
-            try:
-                obj_ref, upstream_seq_id,  downstream_seq_id = self._sending_data_q.popleft()
-            except IndexError:
-                time.sleep(0.1)
-                continue
-            if isinstance(obj_ref, bool):
-                break
-            try:
-                res = ray.get(obj_ref)
-            except Exception as e:
-                logger.warn(f'Failed to send {obj_ref} with error: {e},'
-                            f'upstream_seq_id: {upstream_seq_id},'
-                            f'downstream_seq_id: {downstream_seq_id}.')
-                if (isinstance(e, RayError) and e.cause()):
-                    pass
-                res = False
-            if not res and self._exit_on_sending_failure:
-                logger.warn('Signal self to exit.')
-                _signal_exit()
-                break
-
-        logger.info('Check sending thread was exited.')
+    def _signal_exit(self):
+        """
+        Exit the current process immediately.
+        Since the compuation is interrupt, no data need to be sent to
+        other parties, therefore the data queue can stop forcelly;
+        But the errors should be sent to other parties as many as possible
+        so that they can exit in time too.
+        """
+        # No need to send any data to other parties
+        self._sending_data_q.stop(graceful=False)
+        # Still 
+        self._sending_error_q.stop()
+        os.kill(os.getpid(), signal.SIGTERM)
 
     def _process_data_message(self, message):
-        def _signal_exit():
-            os.kill(os.getpid(), signal.SIGTERM)
-
+        """
+        This is the handler function that is called in the message queue's
+        processing sub-thread.
+        """
         obj_ref, upstream_seq_id, downstream_seq_id = message
         try:
             res = ray.get(obj_ref)
@@ -139,8 +120,16 @@ class CleanupManager:
             res = False
 
         if not res and self._exit_on_sending_failure:
-            # This will notify the queue to break the for-loop
+            # NOTE(NKcqx): this will exit the data sending thread and
+            # the error sending thread. However, the former will IGNORE
+            # the stop command because this function is called inside
+            # the data sending thread but it can't kill itself. The
+            # data sending thread is exiting by the return value.
+            self._signal_exit()
+            # This will notify the queue to break the for-loop and
+            # exit the thread.
             return False
+        return True
 
 
     def _process_error_message(self, error_msg):
