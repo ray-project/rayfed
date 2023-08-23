@@ -46,10 +46,12 @@ class CleanupManager:
         # `deque()` is thread safe on `popleft` and `append` operations.
         # See https://docs.python.org/3/library/collections.html#deque-objects
         self._sending_data_q = MessageQueue(
-            lambda msg: self._process_data_message(msg))
+            lambda msg: self._process_data_message(msg),
+            name='DataQueue')
 
         self._sending_error_q = MessageQueue(
-            lambda msg: self._process_error_message(msg))
+            lambda msg: self._process_error_message(msg),
+            name="ErrorQueue")
 
         self._monitor_thread = None
 
@@ -79,10 +81,28 @@ class CleanupManager:
 
     def push_to_sending(self,
                         obj_ref: ray.ObjectRef,
-                        upstream_seq_id: int,
-                        downstream_seq_id: int,
+                        dest_party: str = None,
+                        upstream_seq_id: int=-1,
+                        downstream_seq_id: int=-1,
                         is_error=False):
-        msg_pack = (obj_ref, upstream_seq_id, downstream_seq_id)
+        """
+        Push the sending remote task's return value, i.e. `obj_ref` to
+        the corresponding message queue.
+
+        Args:
+            obj_ref: The return value of the send remote task.
+            dest_party: 
+            upstream_seq_id: (Optional) This is unneccessary when sending
+                normal data message because it was already sent to the target
+                party. However, if the computation is corrupted, an error object
+                will be created and sent with the same seq_id to replace the
+                original data object. This argument is used to send the error.
+            downstream_seq_id: (Optional) Same as `upstream_seq_id`.
+            is_error: (Optional) Whether the obj_ref represent an error object or not.
+                Default to False. If True, the obj_ref will be sent to the error
+                queue instead.
+        """
+        msg_pack = (obj_ref, dest_party, upstream_seq_id, downstream_seq_id)
         if (is_error):
             self._sending_error_q.push(msg_pack)
         else:
@@ -98,25 +118,30 @@ class CleanupManager:
         """
         # No need to send any data to other parties
         self._sending_data_q.stop(graceful=False)
-        # Still 
+        # Should wait for errors to broadcase
         self._sending_error_q.stop()
         os.kill(os.getpid(), signal.SIGTERM)
 
     def _process_data_message(self, message):
         """
-        This is the handler function that is called in the message queue's
-        processing sub-thread.
+        This is the handler function called in the sub-thread.
         """
-        obj_ref, upstream_seq_id, downstream_seq_id = message
+        obj_ref, dest_party, upstream_seq_id, downstream_seq_id = message
         try:
             res = ray.get(obj_ref)
         except Exception as e:
-            logger.warn(f'Failed to send {obj_ref} with error: {e},'
-                        f'upstream_seq_id: {upstream_seq_id},'
+            logger.warn(f'Failed to send {obj_ref} to {dest_party}, error: {e},'
+                        f'upstream_seq_id: {upstream_seq_id}, '
                         f'downstream_seq_id: {downstream_seq_id}.')
-            if (isinstance(e, RayError) and e.cause()):
-                # TODO: Send error message
-                pass
+            if (isinstance(e, RayError)):
+                # if (isinstance(e.cause, RayError)):
+                #     # Indicate that the root cause is a computation error
+                #     # which should be broadcasted to other parties
+                logger.info(f"Sending error {e.cause} to {dest_party}.")
+                from fed.proxy.barriers import send
+                # TODO(NKcqx): Maybe broadcast to all parties?
+                send(e.cause, dest_party, upstream_seq_id, downstream_seq_id, True)
+
             res = False
 
         if not res and self._exit_on_sending_failure:
@@ -133,11 +158,14 @@ class CleanupManager:
 
 
     def _process_error_message(self, error_msg):
-        error_ref, upstream_seq_id, downstream_seq_id = error_msg
+        error_ref, dest_party, upstream_seq_id, downstream_seq_id = error_msg
         try:
             res = ray.get(error_ref)
         except Exception as e:
-            logger.warn(f"Failed to brodcast error {error_ref}, "
-                        f"this may cause other parties hang since "
-                        f"they can't sense this error and wait forever.")
-            return False
+            logger.warning(f"Failed to send error {error_ref} to {dest_party}, "
+                        f"upstream_seq_id: {upstream_seq_id} "
+                        f"downstream_seq_id: {downstream_seq_id}. "
+                        "In this case, other parties won't sense "
+                        "this error and may cause unknown behaviour.")
+        # Return True so that one error object won't affect others to send
+        return True

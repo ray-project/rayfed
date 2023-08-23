@@ -18,9 +18,7 @@ import pytest
 import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
-
 import signal
-
 import os
 import sys
 
@@ -32,18 +30,23 @@ def signal_handler(sig, frame):
         os._exit(0)
 
 
+class MyError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+
 @fed.remote
-def f():
-    return 100
+def error_func():
+    raise MyError("Test Error")
 
 
 @fed.remote
 class My:
-    def __init__(self, value) -> None:
-        self._value = value
+    def __init__(self) -> None:
+        pass
 
-    def get_value(self):
-        return self._value
+    def error_func(self):
+        raise MyError("Test Error")
 
 
 def run(party):
@@ -54,13 +57,6 @@ def run(party):
         'alice': '127.0.0.1:11012',
         'bob': '127.0.0.1:11011',
     }
-    retry_policy = {
-        "maxAttempts": 2,
-        "initialBackoff": "1s",
-        "maxBackoff": "1s",
-        "backoffMultiplier": 1,
-        "retryableStatusCodes": ["UNAVAILABLE"],
-    }
 
     fed.init(
         addresses=addresses,
@@ -68,27 +64,33 @@ def run(party):
         logging_level='debug',
         config={
             'cross_silo_comm': {
-                'grpc_retry_policy': retry_policy,
                 'exit_on_sending_failure': True,
                 'timeout_ms': 20 * 1000,
             },
         },
     )
 
-    o = f.party("alice").remote()
-    My.party("bob").remote(o)
-    import time
+    # Both party should catch the error and in the
+    # exact type.
+    o = error_func.party("alice").remote()
+    with pytest.raises(MyError):
+        fed.get(o)
 
-    # Wait for SIGTERM as failure on sending.
-    time.sleep(86400)
+    actor = My.party("bob").remote()
+    with pytest.raises(MyError):
+        fed.get(actor.error_func.remote())
 
 
-def test_exit_when_failure_on_sending():
+def test_cross_silo_error():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_alice.start()
     p_alice.join()
+    # p_bob = multiprocessing.Process(target=run, args=('bob',))
+    # p_bob.start()
+    # p_bob.join()
     assert p_alice.exitcode == 0
 
 
 if __name__ == "__main__":
-    sys.exit(pytest.main(["-sv", __file__]))
+    # sys.exit(pytest.main(["-sv", __file__]))
+    test_cross_silo_error()

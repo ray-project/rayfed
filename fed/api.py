@@ -400,14 +400,14 @@ def get(
                 )
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)
-    try:
+    # try:
         # 当前计算机构：抛出 task error，但不能立刻让 driver 退出，因为 error message 很可能还没发到对面；
         # 对方计算机构：抛出 task error，但是这个 error 是 recv 到执行结构发来的 error message(remote)，此时是可以立刻退出 driver 的。
         # Unify：遇到报错后等待一个事件：SendProxyActor 的 error 队列清空; 不对，是等待本地专用于 error 的 _sending_obj_refs_q 清空
-        values = ray.get(ray_refs)
-    except Exception as e:
-        print(f"Driver execution got error: {e}.")
-        return None
+    values = ray.get(ray_refs)
+    # except Exception as e:
+    #     print(f"Driver execution got error: {e}.")
+    #     return None
     if is_individual_id:
         values = values[0]
 
