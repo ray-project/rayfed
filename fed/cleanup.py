@@ -59,9 +59,9 @@ class CleanupManager:
         self._exit_on_sending_failure = exit_on_sending_failure
 
         self._sending_data_q.start()
-        logger.info('Start check sending thread.')
+        logger.debug('Start check sending thread.')
         self._sending_error_q.start()
-        logger.info('Start check error sending thread.')
+        logger.debug('Start check error sending thread.')
 
         def _main_thread_monitor():
             main_thread = threading.main_thread()
@@ -140,7 +140,7 @@ class CleanupManager:
                 logger.info(f"Sending error {e.cause} to {dest_party}.")
                 from fed.proxy.barriers import send
                 # TODO(NKcqx): Maybe broadcast to all parties?
-                send(e.cause, dest_party, upstream_seq_id, downstream_seq_id, True)
+                send(dest_party, e.cause, upstream_seq_id, downstream_seq_id, True)
 
             res = False
 
@@ -163,7 +163,11 @@ class CleanupManager:
         error_ref, dest_party, upstream_seq_id, downstream_seq_id = error_msg
         try:
             res = ray.get(error_ref)
+            logger.debug(f"Sending error got response: {res}.")
         except Exception as e:
+            res = False
+
+        if not res:
             logger.warning(f"Failed to send error {error_ref} to {dest_party}, "
                         f"upstream_seq_id: {upstream_seq_id} "
                         f"downstream_seq_id: {downstream_seq_id}. "

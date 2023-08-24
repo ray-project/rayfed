@@ -188,6 +188,11 @@ class ReceiverProxyActor:
         data = await self._proxy_instance.get_data(
             src_party, upstream_seq_id, curr_seq_id
         )
+        if isinstance(data, Exception):
+            logger.debug(f"Receiving exception: {type(data)}, {data} from {src_party}, "
+                         f"upstream_seq_id: {upstream_seq_id}, "
+                         f"curr_seq_id: {curr_seq_id}. Re-raise it.")
+            raise data
         return data
 
     async def _get_stats(self):

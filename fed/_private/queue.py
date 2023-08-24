@@ -48,7 +48,7 @@ class MessageQueue:
                     break
 
         if self._thread is None or not self._thread.is_alive():
-            logger.info(f"Starting new thread[{self._name}] for message polling.")
+            logger.debug(f"Starting new thread[{self._name}] for message polling.")
             self._queue = deque()
             self._thread = threading.Thread(target=_loop)
             self._thread.start()
@@ -76,7 +76,8 @@ class MessageQueue:
         # TODO: 这行代码是毒瘤，导致 stop 本身预期是同步调用，一定能把对应子线程 join 掉，但实际上不会。
         if threading.current_thread() == self._thread:
             logger.warning(f"Can't stop the message queue in the message"
-                           f"polling thread[{self._name}], ignore it.")
+                           f"polling thread[{self._name}], ignore it, this."
+                           f"could bring unknown timing problem.")
             return
 
         if graceful:

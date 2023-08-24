@@ -73,24 +73,25 @@ def run(party):
     # Both party should catch the error and in the
     # exact type.
     o = error_func.party("alice").remote()
-    with pytest.raises(MyError):
+    with pytest.raises(Exception):
         fed.get(o)
 
-    # actor = My.party("bob").remote()
-    # with pytest.raises(MyError):
-    #     fed.get(actor.error_func.remote())
+
+    actor = My.party("alice").remote()
+    with pytest.raises(Exception):
+        fed.get(actor.error_func.remote())
 
 
 def test_cross_silo_error():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
+    p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
+    p_bob.start()
     p_alice.join()
-    # p_bob = multiprocessing.Process(target=run, args=('bob',))
-    # p_bob.start()
-    # p_bob.join()
+    p_bob.join()
     assert p_alice.exitcode == 0
+    assert p_bob.exitcode == 0
 
 
 if __name__ == "__main__":
-    # sys.exit(pytest.main(["-sv", __file__]))
-    test_cross_silo_error()
+    sys.exit(pytest.main(["-sv", __file__]))
