@@ -16,8 +16,6 @@ import logging
 import os
 import signal
 import threading
-import time
-# from collections import deque
 from fed._private.queue import MessageQueue
 from ray.exceptions import RayError
 
@@ -82,16 +80,16 @@ class CleanupManager:
     def push_to_sending(self,
                         obj_ref: ray.ObjectRef,
                         dest_party: str = None,
-                        upstream_seq_id: int=-1,
-                        downstream_seq_id: int=-1,
-                        is_error=False):
+                        upstream_seq_id: int = -1,
+                        downstream_seq_id: int = -1,
+                        is_error: bool = False):
         """
         Push the sending remote task's return value, i.e. `obj_ref` to
         the corresponding message queue.
 
         Args:
             obj_ref: The return value of the send remote task.
-            dest_party: 
+            dest_party: Destination
             upstream_seq_id: (Optional) This is unneccessary when sending
                 normal data message because it was already sent to the target
                 party. However, if the computation is corrupted, an error object
@@ -158,20 +156,19 @@ class CleanupManager:
             return False
         return True
 
-
     def _process_error_message(self, error_msg):
         error_ref, dest_party, upstream_seq_id, downstream_seq_id = error_msg
         try:
             res = ray.get(error_ref)
             logger.debug(f"Sending error got response: {res}.")
-        except Exception as e:
+        except Exception:
             res = False
 
         if not res:
             logger.warning(f"Failed to send error {error_ref} to {dest_party}, "
-                        f"upstream_seq_id: {upstream_seq_id} "
-                        f"downstream_seq_id: {downstream_seq_id}. "
-                        "In this case, other parties won't sense "
-                        "this error and may cause unknown behaviour.")
+                           f"upstream_seq_id: {upstream_seq_id} "
+                           f"downstream_seq_id: {downstream_seq_id}. "
+                           "In this case, other parties won't sense "
+                           "this error and may cause unknown behaviour.")
         # Return True so that one error object won't affect others to send
         return True

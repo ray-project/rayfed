@@ -20,7 +20,6 @@ from typing import Any, Dict, List, Union
 
 import cloudpickle
 import ray
-from ray.exceptions import RayError
 
 import fed._private.compatible_utils as compatible_utils
 import fed.config as fed_config
@@ -52,11 +51,13 @@ logger = logging.getLogger(__name__)
 
 original_sigint = signal.getsignal(signal.SIGINT)
 
+
 def _signal_handler(signum, frame):
     if signum == signal.SIGINT:
         signal.signal(signal.SIGINT, original_sigint)
         logger.warning("Receiving SIGINT, try to shutdown fed.")
         shutdown()
+
 
 def init(
     addresses: Dict = None,

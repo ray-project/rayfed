@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 STOP_SYMBOL = False
 
+
 class MessageQueue:
     def __init__(self, msg_handler, failure_handler=None, name=''):
         assert callable(msg_handler), "msg_handler must be a callable function"
@@ -64,20 +65,17 @@ class MessageQueue:
         """
         Stop the message queue.
 
-        If the graceful flag is set to True, it will wait for the current message to be processed before stopping.
-        If the graceful flag is set to False, it will stop the queue immediately.
-
         Args:
-            graceful (bool): A flag indicating whether to stop the queue gracefully or not. Default is True.
-                If True: insert the STOP_SYMBOL at the end of the queue and wait for it to be processed, which
-                    will break the for-loop
-                If False: forcelly kill the for-loop sub-thread
+            graceful (bool): A flag indicating whether to stop the queue
+                    gracefully or not. Default is True.
+                If True: insert the STOP_SYMBOL at the end of the queue
+                    and wait for it to be processed, which will break the for-loop;
+                If False: forcelly kill the for-loop sub-thread.
         """
-        # TODO: 这行代码是毒瘤，导致 stop 本身预期是同步调用，一定能把对应子线程 join 掉，但实际上不会。
         if threading.current_thread() == self._thread:
-            logger.warning(f"Can't stop the message queue in the message"
-                           f"polling thread[{self._name}], ignore it, this."
-                           f"could bring unknown timing problem.")
+            logger.error(f"Can't stop the message queue in the message"
+                         f"polling thread[{self._name}], ignore it, this."
+                         f"could bring unknown timing problem.")
             return
 
         if graceful:

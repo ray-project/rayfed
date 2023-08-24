@@ -76,7 +76,6 @@ def run(party):
     with pytest.raises(Exception):
         fed.get(o)
 
-
     actor = My.party("alice").remote()
     with pytest.raises(Exception):
         fed.get(actor.error_func.remote())
