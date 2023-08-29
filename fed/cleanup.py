@@ -71,7 +71,7 @@ class CleanupManager:
         logger.info('Start check sending monitor thread.')
 
     def graceful_stop(self):
-        # NOTE(Nkcqx): MUST firstly stop the data queue, because it
+        # NOTE(NKcqx): MUST firstly stop the data queue, because it
         # may still throw errors during the termination which need to
         # be sent to the error queue.
         self._sending_data_q.stop()
@@ -108,21 +108,15 @@ class CleanupManager:
 
     def _signal_exit(self):
         """
-        Exit the current process immediately.
-        Since the compuation is interrupt, no data need to be sent to
-        other parties, therefore the data queue can stop forcelly;
-        But the errors should be sent to other parties as many as possible
-        so that they can exit in time too.
+        Exit the current process immediately. The signal will be captured
+        in main thread where the `stop` will be called.
         """
-        # # No need to send any data to other parties
-        # self._sending_data_q.stop(graceful=False)
-        # # Should wait for errors to broadcase
-        # self._sending_error_q.stop()
         os.kill(os.getpid(), signal.SIGINT)
 
     def _process_data_message(self, message):
         """
-        This is the handler function called in the sub-thread.
+        This is the handler function for message queue and will be called
+        in the sub-thread.
         """
         obj_ref, dest_party, upstream_seq_id, downstream_seq_id = message
         try:
@@ -132,9 +126,6 @@ class CleanupManager:
                         f'upstream_seq_id: {upstream_seq_id}, '
                         f'downstream_seq_id: {downstream_seq_id}.')
             if (isinstance(e, RayError)):
-                # if (isinstance(e.cause, RayError)):
-                #     # Indicate that the root cause is a computation error
-                #     # which should be broadcasted to other parties
                 logger.info(f"Sending error {e.cause} to {dest_party}.")
                 from fed.proxy.barriers import send
                 # TODO(NKcqx): Maybe broadcast to all parties?
