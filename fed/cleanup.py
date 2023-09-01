@@ -111,6 +111,7 @@ class CleanupManager:
         Exit the current process immediately. The signal will be captured
         in main thread where the `stop` will be called.
         """
+        logger.debug("Signal SIGINT to exit.")
         os.kill(os.getpid(), signal.SIGINT)
 
     def _process_data_message(self, message):
@@ -134,16 +135,12 @@ class CleanupManager:
             res = False
 
         if not res and self._exit_on_sending_failure:
-            # NOTE(NKcqx): this will exit the data sending thread and
-            # the error sending thread. However, the former will IGNORE
-            # the stop command because this function is called inside
-            # the data sending thread but it can't kill itself. The
-            # data sending thread is exiting by the return value.
-            # self._signal_exit()
-            # Notify main thread to clear all sub-threads
-            os.kill(os.getpid(), signal.SIGINT)
-            # This will notify the queue to break the for-loop and
-            # exit the thread.
+            # NOTE(NKcqx): Send signal to main thread so that it can
+            # do some cleaning, e.g. kill the error sending thread.
+            self._signal_exit()
+            # Return False to exit the loop in sub-thread. Note that
+            # the above signal will also make the main thread to kill
+            # the sub-thread eventually.
             return False
         return True
 

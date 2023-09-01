@@ -51,7 +51,7 @@ class MessageQueue:
         if self._thread is None or not self._thread.is_alive():
             logger.debug(f"Starting new thread[{self._name}] for message polling.")
             self._queue = deque()
-            self._thread = threading.Thread(target=_loop)
+            self._thread = threading.Thread(target=_loop, name=self._name)
             self._thread.start()
 
     def push(self, message):
@@ -80,6 +80,7 @@ class MessageQueue:
 
         if graceful:
             if self.is_started():
+                logger.debug(f"Gracefully killing thread[{self._name}].")
                 self.notify_to_exit()
                 self._thread.join()
         else:

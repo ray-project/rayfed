@@ -16,7 +16,7 @@ import functools
 import inspect
 import logging
 import signal
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Callable
 
 import cloudpickle
 import ray
@@ -55,8 +55,11 @@ original_sigint = signal.getsignal(signal.SIGINT)
 def _signal_handler(signum, frame):
     if signum == signal.SIGINT:
         signal.signal(signal.SIGINT, original_sigint)
-        logger.warning("Receiving SIGINT, try to shutdown fed.")
-        shutdown()
+        logger.warning(
+            "Stop signal received (e.g. via SIGINT/Ctrl+C), "
+            "try to shutdown fed. Press CTRL+C "
+            "(or send SIGINT/SIGKILL/SIGTERM) to skip.")
+        shutdown(intended=False)
 
 
 def init(
@@ -68,7 +71,8 @@ def init(
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
     receiver_sender_proxy_cls: SenderReceiverProxy = None,
-    job_name: str = constants.RAYFED_DEFAULT_JOB_NAME
+    job_name: str = constants.RAYFED_DEFAULT_JOB_NAME,
+    failure_handler: Callable[[], None] = None,
 ):
     """
     Initialize a RayFed client.
@@ -129,7 +133,7 @@ def init(
     assert party in addresses, f"Party {party} is not in the addresses {addresses}."
 
     fed_utils.validate_addresses(addresses)
-    init_global_context(job_name=job_name)
+    init_global_context(job_name=job_name, failure_handler=failure_handler)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
@@ -228,13 +232,22 @@ def init(
         ping_others(addresses=addresses, self_party=party, max_retries=3600)
 
 
-def shutdown():
+def shutdown(intended=True):
     """
     Shutdown a RayFed client.
+
+    Args:
+        intended: (Optional) Whether this is a intended exit. If not, a failure handler
+            will be triggered.
     """
-    compatible_utils._clear_internal_kv()
-    clear_global_context()
-    logger.info('Shutdowned rayfed.')
+    if (get_global_context() is not None):
+        # Job has inited, can be shutdown
+        failure_handler = get_global_context().failure_handler()
+        compatible_utils._clear_internal_kv()
+        clear_global_context()
+        if(not intended and failure_handler is not None):
+            failure_handler()
+        logger.info('Shutdowned rayfed.')
 
 
 def _get_addresses(job_name: str = None):
