@@ -245,7 +245,7 @@ def shutdown(intended=True):
         failure_handler = get_global_context().failure_handler()
         compatible_utils._clear_internal_kv()
         clear_global_context()
-        if(not intended and failure_handler is not None):
+        if (not intended and failure_handler is not None):
             failure_handler()
         logger.info('Shutdowned rayfed.')
 

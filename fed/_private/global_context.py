@@ -18,7 +18,7 @@ from typing import Callable
 
 class GlobalContext:
     def __init__(self, job_name: str,
-                 failure_handler: Callable[[], None] ) -> None:
+                 failure_handler: Callable[[], None]) -> None:
         self._job_name = job_name
         self._seq_count = 0
         self._cleanup_manager = CleanupManager()
