@@ -18,10 +18,11 @@ from typing import Callable
 
 class GlobalContext:
     def __init__(self, job_name: str,
+                 current_party: str,
                  failure_handler: Callable[[], None]) -> None:
         self._job_name = job_name
         self._seq_count = 0
-        self._cleanup_manager = CleanupManager()
+        self._cleanup_manager = CleanupManager(current_party)
         self._failure_handler = failure_handler
 
     def next_seq_id(self) -> int:
@@ -31,20 +32,22 @@ class GlobalContext:
     def get_cleanup_manager(self) -> CleanupManager:
         return self._cleanup_manager
 
-    def job_name(self) -> str:
+    def get_job_name(self) -> str:
         return self._job_name
 
-    def failure_handler(self) -> Callable[[], None]:
+    def get_failure_handler(self) -> Callable[[], None]:
         return self._failure_handler
 
 
 _global_context = None
 
 
-def init_global_context(job_name: str, failure_handler: Callable[[], None]) -> None:
+def init_global_context(current_party: str,
+                        job_name: str,
+                        failure_handler: Callable[[], None] = None) -> None:
     global _global_context
     if _global_context is None:
-        _global_context = GlobalContext(job_name, failure_handler)
+        _global_context = GlobalContext(job_name, current_party, failure_handler)
 
 
 def get_global_context():

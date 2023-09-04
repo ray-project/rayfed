@@ -17,6 +17,7 @@ import os
 import signal
 import threading
 from fed._private.queue import MessageQueue
+from fed._private.exceptions import RemoteError
 from ray.exceptions import RayError
 
 import ray
@@ -40,7 +41,7 @@ class CleanupManager:
         thread exited, then notifys the checking thread.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, party) -> None:
         # `deque()` is thread safe on `popleft` and `append` operations.
         # See https://docs.python.org/3/library/collections.html#deque-objects
         self._sending_data_q = MessageQueue(
@@ -52,6 +53,8 @@ class CleanupManager:
             name="ErrorQueue")
 
         self._monitor_thread = None
+
+        self._party = party
 
     def start(self, exit_on_sending_failure=False):
         self._exit_on_sending_failure = exit_on_sending_failure
@@ -130,7 +133,8 @@ class CleanupManager:
                 logger.info(f"Sending error {e.cause} to {dest_party}.")
                 from fed.proxy.barriers import send
                 # TODO(NKcqx): Maybe broadcast to all parties?
-                send(dest_party, e.cause, upstream_seq_id, downstream_seq_id, True)
+                send(dest_party, RemoteError(self._party, e.cause),
+                     upstream_seq_id, downstream_seq_id, True)
 
             res = False
 

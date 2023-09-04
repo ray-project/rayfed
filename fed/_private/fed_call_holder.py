@@ -48,7 +48,7 @@ class FedCallHolder:
     ) -> None:
         # Note(NKcqx): FedCallHolder will only be created in driver process, where
         # the GlobalContext must has been initialized.
-        job_name = get_global_context().job_name()
+        job_name = get_global_context().get_job_name()
         self._party = fed_config.get_cluster_config(job_name).current_party
         self._node_party = node_party
         self._options = options

@@ -232,7 +232,7 @@ def _start_receiver_proxy(
     ).remote(
         listening_address=addresses[party],
         party=party,
-        job_name=get_global_context().job_name(),
+        job_name=get_global_context().get_job_name(),
         tls_config=tls_config,
         logging_level=logging_level,
         proxy_cls=proxy_cls,
@@ -283,7 +283,7 @@ def _start_sender_proxy(
         name=_SENDER_PROXY_ACTOR_NAME, **actor_options
     )
 
-    job_name = get_global_context().job_name()
+    job_name = get_global_context().get_job_name()
     _SENDER_PROXY_ACTOR = _SENDER_PROXY_ACTOR.remote(
         addresses=addresses,
         party=party,
@@ -403,7 +403,7 @@ def _start_sender_receiver_proxy(
 
     logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
 
-    job_name = get_global_context().job_name()
+    job_name = get_global_context().get_job_name()
     global _SENDER_RECEIVER_PROXY_ACTOR
     global _RECEIVER_PROXY_ACTOR_NAME
     _SENDER_RECEIVER_PROXY_ACTOR = SenderReceiverProxyActor.options(

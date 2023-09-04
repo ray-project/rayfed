@@ -133,7 +133,8 @@ def init(
     assert party in addresses, f"Party {party} is not in the addresses {addresses}."
 
     fed_utils.validate_addresses(addresses)
-    init_global_context(job_name=job_name, failure_handler=failure_handler)
+    init_global_context(current_party=party, job_name=job_name,
+                        failure_handler=failure_handler)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
@@ -242,7 +243,7 @@ def shutdown(intended=True):
     """
     if (get_global_context() is not None):
         # Job has inited, can be shutdown
-        failure_handler = get_global_context().failure_handler()
+        failure_handler = get_global_context().get_failure_handler()
         compatible_utils._clear_internal_kv()
         clear_global_context()
         if (not intended and failure_handler is not None):
@@ -322,7 +323,7 @@ class FedRemoteClass:
 
     def remote(self, *cls_args, **cls_kwargs):
         fed_class_task_id = get_global_context().next_seq_id()
-        job_name = get_global_context().job_name()
+        job_name = get_global_context().get_job_name()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
             _get_addresses(job_name),
@@ -376,7 +377,7 @@ def get(
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
-    job_name = get_global_context().job_name()
+    job_name = get_global_context().get_job_name()
     addresses = _get_addresses(job_name)
     current_party = _get_party(job_name)
     is_individual_id = isinstance(fed_objects, FedObject)
@@ -433,7 +434,7 @@ def get(
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):
-    job_name = get_global_context().job_name()
+    job_name = get_global_context().get_job_name()
     current_party = _get_party(job_name)
     if actor._node_party == current_party:
         handler = actor._actor_handle

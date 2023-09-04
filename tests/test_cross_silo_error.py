@@ -73,8 +73,9 @@ def run(party):
     # Both party should catch the error and in the
     # exact type.
     o = error_func.party("alice").remote()
-    with pytest.raises(Exception):
+    with pytest.raises(Exception) as e:
         fed.get(o)
+    assert 'occurred at alice' in str(e.value)
 
     actor = My.party("alice").remote()
     with pytest.raises(Exception):
