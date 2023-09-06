@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import functools
 import inspect
 import logging
@@ -27,6 +28,7 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
+from fed._private.exceptions import RemoteError
 from fed._private.global_context import (
     init_global_context,
     get_global_context,
@@ -238,8 +240,8 @@ def shutdown(intended=True):
     Shutdown a RayFed client.
 
     Args:
-        intended: (Optional) Whether this is a intended exit. If not, a failure handler
-            will be triggered.
+        intended: (Optional) Whether this is a intended exit. If not
+        a "failure handler" will be triggered.
     """
     if (get_global_context() is not None):
         # Job has inited, can be shutdown
@@ -426,7 +428,16 @@ def get(
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)
 
-    values = ray.get(ray_refs)
+    try:
+        # import time
+        # time.sleep(10)
+        # print("Sleep end, calling ray.get")
+        values = ray.get(ray_refs)
+    except Exception as e:
+        if isinstance(e.cause, RemoteError):
+            logger.warning("Encounter RemoteError happend in other parties"
+                           f", prepare to exit, error message: {e.cause}")
+            os.kill(os.getpid(), signal.SIGINT)
     if is_individual_id:
         values = values[0]
 

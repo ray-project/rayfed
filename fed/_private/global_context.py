@@ -60,5 +60,5 @@ def get_global_context():
 def clear_global_context():
     global _global_context
     if _global_context is not None:
-        _global_context.get_cleanup_manager().graceful_stop()
+        _global_context.get_cleanup_manager().stop()
         _global_context = None

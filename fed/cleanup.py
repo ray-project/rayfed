@@ -67,18 +67,18 @@ class CleanupManager:
         def _main_thread_monitor():
             main_thread = threading.main_thread()
             main_thread.join()
-            self.graceful_stop()
+            self.stop()
 
         self._monitor_thread = threading.Thread(target=_main_thread_monitor)
         self._monitor_thread.start()
         logger.info('Start check sending monitor thread.')
 
-    def graceful_stop(self):
+    def stop(self, graceful=True):
         # NOTE(NKcqx): MUST firstly stop the data queue, because it
         # may still throw errors during the termination which need to
         # be sent to the error queue.
-        self._sending_data_q.stop()
-        self._sending_error_q.stop()
+        self._sending_data_q.stop(graceful)
+        self._sending_error_q.stop(graceful)
 
     def push_to_sending(self,
                         obj_ref: ray.ObjectRef,
@@ -162,5 +162,5 @@ class CleanupManager:
                            f"downstream_seq_id: {downstream_seq_id}. "
                            "In this case, other parties won't sense "
                            "this error and may cause unknown behaviour.")
-        # Return True so that one error object won't affect others to send
+        # Return True so that remaining error objects can be sent
         return True
