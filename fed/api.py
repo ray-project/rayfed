@@ -429,19 +429,15 @@ def get(
             ray_refs.append(received_ray_object_ref)
 
     try:
-        # import time
-        # time.sleep(10)
-        # print("Sleep end, calling ray.get")
         values = ray.get(ray_refs)
+        if is_individual_id:
+            values = values[0]
+        return values
     except Exception as e:
         if isinstance(e.cause, RemoteError):
             logger.warning("Encounter RemoteError happend in other parties"
                            f", prepare to exit, error message: {e.cause}")
-            os.kill(os.getpid(), signal.SIGINT)
-    if is_individual_id:
-        values = values[0]
-
-    return values
+        raise e
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):

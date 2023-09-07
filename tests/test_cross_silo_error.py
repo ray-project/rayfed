@@ -22,12 +22,8 @@ import signal
 import os
 import sys
 
-
-def signal_handler(sig, frame):
-    if sig == signal.SIGTERM.value:
-        fed.shutdown()
-        ray.shutdown()
-        os._exit(0)
+from unittest.mock import Mock
+from fed._private.exceptions import RemoteError
 
 
 class MyError(Exception):
@@ -37,7 +33,7 @@ class MyError(Exception):
 
 @fed.remote
 def error_func():
-    raise MyError("Test Error")
+    raise MyError("Test normal task Error")
 
 
 @fed.remote
@@ -46,12 +42,11 @@ class My:
         pass
 
     def error_func(self):
-        raise MyError("Test Error")
+        raise MyError("Test actor task Error")
 
 
 def run(party):
-    signal.signal(signal.SIGTERM, signal_handler)
-
+    my_failure_handler = Mock()
     compatible_utils.init_ray(address='local')
     addresses = {
         'alice': '127.0.0.1:11012',
@@ -68,28 +63,79 @@ def run(party):
                 'timeout_ms': 20 * 1000,
             },
         },
-        failure_handler=lambda : os.kill(os.getpid(), signal.SIGTERM)
+        failure_handler=my_failure_handler
     )
 
-    # Both party should catch the error and in the
-    # exact type.
+    # Both party should catch the error
     o = error_func.party("alice").remote()
-    # 这实际不会 raise Exception，UT 能过是因为执行过程中触发了 failure_handler 让进程退出了
     with pytest.raises(Exception) as e:
         fed.get(o)
+    if party == 'bob':
+        assert isinstance(e.value.cause, RemoteError)
+        assert 'RemoteError occurred at alice' in str(e.value.cause)
+        assert "normal task Error" in str(e.value.cause)
+    else:
+        assert isinstance(e.value.cause, MyError)
+        assert "normal task Error" in str(e.value.cause)
+    my_failure_handler.assert_called()
 
 
-def test_cross_silo_error():
+def test_cross_silo_normal_task_error():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
-    # p_bob = multiprocessing.Process(target=run, args=('bob',))
+    p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
-    # p_bob.start()
+    p_bob.start()
     p_alice.join()
-    # p_bob.join()
+    p_bob.join()
     assert p_alice.exitcode == 0
-    # assert p_bob.exitcode == 0
+    assert p_bob.exitcode == 0
+
+def run2(party):
+    my_failure_handler = Mock()
+    compatible_utils.init_ray(address='local')
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
+    }
+    fed.init(
+        addresses=addresses,
+        party=party,
+        logging_level='debug',
+        config={
+            'cross_silo_comm': {
+                'exit_on_sending_failure': True,
+                'timeout_ms': 20 * 1000,
+            },
+        },
+        failure_handler=my_failure_handler
+    )
+
+    # Both party should catch the error
+    my = My.party('alice').remote()
+    o = my.error_func.remote()
+    with pytest.raises(Exception) as e:
+        fed.get(o)
+    if party == 'bob':
+        assert isinstance(e.value.cause, RemoteError)
+        assert 'RemoteError occurred at alice' in str(e.value.cause)
+        assert "actor task Error" in str(e.value.cause)
+    else:
+        assert isinstance(e.value.cause, MyError)
+        assert "actor task Error" in str(e.value.cause)
+    assert my_failure_handler.called
+
+
+def test_cross_silo_actor_task_error():
+    p_alice = multiprocessing.Process(target=run2, args=('alice',))
+    p_bob = multiprocessing.Process(target=run2, args=('bob',))
+    p_alice.start()
+    p_bob.start()
+    p_alice.join()
+    p_bob.join()
+    assert p_alice.exitcode == 0
+    assert p_bob.exitcode == 0
 
 
 if __name__ == "__main__":
-    sys.exit(pytest.main(["-sv", __file__]))
-    # test_cross_silo_error()
+    # sys.exit(pytest.main(["-sv", __file__]))
+    test_cross_silo_actor_task_error()
