@@ -262,6 +262,7 @@ def _shutdown(intended=True):
             failure_handler()
         logger.info('Shutdowned rayfed.')
 
+
 def _get_addresses(job_name: str = None):
     """
     Get the RayFed addresses configration.
