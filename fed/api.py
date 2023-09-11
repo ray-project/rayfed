@@ -61,7 +61,7 @@ def _signal_handler(signum, frame):
             "Stop signal received (e.g. via SIGINT/Ctrl+C), "
             "try to shutdown fed. Press CTRL+C "
             "(or send SIGINT/SIGKILL/SIGTERM) to skip.")
-        shutdown(intended=False)
+        _shutdown(intended=False)
 
 
 def init(
@@ -235,9 +235,16 @@ def init(
         ping_others(addresses=addresses, self_party=party, max_retries=3600)
 
 
-def shutdown(intended=True):
+def shutdown():
     """
-    Shutdown a RayFed client. Thread safe.
+    Shutdown a RayFed client.
+    """
+    _shutdown(True)
+
+
+def _shutdown(intended=True):
+    """
+    Shutdown a RayFed client.
 
     Args:
         intended: (Optional) Whether this is a intended exit. If not
@@ -246,7 +253,6 @@ def shutdown(intended=True):
     # Since both main thread and data thread will try to shutdown, this
     # can avoid shutdown twice, so that the failure handler can be
     # executed only once.
-
     if (get_global_context() is not None):
         # Job has inited, can be shutdown
         failure_handler = get_global_context().get_failure_handler()
@@ -255,7 +261,6 @@ def shutdown(intended=True):
         if (not intended and failure_handler is not None):
             failure_handler()
         logger.info('Shutdowned rayfed.')
-
 
 def _get_addresses(job_name: str = None):
     """
@@ -443,7 +448,7 @@ def get(
             logger.warning("Encounter RemoteError happend in other parties"
                            f", prepare to exit, error message: {e.cause}")
         if (get_global_context().acquire_shutdown_flag()):
-            shutdown(intended=False)
+            _shutdown(intended=False)
         # 先抛出异常会让主线程调用的 `fed.get` 直接返回，后续发生什么未知，很可能导致 failure_handler 来不及执行
         raise e
 
