@@ -93,7 +93,7 @@ def test_n_to_1_transport():
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
 
-    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.get_global_context().get_cleanup_manager().stop()
     global_context.clear_global_context()
     compatible_utils._clear_internal_kv()
     ray.shutdown()
@@ -230,7 +230,7 @@ def test_send_grpc_with_meta():
     for result in ray.get(sent_objs):
         assert result
 
-    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.get_global_context().get_cleanup_manager().stop()
     global_context.clear_global_context()
     ray.shutdown()
 
