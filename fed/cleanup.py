@@ -33,7 +33,7 @@ class CleanupManager:
 
     The main logic path is:
         A. If `fed.shutdown()` is invoked in the main thread and every thing works well,
-        the `graceful_stop()` will be invoked as well and the checking thread will be
+        the `stop()` will be invoked as well and the checking thread will be
         notifiled to exit gracefully.
 
         B. If the main thread are broken before sending the notification flag to the

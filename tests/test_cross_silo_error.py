@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ray
 import multiprocessing
 
 import pytest
@@ -75,6 +76,8 @@ def run(party):
         assert isinstance(e.value.cause, MyError)
         assert "normal task Error" in str(e.value.cause)
     my_failure_handler.assert_called_once()
+    fed.shutdown()
+    ray.shutdown()
 
 
 def test_cross_silo_normal_task_error():
@@ -123,6 +126,9 @@ def run2(party):
         assert isinstance(e.value.cause, MyError)
         assert "actor task Error" in str(e.value.cause)
         my_failure_handler.assert_called_once()
+
+    fed.shutdown()
+    ray.shutdown()
 
 
 def test_cross_silo_actor_task_error():
