@@ -15,11 +15,8 @@
 import multiprocessing
 
 import pytest
-import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
-import signal
-import os
 import sys
 
 from unittest.mock import Mock
@@ -77,7 +74,7 @@ def run(party):
     else:
         assert isinstance(e.value.cause, MyError)
         assert "normal task Error" in str(e.value.cause)
-    my_failure_handler.assert_called()
+    my_failure_handler.assert_called_once()
 
 
 def test_cross_silo_normal_task_error():
@@ -89,6 +86,7 @@ def test_cross_silo_normal_task_error():
     p_bob.join()
     assert p_alice.exitcode == 0
     assert p_bob.exitcode == 0
+
 
 def run2(party):
     my_failure_handler = Mock()
@@ -115,14 +113,16 @@ def run2(party):
     o = my.error_func.remote()
     with pytest.raises(Exception) as e:
         fed.get(o)
+
     if party == 'bob':
         assert isinstance(e.value.cause, RemoteError)
         assert 'RemoteError occurred at alice' in str(e.value.cause)
         assert "actor task Error" in str(e.value.cause)
+        my_failure_handler.assert_called_once()
     else:
         assert isinstance(e.value.cause, MyError)
         assert "actor task Error" in str(e.value.cause)
-    assert my_failure_handler.called
+        my_failure_handler.assert_called_once()
 
 
 def test_cross_silo_actor_task_error():
@@ -137,5 +137,4 @@ def test_cross_silo_actor_task_error():
 
 
 if __name__ == "__main__":
-    # sys.exit(pytest.main(["-sv", __file__]))
-    test_cross_silo_actor_task_error()
+    sys.exit(pytest.main(["-sv", __file__]))

@@ -14,6 +14,7 @@
 
 from fed.cleanup import CleanupManager
 from typing import Callable
+import threading
 
 
 class GlobalContext:
@@ -22,8 +23,10 @@ class GlobalContext:
                  failure_handler: Callable[[], None]) -> None:
         self._job_name = job_name
         self._seq_count = 0
-        self._cleanup_manager = CleanupManager(current_party)
         self._failure_handler = failure_handler
+        self._atomic_shutdown_flag = True
+        self._cleanup_manager = CleanupManager(
+            current_party, self.acquire_shutdown_flag)
 
     def next_seq_id(self) -> int:
         self._seq_count += 1
@@ -37,6 +40,13 @@ class GlobalContext:
 
     def get_failure_handler(self) -> Callable[[], None]:
         return self._failure_handler
+
+    def acquire_shutdown_flag(self) -> bool:
+        with threading.Lock():
+            if self._atomic_shutdown_flag:
+                self._atomic_shutdown_flag = False
+                return True
+            return False
 
 
 _global_context = None

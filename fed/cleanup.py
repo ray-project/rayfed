@@ -41,7 +41,7 @@ class CleanupManager:
         thread exited, then notifys the checking thread.
     """
 
-    def __init__(self, party) -> None:
+    def __init__(self, party, acquire_shutdown_flag) -> None:
         # `deque()` is thread safe on `popleft` and `append` operations.
         # See https://docs.python.org/3/library/collections.html#deque-objects
         self._sending_data_q = MessageQueue(
@@ -55,6 +55,7 @@ class CleanupManager:
         self._monitor_thread = None
 
         self._party = party
+        self._acquire_shutdown_flag = acquire_shutdown_flag
 
     def start(self, exit_on_sending_failure=False):
         self._exit_on_sending_failure = exit_on_sending_failure
@@ -73,12 +74,12 @@ class CleanupManager:
         self._monitor_thread.start()
         logger.info('Start check sending monitor thread.')
 
-    def stop(self, graceful=True):
+    def stop(self):
         # NOTE(NKcqx): MUST firstly stop the data queue, because it
         # may still throw errors during the termination which need to
         # be sent to the error queue.
-        self._sending_data_q.stop(graceful)
-        self._sending_error_q.stop(graceful)
+        self._sending_data_q.stop()
+        self._sending_error_q.stop()
 
     def push_to_sending(self,
                         obj_ref: ray.ObjectRef,
@@ -114,8 +115,18 @@ class CleanupManager:
         Exit the current process immediately. The signal will be captured
         in main thread where the `stop` will be called.
         """
-        logger.debug("Signal SIGINT to exit.")
-        os.kill(os.getpid(), signal.SIGINT)
+        # NOTE(NKcqx): The signal is implemented by the error mechanism,
+        # a `KeyboardInterrupt` will be raised after sending the signal,
+        # and OS will hold
+        # the process's original context and change to the error handler context.
+        # States that the original context hold, including `threading.lock`,
+        # will not be released, acquiring the same lock in signal handler
+        # will cause dead lock. In order to ensure executing `shutdown` exactly
+        # once and avoid dead lock, the lock must be checked before sending
+        # signals.
+        if (self._acquire_shutdown_flag()):
+            logger.debug("Signal SIGINT to exit.")
+            os.kill(os.getpid(), signal.SIGINT)
 
     def _process_data_message(self, message):
         """
@@ -144,7 +155,7 @@ class CleanupManager:
             self._signal_exit()
             # Return False to exit the loop in sub-thread. Note that
             # the above signal will also make the main thread to kill
-            # the sub-thread eventually.
+            # the sub-thread eventually by pushing a stop flag.
             return False
         return True
 

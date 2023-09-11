@@ -61,7 +61,7 @@ class MessageQueue:
         logger.info(f"Notify message polling thread[{self._name}] to exit.")
         self.push(STOP_SYMBOL)
 
-    def stop(self, graceful=True):
+    def stop(self):
         """
         Stop the message queue.
 
@@ -78,18 +78,13 @@ class MessageQueue:
                          f"could bring unknown timing problem.")
             return
 
-        if graceful:
-            if self.is_started():
-                logger.debug(f"Gracefully killing thread[{self._name}].")
-                self.notify_to_exit()
-                self._thread.join()
         # TODO(NKcqx): Force kill sub-thread by calling `._stop()` will
         # encounter AssertionError because sub-thread's lock is not released.
-        # Therefore, currently, not support `graceful=False`
-        # else:
-        #     if self._thread is not None:
-        #         self._thread._stop()
-
+        # Therefore, currently, not support forcelly kill thread
+        if self.is_started():
+            logger.debug(f"Gracefully killing thread[{self._name}].")
+            self.notify_to_exit()
+            self._thread.join()
 
         logger.info(f"The message polling thread[{self._name}] was exited.")
 

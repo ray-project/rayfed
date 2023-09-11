@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import functools
 import inspect
 import logging
@@ -48,6 +47,7 @@ from fed.proxy.base_proxy import SenderProxy, ReceiverProxy, SenderReceiverProxy
 from fed.config import CrossSiloMessageConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
+from ray.exceptions import RayError
 
 logger = logging.getLogger(__name__)
 
@@ -237,12 +237,16 @@ def init(
 
 def shutdown(intended=True):
     """
-    Shutdown a RayFed client.
+    Shutdown a RayFed client. Thread safe.
 
     Args:
         intended: (Optional) Whether this is a intended exit. If not
         a "failure handler" will be triggered.
     """
+    # Since both main thread and data thread will try to shutdown, this
+    # can avoid shutdown twice, so that the failure handler can be
+    # executed only once.
+
     if (get_global_context() is not None):
         # Job has inited, can be shutdown
         failure_handler = get_global_context().get_failure_handler()
@@ -428,15 +432,19 @@ def get(
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)
 
+    # ray.get(ray_refs)
     try:
         values = ray.get(ray_refs)
         if is_individual_id:
             values = values[0]
         return values
-    except Exception as e:
+    except RayError as e:
         if isinstance(e.cause, RemoteError):
             logger.warning("Encounter RemoteError happend in other parties"
                            f", prepare to exit, error message: {e.cause}")
+        if (get_global_context().acquire_shutdown_flag()):
+            shutdown(intended=False)
+        # 先抛出异常会让主线程调用的 `fed.get` 直接返回，后续发生什么未知，很可能导致 failure_handler 来不及执行
         raise e
 
 
