@@ -18,7 +18,7 @@ import pytest
 import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
-from fed.tests.test_utils import ray_client_mode_setup
+from fed.tests.test_utils import ray_client_mode_setup # noqa
 
 
 @fed.remote
@@ -83,8 +83,7 @@ def run(party):
     ray.shutdown()
 
 
-@pytest.fixture(ray_client_mode_setup)
-def test_fed_get_in_2_parties():
+def test_fed_get_in_2_parties(ray_client_mode_setup): # noqa
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
