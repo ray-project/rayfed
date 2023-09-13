@@ -1,4 +1,3 @@
-import pytest
 import time
 
 import fed.utils as fed_utils
@@ -21,7 +20,6 @@ def start_ray_cluster(
     _ = fed_utils.start_command(command_str)
 
 
-@pytest.fixture
 def ray_client_mode_setup():
     # Start 2 Ray clusters.
     start_ray_cluster(ray_port=41012, client_server_port=21012, dashboard_port=9112)

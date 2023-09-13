@@ -83,9 +83,8 @@ def run(party):
     ray.shutdown()
 
 
-
-def test_fed_get_in_2_parties(ray_client_mode_setup):
-
+@pytest.fixture(ray_client_mode_setup)
+def test_fed_get_in_2_parties():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
