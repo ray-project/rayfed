@@ -66,6 +66,16 @@ def _get_gcs_address_from_ray_worker():
         return ray.worker._global_node.gcs_address
 
 
+def wrap_kv_key(job_name, key: str):
+    """Add an prefix to the key to avoid conflict with other jobs.
+    """
+    assert isinstance(key, str), \
+        f"The key of KV data must be `str` type, got {type(key)}."
+
+    return constants.RAYFED_JOB_KV_DATA_KEY_FMT.format(
+            job_name, key)
+
+
 class AbstractInternalKv(abc.ABC):
     """ An abstract class that represents for bridging Ray internal kv in
     both Ray client mode and non Ray client mode.
@@ -97,8 +107,9 @@ class AbstractInternalKv(abc.ABC):
 class InternalKv(AbstractInternalKv):
     """The internal kv class for non Ray client mode.
     """
-    def __init__(self) -> None:
+    def __init__(self, job_name: str) -> None:
         super().__init__()
+        self._job_name = job_name
 
     def initialize(self):
         try:
@@ -114,13 +125,16 @@ class InternalKv(AbstractInternalKv):
         return ray_internal_kv._initialize_internal_kv(gcs_client)
 
     def put(self, k, v):
-        return ray_internal_kv._internal_kv_put(k, v)
+        return ray_internal_kv._internal_kv_put(
+            wrap_kv_key(self._job_name, k), v)
 
     def get(self, k):
-        return ray_internal_kv._internal_kv_get(k)
+        return ray_internal_kv._internal_kv_get(
+            wrap_kv_key(self._job_name, k))
 
     def delete(self, k):
-        return ray_internal_kv._internal_kv_del(k)
+        return ray_internal_kv._internal_kv_del(
+            wrap_kv_key(self._job_name, k))
 
     def reset(self):
         return ray_internal_kv._internal_kv_reset()
@@ -157,17 +171,17 @@ class ClientModeInternalKv(AbstractInternalKv):
         return ray.get(o)
 
 
-def _init_internal_kv():
+def _init_internal_kv(job_name):
     """An internal API that initialize the internal kv object."""
     global kv
     if kv is None:
         from ray._private.client_mode_hook import is_client_mode_enabled
         if is_client_mode_enabled:
             kv_actor = ray.remote(InternalKv).options(
-                name="_INTERNAL_KV_ACTOR").remote()
+                name="_INTERNAL_KV_ACTOR").remote(job_name)
             response = kv_actor._ping.remote()
             ray.get(response)
-        kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv()
+        kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv(job_name)
         kv.initialize()
 
 

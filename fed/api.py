@@ -26,7 +26,11 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
-from fed._private.global_context import get_global_context, clear_global_context
+from fed._private.global_context import (
+    init_global_context,
+    get_global_context,
+    clear_global_context
+)
 from fed.proxy.barriers import (
     ping_others,
     recv,
@@ -54,6 +58,7 @@ def init(
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
     receiver_sender_proxy_cls: SenderReceiverProxy = None,
+    job_name: str = constants.RAYFED_DEFAULT_JOB_NAME
 ):
     """
     Initialize a RayFed client.
@@ -91,7 +96,12 @@ def init(
                 }
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
-
+        job_name: optional; the job name of the current job. Note that, the job name
+            must be identical in all parties, otherwise, messages will be ignored
+            because of the job name mismatch. If the job name is not provided, an
+            default fixed name will be assigned, therefore messages of all anonymous
+            jobs will be mixed together, which should only be used in the single job
+            scenario or test mode.
     Examples:
         >>> import fed
         >>> import ray
@@ -109,7 +119,7 @@ def init(
     assert party in addresses, f"Party {party} is not in the addresses {addresses}."
 
     fed_utils.validate_addresses(addresses)
-
+    init_global_context(job_name=job_name)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
@@ -118,7 +128,7 @@ def init(
 
     cross_silo_comm_dict = config.get("cross_silo_comm", {})
     # A Ray private accessing, should be replaced in public API.
-    compatible_utils._init_internal_kv()
+    compatible_utils._init_internal_kv(job_name)
 
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: addresses,
@@ -141,7 +151,8 @@ def init(
         logging_level=logging_level,
         logging_format=constants.RAYFED_LOG_FMT,
         date_format=constants.RAYFED_DATE_FMT,
-        party_val=_get_party(),
+        party_val=_get_party(job_name),
+        job_name=job_name
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
@@ -215,25 +226,25 @@ def shutdown():
     logger.info('Shutdowned rayfed.')
 
 
-def _get_addresses():
+def _get_addresses(job_name: str = None):
     """
     Get the RayFed addresses configration.
     """
-    return fed_config.get_cluster_config().cluster_addresses
+    return fed_config.get_cluster_config(job_name).cluster_addresses
 
 
-def _get_party():
+def _get_party(job_name: str = None):
     """
     A private util function to get the current party name.
     """
-    return fed_config.get_cluster_config().current_party
+    return fed_config.get_cluster_config(job_name).current_party
 
 
-def _get_tls():
+def _get_tls(job_name: str = None):
     """
     Get the tls configurations on this party.
     """
-    return fed_config.get_cluster_config().tls_config
+    return fed_config.get_cluster_config(job_name).tls_config
 
 
 class FedRemoteFunction:
@@ -287,11 +298,12 @@ class FedRemoteClass:
 
     def remote(self, *cls_args, **cls_kwargs):
         fed_class_task_id = get_global_context().next_seq_id()
+        job_name = get_global_context().job_name()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
-            _get_addresses(),
+            _get_addresses(job_name),
             self._cls,
-            _get_party(),
+            _get_party(job_name),
             self._party,
             self._options,
         )
@@ -340,8 +352,9 @@ def get(
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
-    addresses = _get_addresses()
-    current_party = _get_party()
+    job_name = get_global_context().job_name()
+    addresses = _get_addresses(job_name)
+    current_party = _get_party(job_name)
     is_individual_id = isinstance(fed_objects, FedObject)
     if is_individual_id:
         fed_objects = [fed_objects]
@@ -396,7 +409,8 @@ def get(
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):
-    current_party = _get_party()
+    job_name = get_global_context().job_name()
+    current_party = _get_party(job_name)
     if actor._node_party == current_party:
         handler = actor._actor_handle
         ray.kill(handler, no_restart=no_restart)

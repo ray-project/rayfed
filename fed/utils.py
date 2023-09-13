@@ -102,6 +102,7 @@ def setup_logger(
     date_format,
     log_dir=None,
     party_val=None,
+    job_name=None,
 ):
     class PartyRecordFilter(logging.Filter):
         def __init__(self, party_val=None) -> None:
@@ -111,6 +112,16 @@ def setup_logger(
         def filter(self, record) -> bool:
             if not hasattr(record, "party"):
                 record.party = self._party_val
+            return True
+
+    class JobNameRecordFilter(logging.Filter):
+        def __init__(self, job_name=None) -> None:
+            self._job_name = job_name
+            super().__init__("JobNameRecordFilter")
+
+        def filter(self, record) -> bool:
+            if not hasattr(record, "jobname"):
+                record.jobname = self._job_name
             return True
 
     logger = logging.getLogger()
@@ -124,11 +135,13 @@ def setup_logger(
     logger.setLevel(logging_level)
 
     _formatter = logging.Formatter(fmt=logging_format, datefmt=date_format)
-    _filter = PartyRecordFilter(party_val=party_val)
+    _party_filter = PartyRecordFilter(party_val=party_val)
+    _job_name_fitler = JobNameRecordFilter(job_name=job_name)
 
     _customed_handler = logging.StreamHandler()
     _customed_handler.setFormatter(_formatter)
-    _customed_handler.addFilter(_filter)
+    _customed_handler.addFilter(_party_filter)
+    _customed_handler.addFilter(_job_name_fitler)
 
     logger.addHandler(_customed_handler)
 
