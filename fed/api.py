@@ -275,7 +275,6 @@ class FedRemoteClass:
     def __init__(self, func_or_class) -> None:
         self._party = None
         self._cls = func_or_class
-        # self._client_actor_handle_class = ray.
         self._options = {}
 
     def party(self, party: str):
