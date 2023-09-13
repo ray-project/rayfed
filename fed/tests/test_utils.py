@@ -45,7 +45,8 @@ def ray_client_mode_setup():
         start_ray_cluster(ray_port=41011, client_server_port=21011, dashboard_port=9111)
     except RuntimeError as e:
         # A successful case.
-        assert 'Overwriting previous Ray address' in str(e)
+        assert 'Overwriting previous Ray address' in str(e) \
+            or 'WARNING: The object store is using /tmp instead of /dev/shm' in str(e)
 
     yield
     fed_utils.start_command('ray stop --force')
