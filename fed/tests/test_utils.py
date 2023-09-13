@@ -44,9 +44,18 @@ def ray_client_mode_setup():
     try:
         start_ray_cluster(ray_port=41011, client_server_port=21011, dashboard_port=9111)
     except RuntimeError as e:
-        # A successful case.
+        # As we should treat the following warning messages is ok to use.
+        # E           RuntimeError: Failed to start command [ray start --head --port=41012 
+        # --ray-client-server-port=21012 --dashboard-port=9112], the error is:
+        # E            2023-09-13 13:04:11,520	WARNING services.py:1882 -- WARNING: The
+        # object store is using /tmp instead of /dev/shm because /dev/shm has only 67108864
+        # bytes available. This will harm performance! You may be able to free up space by
+        # deleting files in /dev/shm. If you are inside a Docker container, you can increase
+        # /dev/shm size by passing '--shm-size=1.97gb' to 'docker run' (or add it to the
+        # run_options list in a Ray cluster config). Make sure to set this to more than 
+        # 0% of available RAM.
         assert 'Overwriting previous Ray address' in str(e) \
-            or 'WARNING: The object store is using /tmp instead of /dev/shm' in str(e)
+            or 'The object store is using' in str(e)
 
     yield
     fed_utils.start_command('ray stop --force')
