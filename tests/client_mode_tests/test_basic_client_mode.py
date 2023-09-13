@@ -18,7 +18,7 @@ import pytest
 import ray
 import fed
 import fed._private.compatible_utils as compatible_utils
-import fed.utils as fed_utils
+import fed.tests.test_utils as fed_test_utils
 
 
 @fed.remote
@@ -54,7 +54,6 @@ def run(party):
 
     address = 'ray://127.0.0.1:21012' if party == 'alice' else 'ray://127.0.0.1:21011' # noqa
     compatible_utils.init_ray(address=address)
-    # compatible_utils.init_ray(address='local')
 
     addresses = {
         'alice': '127.0.0.1:31012',
@@ -84,16 +83,8 @@ def run(party):
     ray.shutdown()
 
 
+@pytest.fixture(fed_test_utils.ray_client_mode_setup)
 def test_fed_get_in_2_parties():
-    # Start 2 Ray clusters.
-    output1 = fed_utils.start_command('ray start --head --port=41012 --ray-client-server-port=21012 --dashboard-port=9112')
-    import time
-    time.sleep(5)
-    try:
-        output2 = fed_utils.start_command('ray start --head --port=41011 --ray-client-server-port=21011 --dashboard-port=9111')
-    except RuntimeError as e:
-        # A successful case.
-        assert 'Overwriting previous Ray address' in str(e)
 
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
@@ -102,8 +93,7 @@ def test_fed_get_in_2_parties():
     p_alice.join()
     p_bob.join()
     assert p_alice.exitcode == 0 and p_bob.exitcode == 0
-    # TODO(qwang): This should be added to fixture to let it be cleaned when failing.
-    fed_utils.start_command('ray stop --force')
+
 
 if __name__ == "__main__":
     import sys
