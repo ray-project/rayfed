@@ -8,7 +8,7 @@ def start_ray_cluster(
         ray_port,
         client_server_port,
         dashboard_port,
-    ):
+):
     command = [
         'ray',
         'start',

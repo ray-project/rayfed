@@ -243,8 +243,13 @@ def start_command(command: str, timeout=60) :
     """
     A util to start a shell command.
     """
-    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
     output, error = process.communicate(timeout=timeout)
     if len(error) != 0:
-        raise RuntimeError(f'Failed to start command [{command}], the error is:\n {error.decode()}')
+        raise RuntimeError(
+            f'Failed to start command [{command}], the error is:\n {error.decode()}')
     return output
