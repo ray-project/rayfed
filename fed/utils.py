@@ -15,6 +15,7 @@
 import logging
 import re
 import sys
+import subprocess
 
 import ray
 
@@ -236,3 +237,19 @@ def validate_addresses(addresses: dict):
             isinstance(address, str) and address
         ), f'Address should be string but got {address}.'
         validate_address(address)
+
+
+def start_command(command: str, timeout=60) :
+    """
+    A util to start a shell command.
+    """
+    process = subprocess.Popen(
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+    output, error = process.communicate(timeout=timeout)
+    if len(error) != 0:
+        raise RuntimeError(
+            f'Failed to start command [{command}], the error is:\n {error.decode()}')
+    return output
