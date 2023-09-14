@@ -27,7 +27,7 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
-from fed._private.exceptions import RemoteError
+from fed.exceptions import RemoteError
 from fed._private.global_context import (
     init_global_context,
     get_global_context,
@@ -176,7 +176,8 @@ def init(
     cross_silo_comm_config = CrossSiloMessageConfig.from_dict(cross_silo_comm_dict)
     signal.signal(signal.SIGINT, _signal_handler)
     get_global_context().get_cleanup_manager().start(
-        exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure
+        exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure,
+        expose_error_trace=cross_silo_comm_config.expose_error_trace
     )
     if receiver_sender_proxy_cls is not None:
         proxy_actor_name = 'sender_recevier_actor'
@@ -250,9 +251,6 @@ def _shutdown(intended=True):
         intended: (Optional) Whether this is a intended exit. If not
         a "failure handler" will be triggered.
     """
-    # Since both main thread and data thread will try to shutdown, this
-    # can avoid shutdown twice, so that the failure handler can be
-    # executed only once.
     if (get_global_context() is not None):
         # Job has inited, can be shutdown
         failure_handler = get_global_context().get_failure_handler()
@@ -450,7 +448,6 @@ def get(
                            f", prepare to exit, error message: {e.cause}")
         if (get_global_context().acquire_shutdown_flag()):
             _shutdown(intended=False)
-        # 先抛出异常会让主线程调用的 `fed.get` 直接返回，后续发生什么未知，很可能导致 failure_handler 来不及执行
         raise e
 
 

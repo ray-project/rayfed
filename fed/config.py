@@ -114,6 +114,7 @@ class CrossSiloMessageConfig:
     recv_resource_label: Optional[Dict[str, str]] = None
     http_header: Optional[Dict[str, str]] = None
     max_concurrency: Optional[int] = None
+    expose_error_trace: Optional[bool] = False
 
     def __json__(self):
         return json.dumps(self.__dict__)

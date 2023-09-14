@@ -21,7 +21,7 @@ import fed._private.compatible_utils as compatible_utils
 import sys
 
 from unittest.mock import Mock
-from fed._private.exceptions import RemoteError
+from fed.exceptions import RemoteError
 
 
 class MyError(Exception):
@@ -59,6 +59,7 @@ def run(party):
             'cross_silo_comm': {
                 'exit_on_sending_failure': True,
                 'timeout_ms': 20 * 1000,
+                'expose_error_trace': True
             },
         },
         failure_handler=my_failure_handler
@@ -106,6 +107,7 @@ def run2(party):
             'cross_silo_comm': {
                 'exit_on_sending_failure': True,
                 'timeout_ms': 20 * 1000,
+                'expose_error_trace': True
             },
         },
         failure_handler=my_failure_handler
@@ -134,6 +136,54 @@ def run2(party):
 def test_cross_silo_actor_task_error():
     p_alice = multiprocessing.Process(target=run2, args=('alice',))
     p_bob = multiprocessing.Process(target=run2, args=('bob',))
+    p_alice.start()
+    p_bob.start()
+    p_alice.join()
+    p_bob.join()
+    assert p_alice.exitcode == 0
+    assert p_bob.exitcode == 0
+
+
+def run3(party):
+    my_failure_handler = Mock()
+    compatible_utils.init_ray(address='local')
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
+    }
+
+    fed.init(
+        addresses=addresses,
+        party=party,
+        logging_level='debug',
+        config={
+            'cross_silo_comm': {
+                'exit_on_sending_failure': True,
+                'timeout_ms': 20 * 1000,
+            },
+        },
+        failure_handler=my_failure_handler
+    )
+
+    # Both party should catch the error
+    o = error_func.party("alice").remote()
+    with pytest.raises(Exception) as e:
+        fed.get(o)
+    if party == 'bob':
+        assert isinstance(e.value.cause, RemoteError)
+        assert 'RemoteError occurred at alice' in str(e.value.cause)
+        assert 'caused by' not in str(e.value.cause)
+    else:
+        assert isinstance(e.value.cause, MyError)
+        assert "normal task Error" in str(e.value.cause)
+    my_failure_handler.assert_called_once()
+    fed.shutdown()
+    ray.shutdown()
+
+
+def test_cross_silo_not_expose_error_trace():
+    p_alice = multiprocessing.Process(target=run3, args=('alice',))
+    p_bob = multiprocessing.Process(target=run3, args=('bob',))
     p_alice.start()
     p_bob.start()
     p_alice.join()

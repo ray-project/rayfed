@@ -18,4 +18,7 @@ class RemoteError(Exception):
         self._cause = cause
 
     def __str__(self):
-        return f'RemoteError occurred at {self._src_party} caused by {str(self._cause)}'
+        error_msg = f'RemoteError occurred at {self._src_party}'
+        if self._cause is not None:
+            error_msg += f" caused by {str(self._cause)}"
+        return error_msg

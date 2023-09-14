@@ -24,6 +24,7 @@ class GlobalContext:
         self._job_name = job_name
         self._seq_count = 0
         self._failure_handler = failure_handler
+        self._atomic_shutdown_flag_lock = threading.Lock()
         self._atomic_shutdown_flag = True
         self._cleanup_manager = CleanupManager(
             current_party, self.acquire_shutdown_flag)
@@ -42,7 +43,19 @@ class GlobalContext:
         return self._failure_handler
 
     def acquire_shutdown_flag(self) -> bool:
-        with threading.Lock():
+        """
+        Acquiring a lock and set the flag to make sure
+        `fed.shutdown(intended=False)` can be called only once.
+
+        The unintended shutdown, i.e. `fed.shutdown(intended=False)`, needs to
+        be executed only once. However, `fed.shutdown` may get called duing
+        error handling, where acquiring lock inside `fed.shutdown` may cause
+        dead lock, see `CleanupManager._signal_exit` for more details.
+
+        Returns:
+            bool: True if successfully get the permission to unintended shutdown.
+        """
+        with self._atomic_shutdown_flag_lock:
             if self._atomic_shutdown_flag:
                 self._atomic_shutdown_flag = False
                 return True
@@ -62,8 +75,6 @@ def init_global_context(current_party: str,
 
 def get_global_context():
     global _global_context
-    # if _global_context is None:
-    #     _global_context = GlobalContext()
     return _global_context
 
 
