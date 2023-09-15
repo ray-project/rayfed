@@ -47,10 +47,17 @@ def mean(x, y):
 
 
 def run(party):
+    import time
+    if party == 'alice':
+        time.sleep(1.4)
+
+    # address = 'ray://127.0.0.1:21012' if party == 'alice' else 'ray://127.0.0.1:21011' # noqa
+    # compatible_utils.init_ray(address=address)
     compatible_utils.init_ray(address='local')
+
     addresses = {
-        'alice': '127.0.0.1:11012',
-        'bob': '127.0.0.1:11011',
+        'alice': '127.0.0.1:31012',
+        'bob': '127.0.0.1:31011',
     }
     fed.init(addresses=addresses, party=party)
 

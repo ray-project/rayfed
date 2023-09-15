@@ -22,7 +22,6 @@ import ray
 import fed._private.compatible_utils as compatible_utils
 import fed.utils as fed_utils
 from fed._private import constants, global_context
-from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
 from fed.proxy.barriers import (
     _start_receiver_proxy,
     _start_sender_proxy,
