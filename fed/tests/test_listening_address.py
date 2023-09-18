@@ -37,8 +37,7 @@ def _run(party):
         s.bind(("127.0.0.1", occupied_port))
 
     addresses = {
-        'alice': f'127.0.0.1:{occupied_port}',
-        'bob': '127.0.0.1:11011',
+        'alice': f'127.0.0.1:{occupied_port}'
     }
 
     # Starting grpc server on an used port will cause AssertionError
