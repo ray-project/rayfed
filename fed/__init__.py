@@ -16,7 +16,7 @@ from fed.api import (get, init, kill, remote,
                      shutdown)
 from fed.proxy.barriers import recv, send
 from fed.fed_object import FedObject
-from fed.exceptions import RemoteError
+from fed.exceptions import FedRemoteError
 
 __all__ = [
     "get",
@@ -27,5 +27,5 @@ __all__ = [
     "recv",
     "send",
     "FedObject",
-    "RemoteError"
+    "FedRemoteError"
 ]

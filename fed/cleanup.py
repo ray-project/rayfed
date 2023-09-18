@@ -17,7 +17,7 @@ import os
 import signal
 import threading
 from fed._private.message_queue import MessageQueueManager
-from fed.exceptions import RemoteError
+from fed.exceptions import FedRemoteError
 from ray.exceptions import RayError
 
 import ray
@@ -105,9 +105,9 @@ class CleanupManager:
         """
         msg_pack = (obj_ref, dest_party, upstream_seq_id, downstream_seq_id)
         if (is_error):
-            self._sending_error_q.push(msg_pack)
+            self._sending_error_q.append(msg_pack)
         else:
-            self._sending_data_q.push(msg_pack)
+            self._sending_data_q.append(msg_pack)
 
     def _signal_exit(self):
         """
@@ -159,7 +159,7 @@ class CleanupManager:
                 from fed.proxy.barriers import send
                 # TODO(NKcqx): Cascade broadcast to all parties
                 error_trace = e.cause if self._expose_error_trace else None
-                send(dest_party, RemoteError(self._current_party, error_trace),
+                send(dest_party, FedRemoteError(self._current_party, error_trace),
                      upstream_seq_id, downstream_seq_id, True)
 
             res = False

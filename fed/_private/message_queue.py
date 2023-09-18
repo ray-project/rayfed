@@ -60,12 +60,12 @@ class MessageQueueManager:
             self._thread = threading.Thread(target=_loop, name=self._thread_name)
             self._thread.start()
 
-    def push(self, message):
+    def append(self, message):
         self._queue.append(message)
 
     def notify_to_exit(self):
         logger.info(f"Notify message polling thread[{self._thread_name}] to exit.")
-        self.push(STOP_SYMBOL)
+        self.append(STOP_SYMBOL)
 
     def stop(self):
         """
@@ -79,10 +79,10 @@ class MessageQueueManager:
                 If False: forcelly kill the for-loop sub-thread.
         """
         if threading.current_thread() == self._thread:
-            logger.error(f"Can't stop the message queue in the message"
-                         f"polling thread[{self._thread_name}], ignore it, this."
-                         f"could bring unknown timing problem.")
-            return
+            logger.error(f"Can't stop the message queue in the message "
+                         f"polling thread[{self._thread_name}]. Ignore it as this"
+                         f"could bring unknown time sequence problems.")
+            raise RuntimeError("Thread can't kill itself")
 
         # TODO(NKcqx): Force kill sub-thread by calling `._stop()` will
         # encounter AssertionError because sub-thread's lock is not released.

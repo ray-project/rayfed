@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-class RemoteError(Exception):
+class FedRemoteError(Exception):
     def __init__(self, src_party: str, cause: Exception) -> None:
         self._src_party = src_party
         self._cause = cause
 
     def __str__(self):
-        error_msg = f'RemoteError occurred at {self._src_party}'
+        error_msg = f'FedRemoteError occurred at {self._src_party}'
         if self._cause is not None:
             error_msg += f" caused by {str(self._cause)}"
         return error_msg

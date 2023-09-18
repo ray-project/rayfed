@@ -21,7 +21,7 @@ import fed._private.compatible_utils as compatible_utils
 import sys
 
 from unittest.mock import Mock
-from fed.exceptions import RemoteError
+from fed.exceptions import FedRemoteError
 
 
 class MyError(Exception):
@@ -70,7 +70,7 @@ def run(party):
     with pytest.raises(Exception) as e:
         fed.get(o)
     if party == 'bob':
-        assert isinstance(e.value.cause, RemoteError)
+        assert isinstance(e.value.cause, FedRemoteError)
         assert 'RemoteError occurred at alice' in str(e.value.cause)
         assert "normal task Error" in str(e.value.cause)
     else:
@@ -120,7 +120,7 @@ def run2(party):
         fed.get(o)
 
     if party == 'bob':
-        assert isinstance(e.value.cause, RemoteError)
+        assert isinstance(e.value.cause, FedRemoteError)
         assert 'RemoteError occurred at alice' in str(e.value.cause)
         assert "actor task Error" in str(e.value.cause)
         my_failure_handler.assert_called_once()
@@ -170,7 +170,7 @@ def run3(party):
     with pytest.raises(Exception) as e:
         fed.get(o)
     if party == 'bob':
-        assert isinstance(e.value.cause, RemoteError)
+        assert isinstance(e.value.cause, FedRemoteError)
         assert 'RemoteError occurred at alice' in str(e.value.cause)
         assert 'caused by' not in str(e.value.cause)
     else:

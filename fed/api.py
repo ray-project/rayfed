@@ -27,7 +27,7 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
-from fed.exceptions import RemoteError
+from fed.exceptions import FedRemoteError
 from fed._private.global_context import (
     init_global_context,
     get_global_context,
@@ -436,14 +436,13 @@ def get(
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)
 
-    # ray.get(ray_refs)
     try:
         values = ray.get(ray_refs)
         if is_individual_id:
             values = values[0]
         return values
     except RayError as e:
-        if isinstance(e.cause, RemoteError):
+        if isinstance(e.cause, FedRemoteError):
             logger.warning("Encounter RemoteError happend in other parties"
                            f", prepare to exit, error message: {e.cause}")
         if (get_global_context().acquire_shutdown_flag()):
