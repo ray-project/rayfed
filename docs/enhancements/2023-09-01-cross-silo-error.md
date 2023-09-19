@@ -12,7 +12,7 @@ Therefore, we need a mechanism to inform the other participant(s) when the DAG e
 The below graph shows what will happen now after this proposal:
 ![image](https://github.com/ray-project/rayfed/assets/26196566/2f2ad25d-53cb-4ba8-9f3b-38419c7f494b)
 
-In alice, when the data-sending thread finds a RayTaskError indicating a execution failure, it will wrap it to a `FedRemoteError` object and replace the original data object in place to send to bob.
+In alice, when the data-sending thread finds a RayTaskError indicating an execution failure, it will wrap it as a `FedRemoteError` object and replace the original data object in place to send to bob.
 In bob, the main thread will poll data from receiver actor, where it finds out the data is in the type of `FedRemoteError` and re-raises it, and gets an exception just as what happens in "alice".
 
 The threading model in this proposal is shown below:
