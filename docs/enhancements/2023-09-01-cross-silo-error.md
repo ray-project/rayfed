@@ -6,7 +6,7 @@ Before this proposal, when the execution of a DAG encounters an error in 'alice'
 In alice, both main thread and data sending thread will raise the error, and the process will exit.
 In bob,  since it needs the input from 'alice', it waits for 'alice' forever no matter whether 'alice' exists or not.
 
-Therefore, we need a mechanism to inform the other participant when the DAG execution raises error.
+Therefore, we need a mechanism to inform the other participant(s) when the DAG execution raises error.
 
 ## Design and Architecture
 The below graph shows what will happen now after this proposal:
