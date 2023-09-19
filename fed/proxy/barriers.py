@@ -188,6 +188,11 @@ class ReceiverProxyActor:
         data = await self._proxy_instance.get_data(
             src_party, upstream_seq_id, curr_seq_id
         )
+        if isinstance(data, Exception):
+            logger.debug(f"Receiving exception: {type(data)}, {data} from {src_party}, "
+                         f"upstream_seq_id: {upstream_seq_id}, "
+                         f"curr_seq_id: {curr_seq_id}. Re-raise it.")
+            raise data
         return data
 
     async def _get_stats(self):
@@ -227,7 +232,7 @@ def _start_receiver_proxy(
     ).remote(
         listening_address=addresses[party],
         party=party,
-        job_name=get_global_context().job_name(),
+        job_name=get_global_context().get_job_name(),
         tls_config=tls_config,
         logging_level=logging_level,
         proxy_cls=proxy_cls,
@@ -278,7 +283,7 @@ def _start_sender_proxy(
         name=_SENDER_PROXY_ACTOR_NAME, **actor_options
     )
 
-    job_name = get_global_context().job_name()
+    job_name = get_global_context().get_job_name()
     _SENDER_PROXY_ACTOR = _SENDER_PROXY_ACTOR.remote(
         addresses=addresses,
         party=party,
@@ -398,7 +403,7 @@ def _start_sender_receiver_proxy(
 
     logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
 
-    job_name = get_global_context().job_name()
+    job_name = get_global_context().get_job_name()
     global _SENDER_RECEIVER_PROXY_ACTOR
     global _RECEIVER_PROXY_ACTOR_NAME
     _SENDER_RECEIVER_PROXY_ACTOR = SenderReceiverProxyActor.options(
@@ -424,7 +429,13 @@ def send(
     data,
     upstream_seq_id,
     downstream_seq_id,
+    is_error=False
 ):
+    """
+    Args:
+        is_error: Whether the `data` is an error object or not. Default is False.
+            If True, the data will be sent to the error message queue.
+    """
     global _SENDER_PROXY_ACTOR_NAME
     sender_proxy = ray.get_actor(_SENDER_PROXY_ACTOR_NAME)
     res = sender_proxy.send.remote(
@@ -433,7 +444,8 @@ def send(
         upstream_seq_id=upstream_seq_id,
         downstream_seq_id=downstream_seq_id,
     )
-    get_global_context().get_cleanup_manager().push_to_sending(res)
+    get_global_context().get_cleanup_manager().push_to_sending(
+        res, dest_party, upstream_seq_id, downstream_seq_id, is_error)
     return res
 
 

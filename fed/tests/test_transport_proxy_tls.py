@@ -44,13 +44,13 @@ def test_n_to_1_transport():
         "cert": os.path.join(cert_dir, "server.crt"),
         "key": os.path.join(cert_dir, "server.key"),
     }
-
+    party = 'test_party'
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: tls_config,
     }
-    global_context.init_global_context(test_job_name)
+    global_context.init_global_context(party, test_job_name)
     global_context.get_global_context().get_cleanup_manager().start()
     compatible_utils._init_internal_kv(test_job_name)
     compatible_utils.kv.put(
@@ -59,7 +59,6 @@ def test_n_to_1_transport():
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"
-    party = 'test_party'
     addresses = {'test_party': SERVER_ADDRESS}
     _start_receiver_proxy(
         addresses,
@@ -97,7 +96,7 @@ def test_n_to_1_transport():
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
 
-    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.get_global_context().get_cleanup_manager().stop()
     global_context.clear_global_context()
     compatible_utils._clear_internal_kv()
     ray.shutdown()

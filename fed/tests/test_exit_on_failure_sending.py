@@ -73,6 +73,7 @@ def run(party):
                 'timeout_ms': 20 * 1000,
             },
         },
+        failure_handler=lambda : os.kill(os.getpid(), signal.SIGTERM)
     )
 
     o = f.party("alice").remote()

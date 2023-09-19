@@ -15,7 +15,8 @@
 import functools
 import inspect
 import logging
-from typing import Any, Dict, List, Union
+import signal
+from typing import Any, Dict, List, Union, Callable
 
 import cloudpickle
 import ray
@@ -26,6 +27,7 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
+from fed.exceptions import FedRemoteError
 from fed._private.global_context import (
     init_global_context,
     get_global_context,
@@ -45,8 +47,21 @@ from fed.proxy.base_proxy import SenderProxy, ReceiverProxy, SenderReceiverProxy
 from fed.config import CrossSiloMessageConfig
 from fed.fed_object import FedObject
 from fed.utils import is_ray_object_refs, setup_logger
+from ray.exceptions import RayError
 
 logger = logging.getLogger(__name__)
+
+original_sigint = signal.getsignal(signal.SIGINT)
+
+
+def _signal_handler(signum, frame):
+    if signum == signal.SIGINT:
+        signal.signal(signal.SIGINT, original_sigint)
+        logger.warning(
+            "Stop signal received (e.g. via SIGINT/Ctrl+C), "
+            "try to shutdown fed. Press CTRL+C "
+            "(or send SIGINT/SIGKILL/SIGTERM) to skip.")
+        _shutdown(intended=False)
 
 
 def init(
@@ -58,7 +73,8 @@ def init(
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
     receiver_sender_proxy_cls: SenderReceiverProxy = None,
-    job_name: str = constants.RAYFED_DEFAULT_JOB_NAME
+    job_name: str = constants.RAYFED_DEFAULT_JOB_NAME,
+    failure_handler: Callable[[], None] = None,
 ):
     """
     Initialize a RayFed client.
@@ -119,7 +135,8 @@ def init(
     assert party in addresses, f"Party {party} is not in the addresses {addresses}."
 
     fed_utils.validate_addresses(addresses)
-    init_global_context(job_name=job_name)
+    init_global_context(current_party=party, job_name=job_name,
+                        failure_handler=failure_handler)
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
@@ -157,8 +174,10 @@ def init(
 
     logger.info(f'Started rayfed with {cluster_config}')
     cross_silo_comm_config = CrossSiloMessageConfig.from_dict(cross_silo_comm_dict)
+    signal.signal(signal.SIGINT, _signal_handler)
     get_global_context().get_cleanup_manager().start(
-        exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure
+        exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure,
+        expose_error_trace=cross_silo_comm_config.expose_error_trace
     )
     if receiver_sender_proxy_cls is not None:
         proxy_actor_name = 'sender_recevier_actor'
@@ -177,8 +196,8 @@ def init(
         if receiver_proxy_cls is None:
             logger.debug(
                 (
-                    "There is no receiver proxy class specified, "
-                    "it uses `GrpcRecvProxy` by default."
+                    "No receiver proxy class specified, "
+                    "use `GrpcRecvProxy` by default."
                 )
             )
             from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
@@ -196,7 +215,7 @@ def init(
 
         if sender_proxy_cls is None:
             logger.debug(
-                "There is no sender proxy class specified, it uses `GrpcRecvProxy` by "
+                "No sender proxy class specified, use `GrpcRecvProxy` by "
                 "default."
             )
             from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
@@ -221,9 +240,25 @@ def shutdown():
     """
     Shutdown a RayFed client.
     """
-    compatible_utils._clear_internal_kv()
-    clear_global_context()
-    logger.info('Shutdowned rayfed.')
+    _shutdown(True)
+
+
+def _shutdown(intended=True):
+    """
+    Shutdown a RayFed client.
+
+    Args:
+        intended: (Optional) Whether this is a intended exit. If not
+        a "failure handler" will be triggered.
+    """
+    if (get_global_context() is not None):
+        # Job has inited, can be shutdown
+        failure_handler = get_global_context().get_failure_handler()
+        compatible_utils._clear_internal_kv()
+        clear_global_context()
+        if (not intended and failure_handler is not None):
+            failure_handler()
+        logger.info('Shutdowned rayfed.')
 
 
 def _get_addresses(job_name: str = None):
@@ -298,7 +333,7 @@ class FedRemoteClass:
 
     def remote(self, *cls_args, **cls_kwargs):
         fed_class_task_id = get_global_context().next_seq_id()
-        job_name = get_global_context().job_name()
+        job_name = get_global_context().get_job_name()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
             _get_addresses(job_name),
@@ -352,7 +387,7 @@ def get(
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
-    job_name = get_global_context().job_name()
+    job_name = get_global_context().get_job_name()
     addresses = _get_addresses(job_name)
     current_party = _get_party(job_name)
     is_individual_id = isinstance(fed_objects, FedObject)
@@ -401,15 +436,22 @@ def get(
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)
 
-    values = ray.get(ray_refs)
-    if is_individual_id:
-        values = values[0]
-
-    return values
+    try:
+        values = ray.get(ray_refs)
+        if is_individual_id:
+            values = values[0]
+        return values
+    except RayError as e:
+        if isinstance(e.cause, FedRemoteError):
+            logger.warning("Encounter RemoteError happend in other parties"
+                           f", prepare to exit, error message: {e.cause}")
+        if (get_global_context().acquire_shutdown_flag()):
+            _shutdown(intended=False)
+        raise e
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):
-    job_name = get_global_context().job_name()
+    job_name = get_global_context().get_job_name()
     current_party = _get_party(job_name)
     if actor._node_party == current_party:
         handler = actor._actor_handle

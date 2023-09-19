@@ -16,8 +16,9 @@ import logging
 import os
 import signal
 import threading
-import time
-from collections import deque
+from fed._private.message_queue import MessageQueueManager
+from fed.exceptions import FedRemoteError
+from ray.exceptions import RayError
 
 import ray
 
@@ -32,7 +33,7 @@ class CleanupManager:
 
     The main logic path is:
         A. If `fed.shutdown()` is invoked in the main thread and every thing works well,
-        the `graceful_stop()` will be invoked as well and the checking thread will be
+        the `stop()` will be invoked as well and the checking thread will be
         notifiled to exit gracefully.
 
         B. If the main thread are broken before sending the notification flag to the
@@ -40,67 +41,152 @@ class CleanupManager:
         thread exited, then notifys the checking thread.
     """
 
-    def __init__(self) -> None:
-        # `deque()` is thread safe on `popleft` and `append` operations.
-        # See https://docs.python.org/3/library/collections.html#deque-objects
-        self._sending_obj_refs_q = deque()
-        self._check_send_thread = None
+    def __init__(self, current_party, acquire_shutdown_flag) -> None:
+        self._sending_data_q = MessageQueueManager(
+            lambda msg: self._process_data_sending_task_return(msg),
+            thread_name='DataSendingQueueThread')
+
+        self._sending_error_q = MessageQueueManager(
+            lambda msg: self._process_error_sending_task_return(msg),
+            thread_name="ErrorSendingQueueThread")
+
         self._monitor_thread = None
 
-    def start(self, exit_on_sending_failure=False):
+        self._current_party = current_party
+        self._acquire_shutdown_flag = acquire_shutdown_flag
+
+    def start(self, exit_on_sending_failure=False, expose_error_trace=False):
         self._exit_on_sending_failure = exit_on_sending_failure
+        self._expose_error_trace = expose_error_trace
 
-        def __check_func():
-            self._check_sending_objs()
-
-        self._check_send_thread = threading.Thread(target=__check_func)
-        self._check_send_thread.start()
-        logger.info('Start check sending thread.')
+        self._sending_data_q.start()
+        logger.debug('Start check sending thread.')
+        self._sending_error_q.start()
+        logger.debug('Start check error sending thread.')
 
         def _main_thread_monitor():
             main_thread = threading.main_thread()
             main_thread.join()
-            self._notify_to_exit()
+            self.stop()
 
         self._monitor_thread = threading.Thread(target=_main_thread_monitor)
         self._monitor_thread.start()
         logger.info('Start check sending monitor thread.')
 
-    def graceful_stop(self):
-        assert self._check_send_thread is not None
-        self._notify_to_exit()
-        self._check_send_thread.join()
+    def stop(self):
+        # NOTE(NKcqx): MUST firstly stop the data queue, because it
+        # may still throw errors during the termination which need to
+        # be sent to the error queue.
+        self._sending_data_q.stop()
+        self._sending_error_q.stop()
 
-    def _notify_to_exit(self):
-        # Sending the termination signal
-        self.push_to_sending(True)
-        logger.info('Notify check sending thread to exit.')
+    def push_to_sending(self,
+                        obj_ref: ray.ObjectRef,
+                        dest_party: str = None,
+                        upstream_seq_id: int = -1,
+                        downstream_seq_id: int = -1,
+                        is_error: bool = False):
+        """
+        Push the sending remote task's return value, i.e. `obj_ref` to
+        the corresponding message queue.
 
-    def push_to_sending(self, obj_ref: ray.ObjectRef):
-        self._sending_obj_refs_q.append(obj_ref)
+        Args:
+            obj_ref: The return value of the send remote task.
+            dest_party: Destination
+            upstream_seq_id: (Optional) This is unneccessary when sending
+                normal data message because it was already sent to the target
+                party. However, if the computation is corrupted, an error object
+                will be created and sent with the same seq_id to replace the
+                original data object. This argument is used to send the error.
+            downstream_seq_id: (Optional) Same as `upstream_seq_id`.
+            is_error: (Optional) Whether the obj_ref represent an error object or not.
+                Default to False. If True, the obj_ref will be sent to the error
+                queue instead.
+        """
+        msg_pack = (obj_ref, dest_party, upstream_seq_id, downstream_seq_id)
+        if (is_error):
+            self._sending_error_q.append(msg_pack)
+        else:
+            self._sending_data_q.append(msg_pack)
 
-    def _check_sending_objs(self):
-        def _signal_exit():
-            os.kill(os.getpid(), signal.SIGTERM)
+    def _signal_exit(self):
+        """
+        Exit the current process immediately. The signal will be captured
+        in main thread where the `stop` will be called.
+        """
+        # NOTE(NKcqx): The signal is implemented by the error mechanism,
+        # a `KeyboardInterrupt` will be raised after sending the signal,
+        # and OS will hold
+        # the process's original context and change to the error handler context.
+        # States that the original context hold, including `threading.lock`,
+        # will not be released, acquiring the same lock in signal handler
+        # will cause dead lock. In order to ensure executing `shutdown` exactly
+        # once and avoid dead lock, the lock must be checked before sending
+        # signals.
+        if (self._acquire_shutdown_flag()):
+            logger.debug("Signal SIGINT to exit.")
+            os.kill(os.getpid(), signal.SIGINT)
 
-        assert self._sending_obj_refs_q is not None
+    def _process_data_sending_task_return(self, message):
+        """
+        This is the message handler function used in message queue for
+        processing each element. The element is putted from `barriers.send`
+        and is a quadruple of <obj_ref, dest_party, upstream_seq_id, downstream_seq_id>.
 
-        while True:
-            try:
-                obj_ref = self._sending_obj_refs_q.popleft()
-            except IndexError:
-                time.sleep(0.1)
-                continue
-            if isinstance(obj_ref, bool):
-                break
-            try:
-                res = ray.get(obj_ref)
-            except Exception as e:
-                logger.warn(f'Failed to send {obj_ref} with error: {e}')
-                res = False
-            if not res and self._exit_on_sending_failure:
-                logger.warn('Signal self to exit.')
-                _signal_exit()
-                break
+        The `obj_ref` is the task return value of `sender_proxy.send.remote`.
+        It `obj_ref` needs `ray.get` to trigger the execution of the corresponding
+        task, which is the main functionality of this handler function.
 
-        logger.info('Check sending thread was exited.')
+        If any exception occurs during `ray.get`, it indicates that the data cannot
+        be sent to other party normally. In order to notify the other party the current
+        situation and prevent it from hanging, a RemoteError object will be constructed
+        to replace the origin data object, and try to send it again.
+
+        Return:
+            bool: True, means the processing is success. The message queue will keep
+                    polling.
+                  False, make the message queue stop polling.
+        """
+        obj_ref, dest_party, upstream_seq_id, downstream_seq_id = message
+        try:
+            res = ray.get(obj_ref)
+        except Exception as e:
+            logger.warn(f'Failed to ??? send {obj_ref} to {dest_party}, error: {e},'
+                        f'upstream_seq_id: {upstream_seq_id}, '
+                        f'downstream_seq_id: {downstream_seq_id}.')
+            if (isinstance(e, RayError)):
+                logger.info(f"Sending error {e.cause} to {dest_party}.")
+                from fed.proxy.barriers import send
+                # TODO(NKcqx): Cascade broadcast to all parties
+                error_trace = e.cause if self._expose_error_trace else None
+                send(dest_party, FedRemoteError(self._current_party, error_trace),
+                     upstream_seq_id, downstream_seq_id, True)
+
+            res = False
+
+        if not res and self._exit_on_sending_failure:
+            # NOTE(NKcqx): Send signal to main thread so that it can
+            # do some cleaning, e.g. kill the error sending thread.
+            self._signal_exit()
+            # Return False to exit the loop in sub-thread. Note that
+            # the above signal will also make the main thread to kill
+            # the sub-thread eventually by pushing a stop flag.
+            return False
+        return True
+
+    def _process_error_sending_task_return(self, error_msg):
+        error_ref, dest_party, upstream_seq_id, downstream_seq_id = error_msg
+        try:
+            res = ray.get(error_ref)
+            logger.debug(f"Sending error got response: {res}.")
+        except Exception:
+            res = False
+
+        if not res:
+            logger.warning(f"Failed to send error {error_ref} to {dest_party}, "
+                           f"upstream_seq_id: {upstream_seq_id} "
+                           f"downstream_seq_id: {downstream_seq_id}. "
+                           "In this case, other parties won't sense "
+                           "this error and may cause unknown behaviour.")
+        # Return True so that remaining error objects can be sent
+        return True

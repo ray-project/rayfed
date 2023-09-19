@@ -46,7 +46,8 @@ def test_n_to_1_transport():
     """
     compatible_utils.init_ray(address='local')
     test_job_name = 'test_n_to_1_transport'
-    global_context.init_global_context(test_job_name)
+    party = 'test_party'
+    global_context.init_global_context(party, test_job_name)
     global_context.get_global_context().get_cleanup_manager().start()
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
@@ -60,7 +61,7 @@ def test_n_to_1_transport():
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
-    party = 'test_party'
+
     addresses = {'test_party': SERVER_ADDRESS}
     _start_receiver_proxy(
         addresses,
@@ -91,7 +92,7 @@ def test_n_to_1_transport():
     for i in range(NUM_DATA):
         assert f"data-{i}" in ray.get(get_objs)
 
-    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.get_global_context().get_cleanup_manager().stop()
     global_context.clear_global_context()
     compatible_utils._clear_internal_kv()
     ray.shutdown()
@@ -197,7 +198,8 @@ def test_send_grpc_with_meta():
         constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: config,
     }
     test_job_name = 'test_send_grpc_with_meta'
-    global_context.init_global_context(test_job_name)
+    party_name = 'test_party'
+    global_context.init_global_context(party_name, test_job_name)
     compatible_utils._init_internal_kv(test_job_name)
     compatible_utils.kv.put(
         constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
@@ -206,7 +208,7 @@ def test_send_grpc_with_meta():
     global_context.get_global_context().get_cleanup_manager().start()
 
     SERVER_ADDRESS = "127.0.0.1:12344"
-    party_name = 'test_party'
+
     addresses = {party_name: SERVER_ADDRESS}
     _test_start_receiver_proxy(
         addresses,
@@ -227,7 +229,7 @@ def test_send_grpc_with_meta():
     for result in ray.get(sent_objs):
         assert result
 
-    global_context.get_global_context().get_cleanup_manager().graceful_stop()
+    global_context.get_global_context().get_cleanup_manager().stop()
     global_context.clear_global_context()
     ray.shutdown()
 
