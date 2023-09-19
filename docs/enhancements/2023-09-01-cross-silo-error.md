@@ -4,7 +4,7 @@ Before this proposal, when the execution of a DAG encounters an error in 'alice'
 ![image](https://github.com/ray-project/rayfed/assets/26196566/77fa1bd1-dc14-4ddc-8d9e-5dbaf6942564)
 
 In alice, both main thread and data sending thread will raise the error, and the process will exit.
-In bob,  since it needs the input from 'alice', it will waits for 'alice' forever no matter whether 'alice' exists or not.
+In bob,  since it needs the input from 'alice', it waits for 'alice' forever no matter whether 'alice' exists or not.
 
 Therefore, we need a mechanism to inform the other participant when the DAG execution raises error.
 
