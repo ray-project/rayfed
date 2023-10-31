@@ -60,8 +60,21 @@ def parse_grpc_options(proxy_config: CrossSiloMessageConfig):
         dict: A dictionary containing the gRPC channel options.
     """
     grpc_channel_options = {}
-    if proxy_config is not None and isinstance(
-            proxy_config, GrpcCrossSiloMessageConfig):
+    if proxy_config is not None:
+        # NOTE(NKcqx): `messages_max_size_in_bytes` is a common cross-silo
+        # config that should be extracted and filled into proper grpc's
+        # channel options.
+        # However, `GrpcCrossSiloMessageConfig` provides a more flexible way
+        # to configure grpc channel options, i.e. the `grpc_channel_options`
+        # field, which may override the `messages_max_size_in_bytes` field.
+        if (isinstance(proxy_config, CrossSiloMessageConfig)):
+            if (proxy_config.messages_max_size_in_bytes is not None):
+                grpc_channel_options.update({
+                    'grpc.max_send_message_length':
+                        proxy_config.messages_max_size_in_bytes,
+                    'grpc.max_receive_message_length':
+                        proxy_config.messages_max_size_in_bytes,
+                })
         if isinstance(proxy_config, GrpcCrossSiloMessageConfig):
             if proxy_config.grpc_channel_options is not None:
                 grpc_channel_options.update(proxy_config.grpc_channel_options)
