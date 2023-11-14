@@ -95,8 +95,7 @@ class CrossSiloMessageConfig:
             cross-silo sending. If True, a SIGTERM will be signaled to self
             if failed to sending cross-silo data.
         messages_max_size_in_bytes: The maximum length in bytes of
-            cross-silo messages.
-            If None, the default value of 500 MB is specified.
+            cross-silo messages. If None, the default value of 500 MB is specified.
         timeout_in_ms: The timeout in mili-seconds of a cross-silo RPC call.
             It's 60000 by default.
         http_header: The HTTP header, e.g. metadata in grpc, sent with the RPC request.
