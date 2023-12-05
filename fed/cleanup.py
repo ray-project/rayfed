@@ -151,7 +151,7 @@ class CleanupManager:
         try:
             res = ray.get(obj_ref)
         except Exception as e:
-            logger.warn(f'Failed to ??? send {obj_ref} to {dest_party}, error: {e},'
+            logger.warn(f'Failed to send {obj_ref} to {dest_party}, error: {e},'
                         f'upstream_seq_id: {upstream_seq_id}, '
                         f'downstream_seq_id: {downstream_seq_id}.')
             if (isinstance(e, RayError)):
