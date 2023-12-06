@@ -63,7 +63,6 @@ def test_listen_used_address():
 
 
 if __name__ == "__main__":
-    # import sys
+    import sys
 
-    # sys.exit(pytest.main(["-sv", __file__]))
-    test_listen_used_address()
+    sys.exit(pytest.main(["-sv", __file__]))
