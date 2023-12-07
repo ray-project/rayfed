@@ -34,11 +34,11 @@ class CleanupManager:
     The main logic path is:
         A. If `fed.shutdown()` is invoked in the main thread and every thing works well,
         the `stop()` will be invoked as well and the checking thread will be
-        notifiled to exit gracefully.
+        notified to exit gracefully.
 
-        B. If the main thread are broken before sending the notification flag to the
-        sending thread, the monitor thread will detect that and it joins until the main
-        thread exited, then notifys the checking thread.
+        B. If the main thread are broken before sending the stop flag to the sending
+        thread, the monitor thread will detect that and then notifys the checking
+        thread.
     """
 
     def __init__(self, current_party, acquire_shutdown_flag) -> None:
