@@ -94,6 +94,7 @@ def run(party, job_name):
              config={
                 'cross_silo_comm': {
                     'exit_on_sending_failure': True,
+                    # Create unique proxy for current job
                     'use_global_proxy': False
                 }})
 
