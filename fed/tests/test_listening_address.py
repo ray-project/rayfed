@@ -26,12 +26,12 @@ def _run(party):
     compatible_utils.init_ray(address='local')
     occupied_port = 11020
     # NOTE(NKcqx): Firstly try to bind IPv6 because the grpc server will do so.
-    # Otherwise this UT will false because socket bind $occupied_port
-    # on IPv4 address while grpc server listendn Ipv6 address.
+    # Otherwise this UT will fail because socket bind $occupied_port
+    # on IPv4 address while grpc server listened on the Ipv6 address.
     try:
         s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        # Pre-occuping the port
-        s.bind(("::", occupied_port))
+        # Pre-occuping the port using local address
+        s.bind(("::1", occupied_port))
     except OSError:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("127.0.0.1", occupied_port))
@@ -63,7 +63,6 @@ def test_listen_used_address():
 
 
 if __name__ == "__main__":
-    # import sys
+    import sys
 
-    # sys.exit(pytest.main(["-sv", __file__]))
-    test_listen_used_address()
+    sys.exit(pytest.main(["-sv", __file__]))
