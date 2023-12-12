@@ -343,7 +343,7 @@ async def _run_grpc_server(
     port, event, all_data, party, lock, job_name,
     server_ready_future, tls_config=None, grpc_options=None
 ):
-    logger.info(f"ReceiveProxy binding port {port}, options: {grpc_options}...")
+    logger.info(f"ReceiverProxy binding port {port}, options: {grpc_options}...")
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
         SendDataService(event, all_data, party, lock, job_name), server

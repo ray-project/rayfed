@@ -17,6 +17,7 @@ import multiprocessing
 import fed
 import fed._private.compatible_utils as compatible_utils
 import ray
+import time
 from fed.proxy.barriers import ping_others
 
 
@@ -49,7 +50,10 @@ def test_ping_started_party():
         if (party == 'alice'):
             ping_success = ping_others(addresses, party, 5)
             assert ping_success is True
-
+        else:
+            # Wait for alice to ping, otherwise, bob may
+            # exit before alice when started first.
+            time.sleep(10)
         fed.shutdown()
         ray.shutdown()
 

@@ -40,8 +40,7 @@ from fed.proxy.barriers import (
     _start_receiver_proxy,
     _start_sender_proxy,
     _start_sender_receiver_proxy,
-    set_receiver_proxy_actor_name,
-    set_sender_proxy_actor_name,
+    set_proxy_actor_name,
 )
 from fed.proxy.base_proxy import SenderProxy, ReceiverProxy, SenderReceiverProxy
 from fed.config import CrossSiloMessageConfig
@@ -116,6 +115,7 @@ def init(
                         "timeout_in_ms": 1000,
                         "exit_on_sending_failure": True,
                         "expose_error_trace": True,
+                        "use_global_proxy": True,
                     },
                     "barrier_on_initializing": True,
                 }
@@ -170,7 +170,6 @@ def init(
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
 
-    cross_silo_comm_dict = config.get("cross_silo_comm", {})
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv(job_name)
 
@@ -180,6 +179,7 @@ def init(
         constants.KEY_OF_TLS_CONFIG: tls_config,
     }
 
+    cross_silo_comm_dict = config.get("cross_silo_comm", {})
     job_config = {
         constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: cross_silo_comm_dict,
     }
@@ -206,10 +206,10 @@ def init(
         exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure,
         expose_error_trace=cross_silo_comm_config.expose_error_trace
     )
+
     if receiver_sender_proxy_cls is not None:
-        proxy_actor_name = 'sender_recevier_actor'
-        set_sender_proxy_actor_name(proxy_actor_name)
-        set_receiver_proxy_actor_name(proxy_actor_name)
+        set_proxy_actor_name(
+            job_name, cross_silo_comm_dict.get("use_global_proxy", True), True)
         _start_sender_receiver_proxy(
             addresses=addresses,
             party=party,
@@ -230,6 +230,8 @@ def init(
             from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
 
             receiver_proxy_cls = GrpcReceiverProxy
+        set_proxy_actor_name(
+            job_name, cross_silo_comm_dict.get("use_global_proxy", True))
         _start_receiver_proxy(
             addresses=addresses,
             party=party,
@@ -242,12 +244,13 @@ def init(
 
         if sender_proxy_cls is None:
             logger.debug(
-                "No sender proxy class specified, use `GrpcRecvProxy` by "
+                "No sender proxy class specified, use `GrpcSenderProxy` by "
                 "default."
             )
             from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
 
             sender_proxy_cls = GrpcSenderProxy
+
         _start_sender_proxy(
             addresses=addresses,
             party=party,

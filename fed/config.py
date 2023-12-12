@@ -102,6 +102,8 @@ class CrossSiloMessageConfig:
             This won't override basic tcp headers, such as `user-agent`, but concat
             them together.
         max_concurrency: the max_concurrency of the sender/receiver proxy actor.
+        use_global_proxy: Whether using the global proxy actor or create new proxy
+            actor for current job.
     """
 
     proxy_max_restarts: int = None
@@ -114,6 +116,7 @@ class CrossSiloMessageConfig:
     http_header: Optional[Dict[str, str]] = None
     max_concurrency: Optional[int] = None
     expose_error_trace: Optional[bool] = False
+    use_global_proxy: Optional[bool] = True
 
     def __json__(self):
         return json.dumps(self.__dict__)

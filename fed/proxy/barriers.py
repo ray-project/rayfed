@@ -51,6 +51,39 @@ def set_receiver_proxy_actor_name(name: str):
     _RECEIVER_PROXY_ACTOR_NAME = name
 
 
+def set_proxy_actor_name(job_name: str,
+                         use_global_proxy: bool,
+                         sender_recvr_proxy: bool = False):
+    """
+    Generate the name of the proxy actor.
+
+    Args:
+        job_name: The name of the job, used for actor name's postfix
+        use_global_proxy: Whether
+            to use a single proxy actor or not. If True, the name of the proxy
+            actor will be the default global name, otherwise the name will be
+            added with a postfix.
+        sender_recvr_proxy: Whether to use the sender-receiver proxy actor or
+            not. If True, since there's only one proxy actor, make two actor name
+            the same.
+    """
+    sender_actor_name = (
+        constants.RAYFED_DEFAULT_SENDER_PROXY_ACTOR_NAME
+        if not sender_recvr_proxy
+        else constants.RAYFED_DEFAULT_SENDER_RECEIVER_PROXY_ACTOR_NAME
+    )
+    receiver_actor_name = (
+        constants.RAYFED_DEFAULT_RECEIVER_PROXY_ACTOR_NAME
+        if not sender_recvr_proxy
+        else constants.RAYFED_DEFAULT_SENDER_RECEIVER_PROXY_ACTOR_NAME
+    )
+    if not use_global_proxy:
+        sender_actor_name = f"{sender_actor_name}_{job_name}"
+        receiver_actor_name = f"{receiver_actor_name}_{job_name}"
+    set_sender_proxy_actor_name(sender_actor_name)
+    set_receiver_proxy_actor_name(receiver_actor_name)
+
+
 def key_exists_in_two_dim_dict(the_dict, key_a, key_b) -> bool:
     key_a, key_b = str(key_a), str(key_b)
     if key_a not in the_dict:
@@ -217,22 +250,20 @@ def _start_receiver_proxy(
     ready_timeout_second: int = 60,
 ):
     actor_options = copy.deepcopy(_DEFAULT_RECEIVER_PROXY_OPTIONS)
-    if proxy_config:
-        proxy_config = fed_config.CrossSiloMessageConfig.from_dict(proxy_config)
-        if proxy_config.recv_resource_label is not None:
-            actor_options.update({"resources": proxy_config.recv_resource_label})
-        if proxy_config.max_concurrency:
-            actor_options.update({"max_concurrency": proxy_config.max_concurrency})
+    proxy_config = fed_config.CrossSiloMessageConfig.from_dict(proxy_config)
+    if proxy_config.recv_resource_label is not None:
+        actor_options.update({"resources": proxy_config.recv_resource_label})
+    if proxy_config.max_concurrency:
+        actor_options.update({"max_concurrency": proxy_config.max_concurrency})
+    actor_options.update({"name": receiver_proxy_actor_name()})
 
     logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
+    job_name = get_global_context().get_job_name()
 
-    global _RECEIVER_PROXY_ACTOR_NAME
-    receiver_proxy_actor = ReceiverProxyActor.options(
-        name=_RECEIVER_PROXY_ACTOR_NAME, **actor_options
-    ).remote(
+    receiver_proxy_actor = ReceiverProxyActor.options(**actor_options).remote(
         listening_address=addresses[party],
         party=party,
-        job_name=get_global_context().get_job_name(),
+        job_name=job_name,
         tls_config=tls_config,
         logging_level=logging_level,
         proxy_cls=proxy_cls,
@@ -260,30 +291,28 @@ def _start_sender_proxy(
     proxy_config: Dict = None,
     ready_timeout_second: int = 60,
 ):
-    if proxy_config:
-        proxy_config = fed_config.GrpcCrossSiloMessageConfig.from_dict(proxy_config)
     actor_options = copy.deepcopy(_DEFAULT_SENDER_PROXY_OPTIONS)
-    if proxy_config:
-        if proxy_config.proxy_max_restarts:
-            actor_options.update(
-                {
-                    "max_task_retries": proxy_config.proxy_max_restarts,
-                    "max_restarts": 1,
-                }
-            )
-        if proxy_config.send_resource_label:
-            actor_options.update({"resources": proxy_config.send_resource_label})
-        if proxy_config.max_concurrency:
-            actor_options.update({"max_concurrency": proxy_config.max_concurrency})
+    proxy_config = fed_config.GrpcCrossSiloMessageConfig.from_dict(proxy_config)
+    if proxy_config.proxy_max_restarts:
+        actor_options.update(
+            {
+                "max_task_retries": proxy_config.proxy_max_restarts,
+                "max_restarts": 1,
+            }
+        )
+    if proxy_config.send_resource_label:
+        actor_options.update({"resources": proxy_config.send_resource_label})
+    if proxy_config.max_concurrency:
+        actor_options.update({"max_concurrency": proxy_config.max_concurrency})
+
+    job_name = get_global_context().get_job_name()
+    actor_options.update({"name": sender_proxy_actor_name()})
 
     logger.debug(f"Starting SenderProxyActor with options: {actor_options}")
     global _SENDER_PROXY_ACTOR
-    global _SENDER_PROXY_ACTOR_NAME
-    _SENDER_PROXY_ACTOR = SenderProxyActor.options(
-        name=_SENDER_PROXY_ACTOR_NAME, **actor_options
-    )
 
-    job_name = get_global_context().get_job_name()
+    _SENDER_PROXY_ACTOR = SenderProxyActor.options(**actor_options)
+
     _SENDER_PROXY_ACTOR = _SENDER_PROXY_ACTOR.remote(
         addresses=addresses,
         party=party,
@@ -389,32 +418,32 @@ def _start_sender_receiver_proxy(
 ):
     global _DEFAULT_SENDER_RECEIVER_PROXY_OPTIONS
     actor_options = copy.deepcopy(_DEFAULT_SENDER_RECEIVER_PROXY_OPTIONS)
-    if proxy_config:
-        proxy_config = fed_config.CrossSiloMessageConfig.from_dict(proxy_config)
-        if proxy_config.proxy_max_restarts:
-            actor_options.update(
-                {
-                    "max_task_retries": proxy_config.proxy_max_restarts,
-                    "max_restarts": 1,
-                }
-            )
-        if proxy_config.max_concurrency:
-            actor_options.update({"max_concurrency": proxy_config.max_concurrency})
+    proxy_config = fed_config.CrossSiloMessageConfig.from_dict(proxy_config)
+    if proxy_config.proxy_max_restarts:
+        actor_options.update(
+            {
+                "max_task_retries": proxy_config.proxy_max_restarts,
+                "max_restarts": 1,
+            }
+        )
+    if proxy_config.max_concurrency:
+        actor_options.update({"max_concurrency": proxy_config.max_concurrency})
 
+    # NOTE(NKcqx): sender & receiver have the same name
+    actor_options.update({"name": receiver_proxy_actor_name()})
     logger.debug(f"Starting ReceiverProxyActor with options: {actor_options}")
 
     job_name = get_global_context().get_job_name()
     global _SENDER_RECEIVER_PROXY_ACTOR
-    global _RECEIVER_PROXY_ACTOR_NAME
+
     _SENDER_RECEIVER_PROXY_ACTOR = SenderReceiverProxyActor.options(
-        name=_RECEIVER_PROXY_ACTOR_NAME, **actor_options
-    ).remote(
-        addresses=addresses,
-        party=party,
-        job_name=job_name,
-        tls_config=tls_config,
-        logging_level=logging_level,
-        proxy_cls=proxy_cls,
+        **actor_options).remote(
+            addresses=addresses,
+            party=party,
+            job_name=job_name,
+            tls_config=tls_config,
+            logging_level=logging_level,
+            proxy_cls=proxy_cls,
     )
     _SENDER_RECEIVER_PROXY_ACTOR.start.remote()
     server_state = ray.get(
@@ -436,8 +465,7 @@ def send(
         is_error: Whether the `data` is an error object or not. Default is False.
             If True, the data will be sent to the error message queue.
     """
-    global _SENDER_PROXY_ACTOR_NAME
-    sender_proxy = ray.get_actor(_SENDER_PROXY_ACTOR_NAME)
+    sender_proxy = ray.get_actor(sender_proxy_actor_name())
     res = sender_proxy.send.remote(
         dest_party=dest_party,
         data=data,
@@ -451,8 +479,7 @@ def send(
 
 def recv(party: str, src_party: str, upstream_seq_id, curr_seq_id):
     assert party, 'Party can not be None.'
-    global _RECEIVER_PROXY_ACTOR_NAME
-    receiver_proxy = ray.get_actor(_RECEIVER_PROXY_ACTOR_NAME)
+    receiver_proxy = ray.get_actor(receiver_proxy_actor_name())
     return receiver_proxy.get_data.remote(src_party, upstream_seq_id, curr_seq_id)
 
 
