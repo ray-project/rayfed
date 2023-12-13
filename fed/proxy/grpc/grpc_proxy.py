@@ -14,27 +14,29 @@
 
 import asyncio
 import copy
-import cloudpickle
-import grpc
+import json
 import logging
 import threading
-import json
 from typing import Dict
 
-import fed.utils as fed_utils
+import cloudpickle
+import grpc
 
-from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
 import fed._private.compatible_utils as compatible_utils
-from fed.proxy.grpc.grpc_options import _DEFAULT_GRPC_CHANNEL_OPTIONS, _GRPC_SERVICE
+import fed.utils as fed_utils
+from fed.config import CrossSiloMessageConfig, GrpcCrossSiloMessageConfig
 from fed.proxy.barriers import (
     add_two_dim_dict,
     get_from_two_dim_dict,
-    pop_from_two_dim_dict,
     key_exists_in_two_dim_dict,
+    pop_from_two_dim_dict,
 )
-from fed.proxy.base_proxy import SenderProxy, ReceiverProxy
+from fed.proxy.base_proxy import ReceiverProxy, SenderProxy
+from fed.proxy.grpc.grpc_options import _DEFAULT_GRPC_CHANNEL_OPTIONS, _GRPC_SERVICE
+
 if compatible_utils._compare_version_strings(
-        fed_utils.get_package_version('protobuf'), '4.0.0'):
+    fed_utils.get_package_version('protobuf'), '4.0.0'
+):
     from fed.grpc.pb4 import fed_pb2 as fed_pb2
     from fed.grpc.pb4 import fed_pb2_grpc as fed_pb2_grpc
 else:
@@ -67,43 +69,44 @@ def parse_grpc_options(proxy_config: CrossSiloMessageConfig):
         # However, `GrpcCrossSiloMessageConfig` provides a more flexible way
         # to configure grpc channel options, i.e. the `grpc_channel_options`
         # field, which may override the `messages_max_size_in_bytes` field.
-        if (isinstance(proxy_config, CrossSiloMessageConfig)):
-            if (proxy_config.messages_max_size_in_bytes is not None):
-                grpc_channel_options.update({
-                    'grpc.max_send_message_length':
-                        proxy_config.messages_max_size_in_bytes,
-                    'grpc.max_receive_message_length':
-                        proxy_config.messages_max_size_in_bytes,
-                })
+        if isinstance(proxy_config, CrossSiloMessageConfig):
+            if proxy_config.messages_max_size_in_bytes is not None:
+                grpc_channel_options.update(
+                    {
+                        'grpc.max_send_message_length': proxy_config.messages_max_size_in_bytes,
+                        'grpc.max_receive_message_length': proxy_config.messages_max_size_in_bytes,
+                    }
+                )
         if isinstance(proxy_config, GrpcCrossSiloMessageConfig):
             if proxy_config.grpc_channel_options is not None:
                 grpc_channel_options.update(proxy_config.grpc_channel_options)
             if proxy_config.grpc_retry_policy is not None:
-                grpc_channel_options.update({
-                    'grpc.service_config':
-                    json.dumps(
-                        {
-                            'methodConfig': [
-                                {
-                                    'name': [{'service': _GRPC_SERVICE}],
-                                    'retryPolicy': proxy_config.grpc_retry_policy,
-                                }
-                            ]
-                        }
-                    ),
-                })
+                grpc_channel_options.update(
+                    {
+                        'grpc.service_config': json.dumps(
+                            {
+                                'methodConfig': [
+                                    {
+                                        'name': [{'service': _GRPC_SERVICE}],
+                                        'retryPolicy': proxy_config.grpc_retry_policy,
+                                    }
+                                ]
+                            }
+                        ),
+                    }
+                )
 
     return grpc_channel_options
 
 
 class GrpcSenderProxy(SenderProxy):
     def __init__(
-            self,
-            cluster: Dict,
-            party: str,
-            job_name: str,
-            tls_config: Dict,
-            proxy_config: Dict = None
+        self,
+        cluster: Dict,
+        party: str,
+        job_name: str,
+        tls_config: Dict,
+        proxy_config: Dict = None,
     ) -> None:
         proxy_config = GrpcCrossSiloMessageConfig.from_dict(proxy_config)
         super().__init__(cluster, party, job_name, tls_config, proxy_config)
@@ -113,29 +116,27 @@ class GrpcSenderProxy(SenderProxy):
         # Mapping the destination party name to the reused client stub.
         self._stubs = {}
 
-    async def send(
-            self,
-            dest_party,
-            data,
-            upstream_seq_id,
-            downstream_seq_id):
+    async def send(self, dest_party, data, upstream_seq_id, downstream_seq_id):
         dest_addr = self._addresses[dest_party]
         grpc_metadata, grpc_channel_options = self.get_grpc_config_by_party(dest_party)
         tls_enabled = fed_utils.tls_enabled(self._tls_config)
         if dest_party not in self._stubs:
             if tls_enabled:
                 ca_cert, private_key, cert_chain = fed_utils.load_cert_config(
-                    self._tls_config)
+                    self._tls_config
+                )
                 credentials = grpc.ssl_channel_credentials(
                     certificate_chain=cert_chain,
                     private_key=private_key,
                     root_certificates=ca_cert,
                 )
                 channel = grpc.aio.secure_channel(
-                    dest_addr, credentials, options=grpc_channel_options)
+                    dest_addr, credentials, options=grpc_channel_options
+                )
             else:
                 channel = grpc.aio.insecure_channel(
-                    dest_addr, options=grpc_channel_options)
+                    dest_addr, options=grpc_channel_options
+                )
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             self._stubs[dest_party] = stub
 
@@ -153,8 +154,7 @@ class GrpcSenderProxy(SenderProxy):
         return response.result
 
     def get_grpc_config_by_party(self, dest_party):
-        """Overide global config by party specific config
-        """
+        """Overide global config by party specific config"""
         grpc_metadata = self._grpc_metadata
         grpc_options = self._grpc_options
 
@@ -162,14 +162,9 @@ class GrpcSenderProxy(SenderProxy):
         if dest_party_msg_config is not None:
             if dest_party_msg_config.http_header is not None:
                 dest_party_grpc_metadata = dict(dest_party_msg_config.http_header)
-                grpc_metadata = {
-                    **grpc_metadata,
-                    **dest_party_grpc_metadata
-                }
+                grpc_metadata = {**grpc_metadata, **dest_party_grpc_metadata}
             dest_party_grpc_options = parse_grpc_options(dest_party_msg_config)
-            grpc_options = {
-                **grpc_options, **dest_party_grpc_options
-            }
+            grpc_options = {**grpc_options, **dest_party_grpc_options}
         return grpc_metadata, fed_utils.dict2tuple(grpc_options)
 
     async def get_proxy_config(self, dest_party=None):
@@ -188,8 +183,10 @@ class GrpcSenderProxy(SenderProxy):
         if 400 <= response.code < 500:
             # Request error should also be identified as a sending failure,
             # though the request was physically sent.
-            logger.warning(f"Request was successfully sent but got error response, "
-                           f"code: {response.code}, message: {response.result}.")
+            logger.warning(
+                f"Request was successfully sent but got error response, "
+                f"code: {response.code}, message: {response.result}."
+            )
             raise RuntimeError(response.result)
 
 
@@ -225,12 +222,12 @@ async def send_data_grpc(
 
 class GrpcReceiverProxy(ReceiverProxy):
     def __init__(
-            self,
-            listen_addr: str,
-            party: str,
-            job_name: str,
-            tls_config: Dict,
-            proxy_config: Dict
+        self,
+        listen_addr: str,
+        party: str,
+        job_name: str,
+        tls_config: Dict,
+        proxy_config: Dict,
     ) -> None:
         proxy_config = GrpcCrossSiloMessageConfig.from_dict(proxy_config)
         super().__init__(listen_addr, party, job_name, tls_config, proxy_config)
@@ -260,9 +257,11 @@ class GrpcReceiverProxy(ReceiverProxy):
                 fed_utils.dict2tuple(self._grpc_options),
             )
         except RuntimeError as err:
-            msg = f'Grpc server failed to listen to port: {port}' \
-                  f' Try another port by setting `listen_addr` into `cluster` config' \
-                  f' when calling `fed.init`. Grpc error msg: {err}'
+            msg = (
+                f'Grpc server failed to listen to port: {port}'
+                f' Try another port by setting `listen_addr` into `cluster` config'
+                f' when calling `fed.init`. Grpc error msg: {err}'
+            )
             self._server_ready_future.set_result((False, msg))
 
     async def is_ready(self):
@@ -289,6 +288,7 @@ class GrpcReceiverProxy(ReceiverProxy):
 
         # NOTE(qwang): This is used to avoid the conflict with pickle5 in Ray.
         import fed._private.serialization_utils as fed_ser_utils
+
         fed_ser_utils._apply_loads_function_with_whitelist()
         return cloudpickle.loads(data)
 
@@ -309,12 +309,15 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
     async def SendData(self, request, context):
         job_name = request.job_name
         if job_name != self._job_name:
-            logger.warning(f"Receive data from job {job_name}, ignore it. "
-                           f"The reason may be that the ReceiverProxy is listening "
-                           f"on the same address with that job.")
+            logger.warning(
+                f"Receive data from job {job_name}, ignore it. "
+                f"The reason may be that the ReceiverProxy is listening "
+                f"on the same address with that job."
+            )
             return fed_pb2.SendDataResponse(
                 code=417,
-                result=f"JobName mis-match, expected {self._job_name}, got {job_name}.")
+                result=f"JobName mis-match, expected {self._job_name}, got {job_name}.",
+            )
         upstream_seq_id = request.upstream_seq_id
         downstream_seq_id = request.downstream_seq_id
         logger.debug(
@@ -340,8 +343,15 @@ class SendDataService(fed_pb2_grpc.GrpcServiceServicer):
 
 
 async def _run_grpc_server(
-    port, event, all_data, party, lock, job_name,
-    server_ready_future, tls_config=None, grpc_options=None
+    port,
+    event,
+    all_data,
+    party,
+    lock,
+    job_name,
+    server_ready_future,
+    tls_config=None,
+    grpc_options=None,
 ):
     logger.info(f"ReceiverProxy binding port {port}, options: {grpc_options}...")
     server = grpc.aio.server(options=grpc_options)

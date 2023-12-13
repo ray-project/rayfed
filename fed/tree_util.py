@@ -14,10 +14,9 @@
 
 # Most codes are copied from https://github.com/pytorch/pytorch/blob/c263bd43e8e8502d4726643bc6fd046f0130ac0e/torch/utils/_pytree.py # noqa
 
-from typing import NamedTuple, Callable, Any, Tuple, List, Dict, Type, cast, TypeVar
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict, namedtuple
 from dataclasses import dataclass
-
+from typing import Any, Callable, Dict, List, NamedTuple, Tuple, Type, TypeVar, cast
 
 T = TypeVar('T')
 S = TypeVar('S')
@@ -63,9 +62,8 @@ SUPPORTED_NODES: Dict[Type[Any], NodeDef] = {}
 
 
 def _register_pytree_node(
-        typ: Any,
-        flatten_fn: FlattenFunc,
-        unflatten_fn: UnflattenFunc) -> None:
+    typ: Any, flatten_fn: FlattenFunc, unflatten_fn: UnflattenFunc
+) -> None:
     SUPPORTED_NODES[typ] = NodeDef(flatten_fn, unflatten_fn)
 
 
@@ -161,8 +159,11 @@ class TreeSpec:
             children_specs_str += self.children_specs[0].__repr__(indent)
             children_specs_str += ',' if len(self.children_specs) > 1 else ''
             children_specs_str += ','.join(
-                ['\n' + ' ' * indent + child.__repr__(indent)
-                    for child in self.children_specs[1:]])
+                [
+                    '\n' + ' ' * indent + child.__repr__(indent)
+                    for child in self.children_specs[1:]
+                ]
+            )
         repr_suffix: str = f'{children_specs_str}])'
         return repr_prefix + repr_suffix
 
@@ -188,8 +189,8 @@ def tree_flatten(pytree: PyTree) -> Tuple[List[Any], TreeSpec]:
     child_pytrees, context = flatten_fn(pytree)
 
     # Recursively flatten the children
-    result : List[Any] = []
-    children_specs : List['TreeSpec'] = []
+    result: List[Any] = []
+    children_specs: List['TreeSpec'] = []
     for child in child_pytrees:
         flat, child_spec = tree_flatten(child)
         result += flat
@@ -205,12 +206,14 @@ def tree_unflatten(values: List[Any], spec: TreeSpec) -> PyTree:
     if not isinstance(spec, TreeSpec):
         raise ValueError(
             f'tree_unflatten(values, spec): Expected `spec` to be instance of '
-            f'TreeSpec but got item of type {type(spec)}.')
+            f'TreeSpec but got item of type {type(spec)}.'
+        )
     if len(values) != spec.num_leaves:
         raise ValueError(
             f'tree_unflatten(values, spec): `values` has length {len(values)} '
             f'but the spec refers to a pytree that holds {spec.num_leaves} '
-            f'items ({spec}).')
+            f'items ({spec}).'
+        )
     if isinstance(spec, LeafSpec):
         return values[0]
 

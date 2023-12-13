@@ -14,7 +14,6 @@
 
 import json
 
-
 _GRPC_SERVICE = "GrpcService"
 
 _DEFAULT_GRPC_RETRY_POLICY = {
@@ -34,17 +33,16 @@ _DEFAULT_GRPC_CHANNEL_OPTIONS = {
     'grpc.so_reuseport': 0,
     'grpc.max_send_message_length': _DEFAULT_GRPC_MAX_SEND_MESSAGE_LENGTH,
     'grpc.max_receive_message_length': _DEFAULT_GRPC_MAX_RECEIVE_MESSAGE_LENGTH,
-    'grpc.service_config':
-        json.dumps(
-            {
-                'methodConfig': [
-                    {
-                        'name': [{'service': _GRPC_SERVICE}],
-                        'retryPolicy': _DEFAULT_GRPC_RETRY_POLICY,
-                    }
-                ]
-            }
-        ),
+    'grpc.service_config': json.dumps(
+        {
+            'methodConfig': [
+                {
+                    'name': [{'service': _GRPC_SERVICE}],
+                    'retryPolicy': _DEFAULT_GRPC_RETRY_POLICY,
+                }
+            ]
+        }
+    ),
 }
 
 

@@ -1,8 +1,10 @@
 import multiprocessing
-import fed
-import ray
-import fed._private.compatible_utils as compatible_utils
+
 import pytest
+import ray
+
+import fed
+import fed._private.compatible_utils as compatible_utils
 
 addresses = {
     'alice': '127.0.0.1:11012',
@@ -21,9 +23,7 @@ class A:
 
 def run(party):
     compatible_utils.init_ray(address='local')
-    fed.init(
-        addresses=addresses,
-        party=party)
+    fed.init(addresses=addresses, party=party)
 
     actor = A.party('alice').remote(10)
     alice_fed_obj = actor.get.remote()
@@ -45,9 +45,7 @@ def run(party):
         compatible_utils.kv.put("key2", "val2")
 
     compatible_utils.init_ray(address='local')
-    fed.init(
-        addresses=addresses,
-        party=party)
+    fed.init(addresses=addresses, party=party)
 
     actor = A.party('alice').remote(10)
     alice_fed_obj = actor.get.remote()
@@ -70,8 +68,8 @@ def run(party):
 
 
 def test_reset_context():
-    p_alice = multiprocessing.Process(target=run, args=('alice', ))
-    p_bob = multiprocessing.Process(target=run, args=('bob', ))
+    p_alice = multiprocessing.Process(target=run, args=('alice',))
+    p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
 
     import time
@@ -85,4 +83,5 @@ def test_reset_context():
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(pytest.main(["-sv", __file__]))

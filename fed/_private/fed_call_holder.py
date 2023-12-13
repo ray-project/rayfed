@@ -14,15 +14,16 @@
 
 import logging
 
+import fed.config as fed_config
+from fed._private.global_context import get_global_context
+from fed.fed_object import FedObject
+from fed.proxy.barriers import send
+from fed.tree_util import tree_flatten
+from fed.utils import resolve_dependencies
+
 # Set config in the very beginning to avoid being overwritten by other packages.
 logging.basicConfig(level=logging.INFO)
 
-from fed._private.global_context import get_global_context
-from fed.proxy.barriers import send
-from fed.fed_object import FedObject
-from fed.utils import resolve_dependencies
-from fed.tree_util import tree_flatten
-import fed.config as fed_config
 
 logger = logging.getLogger(__name__)
 

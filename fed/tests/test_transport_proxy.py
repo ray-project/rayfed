@@ -31,7 +31,8 @@ from fed.proxy.barriers import (
 from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy, GrpcSenderProxy
 
 if compatible_utils._compare_version_strings(
-        fed_utils.get_package_version('protobuf'), '4.0.0'):
+    fed_utils.get_package_version('protobuf'), '4.0.0'
+):
     from fed.grpc.pb4 import fed_pb2 as fed_pb2
     from fed.grpc.pb4 import fed_pb2_grpc as fed_pb2_grpc
 else:
@@ -99,8 +100,9 @@ def test_n_to_1_transport():
 
 
 class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
-    def __init__(self, all_events, all_data, party, lock,
-                 expected_metadata, expected_jobname):
+    def __init__(
+        self, all_events, all_data, party, lock, expected_metadata, expected_jobname
+    ):
         self.expected_metadata = expected_metadata or {}
         self._expected_jobname = expected_jobname or ""
 
@@ -109,8 +111,9 @@ class TestSendDataService(fed_pb2_grpc.GrpcServiceServicer):
         assert self._expected_jobname == job_name
         metadata = dict(context.invocation_metadata())
         for k, v in self.expected_metadata.items():
-            assert k in metadata, \
-                f"The expected key {k} is not in the metadata keys: {metadata.keys()}."
+            assert (
+                k in metadata
+            ), f"The expected key {k} is not in the metadata keys: {metadata.keys()}."
             assert v == metadata[k]
         event = asyncio.Event()
         event.set()
@@ -129,9 +132,10 @@ async def _test_run_grpc_server(
 ):
     server = grpc.aio.server(options=grpc_options)
     fed_pb2_grpc.add_GrpcServiceServicer_to_server(
-        TestSendDataService(event, all_data, party, lock,
-                            expected_metadata, expected_jobname),
-        server
+        TestSendDataService(
+            event, all_data, party, lock, expected_metadata, expected_jobname
+        ),
+        server,
     )
     server.add_insecure_port(f'[::]:{port}')
     await server.start()
@@ -154,13 +158,13 @@ class TestReceiverProxyActor:
 
     async def run_grpc_server(self):
         return await _test_run_grpc_server(
-            self._listen_addr[self._listen_addr.index(':') + 1:],
+            self._listen_addr[self._listen_addr.index(':') + 1 :],
             None,
             None,
             self._party,
             None,
             expected_metadata=self._expected_metadata,
-            expected_jobname=self._expected_jobname
+            expected_jobname=self._expected_jobname,
         )
 
     async def is_ready(self):
@@ -178,9 +182,12 @@ def _test_start_receiver_proxy(
     address = addresses[party]
     receiver_proxy_actor = TestReceiverProxyActor.options(
         name=receiver_proxy_actor_name(), max_concurrency=1000
-    ).remote(listen_addr=address, party=party,
-             expected_metadata=expected_metadata,
-             expected_jobname=expected_jobname)
+    ).remote(
+        listen_addr=address,
+        party=party,
+        expected_metadata=expected_metadata,
+        expected_jobname=expected_jobname,
+    )
     receiver_proxy_actor.run_grpc_server.remote()
     assert ray.get(receiver_proxy_actor.is_ready.remote())
 
@@ -214,7 +221,7 @@ def test_send_grpc_with_meta():
         addresses,
         party_name,
         expected_metadata=metadata,
-        expected_jobname=test_job_name
+        expected_jobname=test_job_name,
     )
     _start_sender_proxy(
         addresses,

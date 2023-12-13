@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ray
-import time
 import sys
+import time
+
+import ray
+
 import fed
 
 
@@ -53,8 +55,8 @@ def main(party):
         if i % 100 == 0:
             print(f"Running {i}th call")
     print(f"num calls: {num_calls}")
-    print("total time (ms) = ", (time.time() - start)*1000)
-    print("per task overhead (ms) =", (time.time() - start)*1000/num_calls)
+    print("total time (ms) = ", (time.time() - start) * 1000)
+    print("per task overhead (ms) =", (time.time() - start) * 1000 / num_calls)
 
     fed.shutdown()
     ray.shutdown()

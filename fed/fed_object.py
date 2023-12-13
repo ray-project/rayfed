@@ -17,6 +17,7 @@ from ray import ObjectRef
 
 class FedObjectSendingContext:
     """The class that's used for holding the all contexts about sending side."""
+
     def __init__(self) -> None:
         # This field holds the target(downstream) parties that this fed object
         # is sending or sent to.
@@ -33,6 +34,7 @@ class FedObjectSendingContext:
 
 class FedObjectReceivingContext:
     """The class that's used for holding the all contexts about receiving side."""
+
     pass
 
 

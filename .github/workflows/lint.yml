@@ -33,4 +33,4 @@ jobs:
     - name: Lint
       run: |
            . py3/bin/activate
-           black --check --diff .
+           black  -S --check --diff . --exclude='fed/grpc|py3'

@@ -13,8 +13,10 @@
 # limitations under the License.
 
 import multiprocessing
-import fed
+
 import ray
+
+import fed
 
 
 @fed.remote

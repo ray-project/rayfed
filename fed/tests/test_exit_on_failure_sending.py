@@ -13,16 +13,15 @@
 # limitations under the License.
 
 import multiprocessing
+import os
+import signal
+import sys
 
 import pytest
 import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
-
-import signal
-
-import os
-import sys
 
 
 def signal_handler(sig, frame):
@@ -73,7 +72,7 @@ def run(party):
                 'timeout_ms': 20 * 1000,
             },
         },
-        failure_handler=lambda : os.kill(os.getpid(), signal.SIGTERM)
+        failure_handler=lambda: os.kill(os.getpid(), signal.SIGTERM),
     )
 
     o = f.party("alice").remote()

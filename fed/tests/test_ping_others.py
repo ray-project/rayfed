@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import multiprocessing
+import time
+
+import pytest
+import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
-import ray
-import time
 from fed.proxy.barriers import ping_others
-
 
 addresses = {
     'alice': '127.0.0.1:11012',
@@ -31,7 +32,7 @@ def test_ping_non_started_party():
     def run(party):
         compatible_utils.init_ray(address='local')
         fed.init(addresses=addresses, party=party)
-        if (party == 'alice'):
+        if party == 'alice':
             with pytest.raises(RuntimeError):
                 ping_others(addresses, party, 5)
 
@@ -47,7 +48,7 @@ def test_ping_started_party():
     def run(party):
         compatible_utils.init_ray(address='local')
         fed.init(addresses=addresses, party=party)
-        if (party == 'alice'):
+        if party == 'alice':
             ping_success = ping_others(addresses, party, 5)
             assert ping_success is True
         else:

@@ -12,15 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ray
 import multiprocessing
+import sys
+from unittest.mock import Mock
 
 import pytest
+import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
-import sys
-
-from unittest.mock import Mock
 from fed.exceptions import FedRemoteError
 
 
@@ -59,10 +59,10 @@ def run(party):
             'cross_silo_comm': {
                 'exit_on_sending_failure': True,
                 'timeout_ms': 20 * 1000,
-                'expose_error_trace': True
+                'expose_error_trace': True,
             },
         },
-        failure_handler=my_failure_handler
+        failure_handler=my_failure_handler,
     )
 
     # Both party should catch the error
@@ -107,10 +107,10 @@ def run2(party):
             'cross_silo_comm': {
                 'exit_on_sending_failure': True,
                 'timeout_ms': 20 * 1000,
-                'expose_error_trace': True
+                'expose_error_trace': True,
             },
         },
-        failure_handler=my_failure_handler
+        failure_handler=my_failure_handler,
     )
 
     # Both party should catch the error
@@ -162,7 +162,7 @@ def run3(party):
                 'timeout_ms': 20 * 1000,
             },
         },
-        failure_handler=my_failure_handler
+        failure_handler=my_failure_handler,
     )
 
     # Both party should catch the error

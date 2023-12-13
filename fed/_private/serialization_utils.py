@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import io
+
 import cloudpickle
 
 import fed.config as fed_config
-
 
 _pickle_whitelist = None
 

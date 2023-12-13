@@ -51,9 +51,9 @@ def set_receiver_proxy_actor_name(name: str):
     _RECEIVER_PROXY_ACTOR_NAME = name
 
 
-def set_proxy_actor_name(job_name: str,
-                         use_global_proxy: bool,
-                         sender_recvr_proxy: bool = False):
+def set_proxy_actor_name(
+    job_name: str, use_global_proxy: bool, sender_recvr_proxy: bool = False
+):
     """
     Generate the name of the proxy actor.
 
@@ -136,7 +136,8 @@ class SenderProxyActor:
         job_config = fed_config.get_job_config(job_name)
         cross_silo_comm_config = job_config.cross_silo_comm_config_dict
         self._proxy_instance: SenderProxy = proxy_cls(
-            addresses, party, job_name, tls_config, cross_silo_comm_config)
+            addresses, party, job_name, tls_config, cross_silo_comm_config
+        )
 
     async def is_ready(self):
         res = await self._proxy_instance.is_ready()
@@ -207,7 +208,8 @@ class ReceiverProxyActor:
         job_config = fed_config.get_job_config(job_name)
         cross_silo_comm_config = job_config.cross_silo_comm_config_dict
         self._proxy_instance: ReceiverProxy = proxy_cls(
-            listening_address, party, job_name, tls_config, cross_silo_comm_config)
+            listening_address, party, job_name, tls_config, cross_silo_comm_config
+        )
 
     async def start(self):
         await self._proxy_instance.start()
@@ -222,9 +224,11 @@ class ReceiverProxyActor:
             src_party, upstream_seq_id, curr_seq_id
         )
         if isinstance(data, Exception):
-            logger.debug(f"Receiving exception: {type(data)}, {data} from {src_party}, "
-                         f"upstream_seq_id: {upstream_seq_id}, "
-                         f"curr_seq_id: {curr_seq_id}. Re-raise it.")
+            logger.debug(
+                f"Receiving exception: {type(data)}, {data} from {src_party}, "
+                f"upstream_seq_id: {upstream_seq_id}, "
+                f"curr_seq_id: {curr_seq_id}. Re-raise it."
+            )
             raise data
         return data
 
@@ -437,13 +441,14 @@ def _start_sender_receiver_proxy(
     global _SENDER_RECEIVER_PROXY_ACTOR
 
     _SENDER_RECEIVER_PROXY_ACTOR = SenderReceiverProxyActor.options(
-        **actor_options).remote(
-            addresses=addresses,
-            party=party,
-            job_name=job_name,
-            tls_config=tls_config,
-            logging_level=logging_level,
-            proxy_cls=proxy_cls,
+        **actor_options
+    ).remote(
+        addresses=addresses,
+        party=party,
+        job_name=job_name,
+        tls_config=tls_config,
+        logging_level=logging_level,
+        proxy_cls=proxy_cls,
     )
     _SENDER_RECEIVER_PROXY_ACTOR.start.remote()
     server_state = ray.get(
@@ -453,13 +458,7 @@ def _start_sender_receiver_proxy(
     logger.info("Succeeded to create receiver proxy actor.")
 
 
-def send(
-    dest_party,
-    data,
-    upstream_seq_id,
-    downstream_seq_id,
-    is_error=False
-):
+def send(dest_party, data, upstream_seq_id, downstream_seq_id, is_error=False):
     """
     Args:
         is_error: Whether the `data` is an error object or not. Default is False.
@@ -473,7 +472,8 @@ def send(
         downstream_seq_id=downstream_seq_id,
     )
     get_global_context().get_cleanup_manager().push_to_sending(
-        res, dest_party, upstream_seq_id, downstream_seq_id, is_error)
+        res, dest_party, upstream_seq_id, downstream_seq_id, is_error
+    )
     return res
 
 
