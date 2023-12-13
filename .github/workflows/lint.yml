@@ -29,9 +29,9 @@ jobs:
             which python
             pip install pytest torch cloudpickle cryptography
             pip install ray==2.0.0
-            pip install flake8 # For code style checking
+            pip install black
 
     - name: Lint
       run: |
            . py3/bin/activate
-           flake8
+           black --check --diff .
