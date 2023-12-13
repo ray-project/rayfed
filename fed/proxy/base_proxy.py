@@ -51,7 +51,7 @@ class ReceiverProxy(abc.ABC):
         party: str,
         job_name: str,
         tls_config: Dict,
-        proxy_config: CrossSiloMessageConfig = None
+        proxy_config: CrossSiloMessageConfig = None,
     ) -> None:
         self._listen_addr = listen_addr
         self._party = party

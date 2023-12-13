@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import threading
-from collections import deque
-import time
 import logging
-
+import threading
+import time
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,8 @@ class MessageQueueManager:
 
         if self._thread is None or not self._thread.is_alive():
             logger.debug(
-                f"Starting new thread[{self._thread_name}] for message polling.")
+                f"Starting new thread[{self._thread_name}] for message polling."
+            )
             self._queue = deque()
             self._thread = threading.Thread(target=_loop, name=self._thread_name)
             self._thread.start()
@@ -79,9 +79,11 @@ class MessageQueueManager:
                 If False: forcelly kill the for-loop sub-thread.
         """
         if threading.current_thread() == self._thread:
-            logger.error(f"Can't stop the message queue in the message "
-                         f"polling thread[{self._thread_name}]. Ignore it as this"
-                         f"could bring unknown time sequence problems.")
+            logger.error(
+                f"Can't stop the message queue in the message "
+                f"polling thread[{self._thread_name}]. Ignore it as this"
+                f"could bring unknown time sequence problems."
+            )
             raise RuntimeError("Thread can't kill itself")
 
         # TODO(NKcqx): Force kill sub-thread by calling `._stop()` will

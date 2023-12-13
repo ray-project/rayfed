@@ -16,6 +16,7 @@ import logging
 
 import ray
 from ray.util.client.common import ClientActorHandle
+
 from fed._private.fed_call_holder import FedCallHolder
 from fed.fed_object import FedObject
 
@@ -90,19 +91,17 @@ class FedActorHandle:
             )
 
     def _execute_remote_method(
-            self,
-            method_name,
-            options,
-            _ray_wrappered_method,
-            args,
-            kwargs,
+        self,
+        method_name,
+        options,
+        _ray_wrappered_method,
+        args,
+        kwargs,
     ):
         num_returns = 1
         if options and 'num_returns' in options:
             num_returns = options['num_returns']
-        logger.debug(
-            f"Actor method call: {method_name}, num_returns: {num_returns}"
-        )
+        logger.debug(f"Actor method call: {method_name}, num_returns: {num_returns}")
 
         return _ray_wrappered_method.options(
             name='',

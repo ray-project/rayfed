@@ -16,9 +16,10 @@
 import multiprocessing
 
 import pytest
+import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
-import ray
 
 
 @fed.remote

@@ -66,8 +66,10 @@ setup(
     name=package_name,
     version=VERSION,
     license='Apache 2.0',
-    description='A multiple parties joint, distributed execution engine based on Ray,'
-                'to help build your own federated learning frameworks in minutes.',
+    description=(
+        'A multiple parties joint, distributed execution engine based on Ray,'
+        'to help build your own federated learning frameworks in minutes.'
+    ),
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='RayFed Team',

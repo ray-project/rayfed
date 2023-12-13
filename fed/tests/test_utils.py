@@ -13,15 +13,16 @@
 # limitations under the License.
 
 import time
+
 import pytest
 
 import fed.utils as fed_utils
 
 
 def start_ray_cluster(
-        ray_port,
-        client_server_port,
-        dashboard_port,
+    ray_port,
+    client_server_port,
+    dashboard_port,
 ):
     command = [
         'ray',
@@ -45,8 +46,9 @@ def start_ray_cluster(
         # container, you can increase /dev/shm size by passing '--shm-size=1.97gb' to
         # 'docker run' (or add it to the run_options list in a Ray cluster config).
         # Make sure to set this to more than 0% of available RAM.
-        assert 'Overwriting previous Ray address' in str(e) \
-            or 'WARNING: The object store is using /tmp instead of /dev/shm' in str(e)
+        assert 'Overwriting previous Ray address' in str(
+            e
+        ) or 'WARNING: The object store is using /tmp instead of /dev/shm' in str(e)
 
 
 @pytest.fixture

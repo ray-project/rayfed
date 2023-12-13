@@ -16,11 +16,12 @@ import logging
 import os
 import signal
 import threading
-from fed._private.message_queue import MessageQueueManager
-from fed.exceptions import FedRemoteError
-from ray.exceptions import RayError
 
 import ray
+from ray.exceptions import RayError
+
+from fed._private.message_queue import MessageQueueManager
+from fed.exceptions import FedRemoteError
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +45,13 @@ class CleanupManager:
     def __init__(self, current_party, acquire_shutdown_flag) -> None:
         self._sending_data_q = MessageQueueManager(
             lambda msg: self._process_data_sending_task_return(msg),
-            thread_name='DataSendingQueueThread')
+            thread_name='DataSendingQueueThread',
+        )
 
         self._sending_error_q = MessageQueueManager(
             lambda msg: self._process_error_sending_task_return(msg),
-            thread_name="ErrorSendingQueueThread")
+            thread_name="ErrorSendingQueueThread",
+        )
 
         self._monitor_thread = None
 
@@ -80,12 +83,14 @@ class CleanupManager:
         self._sending_data_q.stop()
         self._sending_error_q.stop()
 
-    def push_to_sending(self,
-                        obj_ref: ray.ObjectRef,
-                        dest_party: str = None,
-                        upstream_seq_id: int = -1,
-                        downstream_seq_id: int = -1,
-                        is_error: bool = False):
+    def push_to_sending(
+        self,
+        obj_ref: ray.ObjectRef,
+        dest_party: str = None,
+        upstream_seq_id: int = -1,
+        downstream_seq_id: int = -1,
+        is_error: bool = False,
+    ):
         """
         Push the sending remote task's return value, i.e. `obj_ref` to
         the corresponding message queue.
@@ -104,7 +109,7 @@ class CleanupManager:
                 queue instead.
         """
         msg_pack = (obj_ref, dest_party, upstream_seq_id, downstream_seq_id)
-        if (is_error):
+        if is_error:
             self._sending_error_q.append(msg_pack)
         else:
             self._sending_data_q.append(msg_pack)
@@ -123,7 +128,7 @@ class CleanupManager:
         # will cause dead lock. In order to ensure executing `shutdown` exactly
         # once and avoid dead lock, the lock must be checked before sending
         # signals.
-        if (self._acquire_shutdown_flag()):
+        if self._acquire_shutdown_flag():
             logger.debug("Signal SIGINT to exit.")
             os.kill(os.getpid(), signal.SIGINT)
 
@@ -151,16 +156,24 @@ class CleanupManager:
         try:
             res = ray.get(obj_ref)
         except Exception as e:
-            logger.warn(f'Failed to send {obj_ref} to {dest_party}, error: {e},'
-                        f'upstream_seq_id: {upstream_seq_id}, '
-                        f'downstream_seq_id: {downstream_seq_id}.')
-            if (isinstance(e, RayError)):
+            logger.warn(
+                f'Failed to send {obj_ref} to {dest_party}, error: {e},'
+                f'upstream_seq_id: {upstream_seq_id}, '
+                f'downstream_seq_id: {downstream_seq_id}.'
+            )
+            if isinstance(e, RayError):
                 logger.info(f"Sending error {e.cause} to {dest_party}.")
                 from fed.proxy.barriers import send
+
                 # TODO(NKcqx): Cascade broadcast to all parties
                 error_trace = e.cause if self._expose_error_trace else None
-                send(dest_party, FedRemoteError(self._current_party, error_trace),
-                     upstream_seq_id, downstream_seq_id, True)
+                send(
+                    dest_party,
+                    FedRemoteError(self._current_party, error_trace),
+                    upstream_seq_id,
+                    downstream_seq_id,
+                    True,
+                )
 
             res = False
 
@@ -183,10 +196,12 @@ class CleanupManager:
             res = False
 
         if not res:
-            logger.warning(f"Failed to send error {error_ref} to {dest_party}, "
-                           f"upstream_seq_id: {upstream_seq_id} "
-                           f"downstream_seq_id: {downstream_seq_id}. "
-                           "In this case, other parties won't sense "
-                           "this error and may cause unknown behaviour.")
+            logger.warning(
+                f"Failed to send error {error_ref} to {dest_party}, "
+                f"upstream_seq_id: {upstream_seq_id} "
+                f"downstream_seq_id: {downstream_seq_id}. "
+                "In this case, other parties won't sense "
+                "this error and may cause unknown behaviour."
+            )
         # Return True so that remaining error objects can be sent
         return True

@@ -1,10 +1,12 @@
 import multiprocessing
+import time
+
 import pytest
 import ray
-import fed
-import time
-import fed._private.compatible_utils as compatible_utils
 import ray.experimental.internal_kv as ray_internal_kv
+
+import fed
+import fed._private.compatible_utils as compatible_utils
 
 
 def run(party):
@@ -21,8 +23,10 @@ def run(party):
 
     # Test that a prefix key name is added under the hood.
     assert ray_internal_kv._internal_kv_get(b"test_key") is None
-    assert ray_internal_kv._internal_kv_get(
-        b"RAYFED#test_job_name#test_key") == b"test_val"
+    assert (
+        ray_internal_kv._internal_kv_get(b"RAYFED#test_job_name#test_key")
+        == b"test_val"
+    )
 
     time.sleep(5)
     fed.shutdown()

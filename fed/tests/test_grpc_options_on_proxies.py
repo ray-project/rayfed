@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import multiprocessing
+
 import pytest
-import fed
-import fed._private.compatible_utils as compatible_utils
 import ray
 
+import fed
+import fed._private.compatible_utils as compatible_utils
 from fed.proxy.barriers import receiver_proxy_actor_name, sender_proxy_actor_name
 
 
@@ -131,7 +132,7 @@ def run3(party):
                 "messages_max_size_in_bytes": 100,
                 "grpc_channel_options": [
                     ('grpc.max_send_message_length', 200),
-                    ],
+                ],
             },
         },
     )

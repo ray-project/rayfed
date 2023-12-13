@@ -16,6 +16,7 @@ import multiprocessing
 
 import pytest
 import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
 
@@ -48,6 +49,7 @@ def mean(x, y):
 
 def run(party):
     import time
+
     if party == 'alice':
         time.sleep(1.4)
 

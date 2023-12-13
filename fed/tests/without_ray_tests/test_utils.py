@@ -1,4 +1,3 @@
-
 # Copyright 2023 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,18 +17,21 @@ import pytest
 import fed
 
 
-@pytest.mark.parametrize("input_address, is_valid_address", [
-    ("192.168.0.1:8080", True),
-    ("sa127032as:80", True),
-    ("https://www.example.com", True),
-    ("http://www.example.com", True),
-    ("local", True),
-    ("localhost", True),
-    (None, False),
-    ("invalid_string", False),
-    ("http", False),
-    ("example.com", False),
-])
+@pytest.mark.parametrize(
+    "input_address, is_valid_address",
+    [
+        ("192.168.0.1:8080", True),
+        ("sa127032as:80", True),
+        ("https://www.example.com", True),
+        ("http://www.example.com", True),
+        ("local", True),
+        ("localhost", True),
+        (None, False),
+        ("invalid_string", False),
+        ("http", False),
+        ("example.com", False),
+    ],
+)
 def test_validate_address(input_address, is_valid_address):
     if is_valid_address:
         fed.utils.validate_address(input_address)
@@ -43,4 +45,5 @@ def test_validate_address(input_address, is_valid_address):
 
 if __name__ == "__main__":
     import sys
+
     sys.exit(pytest.main(["-sv", __file__]))

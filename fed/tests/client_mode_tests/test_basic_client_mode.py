@@ -16,9 +16,10 @@ import multiprocessing
 
 import pytest
 import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
-from fed.tests.test_utils import ray_client_mode_setup # noqa
+from fed.tests.test_utils import ray_client_mode_setup  # noqa
 
 
 @fed.remote
@@ -49,10 +50,13 @@ def mean(x, y):
 
 def run(party):
     import time
+
     if party == 'alice':
         time.sleep(1.4)
 
-    address = 'ray://127.0.0.1:21012' if party == 'alice' else 'ray://127.0.0.1:21011' # noqa
+    address = (
+        'ray://127.0.0.1:21012' if party == 'alice' else 'ray://127.0.0.1:21011'
+    )  # noqa
     compatible_utils.init_ray(address=address)
 
     addresses = {
@@ -83,7 +87,7 @@ def run(party):
     ray.shutdown()
 
 
-def test_fed_get_in_2_parties(ray_client_mode_setup): # noqa
+def test_fed_get_in_2_parties(ray_client_mode_setup):  # noqa
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()

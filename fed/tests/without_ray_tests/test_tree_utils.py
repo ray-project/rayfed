@@ -1,4 +1,3 @@
-
 # Copyright 2023 The RayFed Team
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Any, Dict, List, Tuple, Union
+
 import pytest
 
-from typing import Any, Union, List, Tuple, Dict
 import fed.tree_util as tree_utils
 
 
@@ -28,7 +28,6 @@ def test_flatten_none():
 
 
 def test_flatten_single_primivite_elements():
-
     def _assert_flatten_single_element(target: Any):
         li, tree_def = tree_utils.tree_flatten(target)
         assert isinstance(li, list)

@@ -13,32 +13,30 @@
 # limitations under the License.
 
 import multiprocessing
-import fed
-import ray
+
 import grpc
 import pytest
-import fed.utils as fed_utils
+import ray
+
+import fed
 import fed._private.compatible_utils as compatible_utils
+import fed.utils as fed_utils
 from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy, send_data_grpc
+
 if compatible_utils._compare_version_strings(
-        fed_utils.get_package_version('protobuf'), '4.0.0'):
+    fed_utils.get_package_version('protobuf'), '4.0.0'
+):
     from fed.grpc.pb4 import fed_pb2_grpc as fed_pb2_grpc
 else:
     from fed.grpc.pb3 import fed_pb2_grpc as fed_pb2_grpc
 
 
 class TestGrpcSenderProxy(GrpcSenderProxy):
-    async def send(
-            self,
-            dest_party,
-            data,
-            upstream_seq_id,
-            downstream_seq_id):
+    async def send(self, dest_party, data, upstream_seq_id, downstream_seq_id):
         dest_addr = self._addresses[dest_party]
         grpc_metadata, grpc_channel_options = self.get_grpc_config_by_party(dest_party)
         if dest_party not in self._stubs:
-            channel = grpc.aio.insecure_channel(
-                dest_addr, options=grpc_channel_options)
+            channel = grpc.aio.insecure_channel(dest_addr, options=grpc_channel_options)
             stub = fed_pb2_grpc.GrpcServiceStub(channel)
             self._stubs[dest_party] = stub
 
@@ -81,14 +79,17 @@ addresses = {
 
 def run(party, job_name):
     ray.init(address='local')
-    fed.init(addresses=addresses,
-             party=party,
-             job_name=job_name,
-             sender_proxy_cls=TestGrpcSenderProxy,
-             config={
-                'cross_silo_comm': {
-                    'exit_on_sending_failure': True,
-                }})
+    fed.init(
+        addresses=addresses,
+        party=party,
+        job_name=job_name,
+        sender_proxy_cls=TestGrpcSenderProxy,
+        config={
+            'cross_silo_comm': {
+                'exit_on_sending_failure': True,
+            }
+        },
+    )
     # 'bob' only needs to start the proxy actors
     if party == 'alice':
         ds1, ds2 = [123, 789]
@@ -103,6 +104,7 @@ def run(party, job_name):
         fed.shutdown()
         ray.shutdown()
         import time
+
         # Wait for SIGTERM as failure on sending.
         time.sleep(86400)
 

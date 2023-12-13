@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 class FedRemoteError(Exception):
     def __init__(self, src_party: str, cause: Exception) -> None:
         self._src_party = src_party

@@ -16,6 +16,7 @@ import multiprocessing
 
 import pytest
 import ray
+
 import fed
 import fed._private.compatible_utils as compatible_utils
 
@@ -36,9 +37,7 @@ def _run(party):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind(("127.0.0.1", occupied_port))
 
-    addresses = {
-        'alice': f'127.0.0.1:{occupied_port}'
-    }
+    addresses = {'alice': f'127.0.0.1:{occupied_port}'}
 
     # Starting grpc server on an used port will cause AssertionError
     with pytest.raises(AssertionError):
