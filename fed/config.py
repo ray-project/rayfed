@@ -2,13 +2,14 @@
    are mutable.
 """
 
+import json
+from dataclasses import dataclass, fields
+from typing import Dict, List, Optional
+
+import cloudpickle
+
 import fed._private.compatible_utils as compatible_utils
 import fed._private.constants as fed_constants
-import cloudpickle
-import json
-
-from typing import Dict, List, Optional
-from dataclasses import dataclass, fields
 
 
 class ClusterConfig:
@@ -48,24 +49,26 @@ _cluster_config = None
 _job_config = None
 
 
-def get_cluster_config(job_name: str = None):
+def get_cluster_config(job_name: str = None) -> ClusterConfig:
     """This function is not thread safe to use."""
     global _cluster_config
     if _cluster_config is None:
-        assert job_name is not None, \
-            "Initializing internal kv need to provide job_name."
+        assert (
+            job_name is not None
+        ), "Initializing internal kv need to provide job_name."
         compatible_utils._init_internal_kv(job_name)
         raw_dict = compatible_utils.kv.get(fed_constants.KEY_OF_CLUSTER_CONFIG)
         _cluster_config = ClusterConfig(raw_dict)
     return _cluster_config
 
 
-def get_job_config(job_name: str = None):
+def get_job_config(job_name: str = None) -> JobConfig:
     """This config still acts like cluster config for now"""
     global _job_config
     if _job_config is None:
-        assert job_name is not None, \
-            "Initializing internal kv need to provide job_name."
+        assert (
+            job_name is not None
+        ), "Initializing internal kv need to provide job_name."
         compatible_utils._init_internal_kv(job_name)
         raw_dict = compatible_utils.kv.get(fed_constants.KEY_OF_JOB_CONFIG)
         _job_config = JobConfig(raw_dict)

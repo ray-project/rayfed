@@ -354,7 +354,7 @@ class SenderReceiverProxyActor:
         self._addresses = addresses
         self._party = party
         self._tls_config = tls_config
-        job_config = fed_config.get_job_config()
+        job_config = fed_config.get_job_config(job_name=job_name)
         cross_silo_comm_config = job_config.cross_silo_comm_config_dict
         self._proxy_instance = proxy_cls(
             addresses, party, tls_config, cross_silo_comm_config
@@ -397,7 +397,7 @@ class SenderReceiverProxyActor:
         except Exception as e:
             logger.error(f'Failed to {send_log_msg}, error: {e}')
             return False
-        logger.debug(f"Succeeded to send {send_log_msg}. Response is {response}")
+        logger.debug(f"Succeeded to {send_log_msg}. Response is {response}")
         return True  # True indicates it's sent successfully.
 
     def _get_stats(self):
