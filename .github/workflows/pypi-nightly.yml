@@ -34,7 +34,7 @@ jobs:
       env:
         RAYFED_BUILD_MODE: nightly
       run: |
-          pip install pytest torch cloudpickle cryptography
+          pip install pytest torch cloudpickle cryptography wheel
           pip install ray==2.0.0
           python3 setup.py bdist_wheel
 
