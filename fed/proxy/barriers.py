@@ -461,8 +461,8 @@ def _start_sender_receiver_proxy(
 def send(
     dest_party: str,
     data: Any,
-    upstream_seq_id: id,
-    downstream_seq_id: id,
+    upstream_seq_id: int,
+    downstream_seq_id: int,
     is_error: bool = False,
     check_sending: bool = True,
 ):
