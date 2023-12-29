@@ -78,7 +78,7 @@ _global_context = None
 def init_global_context(
     current_party: str,
     job_name: str,
-    sending_failure_handler: Callable[[], None] = None,
+    sending_failure_handler: Callable[[Exception], None] = None,
 ) -> None:
     global _global_context
     if _global_context is None:

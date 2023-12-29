@@ -63,7 +63,7 @@ def run(party: str, q: multiprocessing.Queue):
                 'timeout_ms': 20 * 1000,
             },
         },
-        failure_handler=failure_handler,
+        sending_failure_handler=failure_handler,
     )
     o = f.party("alice").remote()
     My.party("bob").remote(o)
