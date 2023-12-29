@@ -82,7 +82,7 @@ class MessageQueueManager:
                 immediately or not. Default is True.
                 If True: insert the STOP_SYMBOL at the begin of the queue.
                 If False: insert the STOP_SYMBOL at the end of the queue, which means
-                stop the for loop until all messages in queue are all sent.    
+                stop the for loop until all messages in queue are all sent.
         """
         if threading.current_thread() == self._thread:
             logger.error(
