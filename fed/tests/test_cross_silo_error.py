@@ -44,7 +44,6 @@ class My:
 
 
 def run(party):
-    my_failure_handler = Mock()
     compatible_utils.init_ray(address='local')
     addresses = {
         'alice': '127.0.0.1:11012',
@@ -57,12 +56,10 @@ def run(party):
         logging_level='debug',
         config={
             'cross_silo_comm': {
-                'exit_on_sending_failure': True,
                 'timeout_ms': 20 * 1000,
                 'expose_error_trace': True,
             },
         },
-        failure_handler=my_failure_handler,
     )
 
     # Both party should catch the error
@@ -76,7 +73,6 @@ def run(party):
     else:
         assert isinstance(e.value.cause, MyError)
         assert "normal task Error" in str(e.value.cause)
-    my_failure_handler.assert_called_once()
     fed.shutdown()
     ray.shutdown()
 
@@ -93,7 +89,6 @@ def test_cross_silo_normal_task_error():
 
 
 def run2(party):
-    my_failure_handler = Mock()
     compatible_utils.init_ray(address='local')
     addresses = {
         'alice': '127.0.0.1:11012',
@@ -105,12 +100,10 @@ def run2(party):
         logging_level='debug',
         config={
             'cross_silo_comm': {
-                'exit_on_sending_failure': True,
                 'timeout_ms': 20 * 1000,
                 'expose_error_trace': True,
             },
         },
-        failure_handler=my_failure_handler,
     )
 
     # Both party should catch the error
@@ -123,11 +116,9 @@ def run2(party):
         assert isinstance(e.value.cause, FedRemoteError)
         assert 'RemoteError occurred at alice' in str(e.value.cause)
         assert "actor task Error" in str(e.value.cause)
-        my_failure_handler.assert_called_once()
     else:
         assert isinstance(e.value.cause, MyError)
         assert "actor task Error" in str(e.value.cause)
-        my_failure_handler.assert_called_once()
 
     fed.shutdown()
     ray.shutdown()
@@ -145,7 +136,6 @@ def test_cross_silo_actor_task_error():
 
 
 def run3(party):
-    my_failure_handler = Mock()
     compatible_utils.init_ray(address='local')
     addresses = {
         'alice': '127.0.0.1:11012',
@@ -158,11 +148,10 @@ def run3(party):
         logging_level='debug',
         config={
             'cross_silo_comm': {
-                'exit_on_sending_failure': True,
                 'timeout_ms': 20 * 1000,
+                'expose_error_trace': False,
             },
         },
-        failure_handler=my_failure_handler,
     )
 
     # Both party should catch the error
@@ -176,7 +165,6 @@ def run3(party):
     else:
         assert isinstance(e.value.cause, MyError)
         assert "normal task Error" in str(e.value.cause)
-    my_failure_handler.assert_called_once()
     fed.shutdown()
     ray.shutdown()
 

@@ -24,6 +24,17 @@ from fed.utils import resolve_dependencies
 # Set config in the very beginning to avoid being overwritten by other packages.
 logging.basicConfig(level=logging.INFO)
 
+from fed._private.global_context import get_global_context
+from fed.fed_object import FedObject
+from fed.proxy.barriers import send
+from fed.utils import resolve_dependencies
+
+try:
+    from jax.tree_util import tree_flatten
+except ImportError:
+    from fed.tree_util import tree_flatten
+
+import fed.config as fed_config
 
 logger = logging.getLogger(__name__)
 

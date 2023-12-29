@@ -63,20 +63,26 @@ class MessageQueueManager:
     def append(self, message):
         self._queue.append(message)
 
-    def notify_to_exit(self):
-        logger.info(f"Notify message polling thread[{self._thread_name}] to exit.")
-        self.append(STOP_SYMBOL)
+    def appendleft(self, message):
+        self._queue.appendleft(message)
 
-    def stop(self):
+    def _notify_to_exit(self, immediately=False):
+        logger.info(f"Notify message polling thread[{self._thread_name}] to exit.")
+        if immediately:
+            self.appendleft(STOP_SYMBOL)
+        else:
+            self.append(STOP_SYMBOL)
+
+    def stop(self, immediately=False):
         """
         Stop the message queue.
 
         Args:
-            graceful (bool): A flag indicating whether to stop the queue
-                    gracefully or not. Default is True.
-                If True: insert the STOP_SYMBOL at the end of the queue
-                    and wait for it to be processed, which will break the for-loop;
-                If False: forcelly kill the for-loop sub-thread.
+            immediately (bool): A flag indicating whether to stop the queue
+                immediately or not. Default is True.
+                If True: insert the STOP_SYMBOL at the begin of the queue.
+                If False: insert the STOP_SYMBOL at the end of the queue, which means
+                stop the for loop until all messages in queue are all sent.    
         """
         if threading.current_thread() == self._thread:
             logger.error(
@@ -90,11 +96,10 @@ class MessageQueueManager:
         # encounter AssertionError because sub-thread's lock is not released.
         # Therefore, currently, not support forcelly kill thread
         if self.is_started():
-            logger.debug(f"Gracefully killing thread[{self._thread_name}].")
-            self.notify_to_exit()
+            logger.debug(f"Killing thread[{self._thread_name}].")
+            self._notify_to_exit(immediately=immediately)
             self._thread.join()
-
-        logger.info(f"The message polling thread[{self._thread_name}] was exited.")
+            logger.info(f"The message polling thread[{self._thread_name}] was exited.")
 
     def is_started(self):
         return self._thread is not None and self._thread.is_alive()
