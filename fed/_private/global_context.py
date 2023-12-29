@@ -23,7 +23,7 @@ class GlobalContext:
         self,
         job_name: str,
         current_party: str,
-        sending_failure_handler: Callable[[], None],
+        sending_failure_handler: Callable[[Exception], None],
         exit_on_sending_failure=False,
     ) -> None:
         self._job_name = job_name
