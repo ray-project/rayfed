@@ -20,6 +20,7 @@ from typing import Any, Dict
 import ray
 
 import fed.config as fed_config
+from fed.exceptions import FedRemoteError
 from fed._private import constants
 from fed._private.global_context import get_global_context
 from fed.proxy.base_proxy import ReceiverProxy, SenderProxy, SenderReceiverProxy
@@ -223,7 +224,7 @@ class ReceiverProxyActor:
         data = await self._proxy_instance.get_data(
             src_party, upstream_seq_id, curr_seq_id
         )
-        if isinstance(data, Exception):
+        if isinstance(data, FedRemoteError):
             logger.debug(
                 f"Receiving exception: {type(data)}, {data} from {src_party}, "
                 f"upstream_seq_id: {upstream_seq_id}, "

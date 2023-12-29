@@ -76,11 +76,15 @@ _global_context = None
 
 
 def init_global_context(
-    current_party: str, job_name: str, sending_failure_handler: Callable[[], None] = None
+    current_party: str,
+    job_name: str,
+    sending_failure_handler: Callable[[], None] = None,
 ) -> None:
     global _global_context
     if _global_context is None:
-        _global_context = GlobalContext(job_name, current_party, sending_failure_handler)
+        _global_context = GlobalContext(
+            job_name, current_party, sending_failure_handler
+        )
 
 
 def get_global_context():

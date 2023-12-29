@@ -168,7 +168,9 @@ def init(
 
     fed_utils.validate_addresses(addresses)
     init_global_context(
-        current_party=party, job_name=job_name, failure_handler=sending_failure_handler
+        current_party=party,
+        job_name=job_name,
+        sending_failure_handler=sending_failure_handler,
     )
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
