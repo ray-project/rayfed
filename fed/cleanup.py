@@ -57,6 +57,7 @@ class CleanupManager:
 
         self._current_party = current_party
         self._acquire_shutdown_flag = acquire_shutdown_flag
+        self._last_sending_error = None
 
     def start(self, exit_on_sending_failure=False, expose_error_trace=False):
         self._exit_on_sending_failure = exit_on_sending_failure
@@ -70,18 +71,25 @@ class CleanupManager:
         def _main_thread_monitor():
             main_thread = threading.main_thread()
             main_thread.join()
-            self.stop()
+            logging.debug('Stoping sending queue ...')
+            self.stop(graceful=True)
 
         self._monitor_thread = threading.Thread(target=_main_thread_monitor)
         self._monitor_thread.start()
         logger.info('Start check sending monitor thread.')
 
-    def stop(self):
+    def stop(self, graceful=True):
         # NOTE(NKcqx): MUST firstly stop the data queue, because it
         # may still throw errors during the termination which need to
         # be sent to the error queue.
-        self._sending_data_q.stop()
-        self._sending_error_q.stop()
+        if graceful:
+            self._sending_data_q.stop(immediately=False)
+            self._sending_error_q.stop(immediately=False)
+        else:
+            # Stop data queue immediately, but stop error queue not immediately always
+            # to sure that error can be sent to peers.
+            self._sending_data_q.stop(immediately=True)
+            self._sending_error_q.stop(immediately=False)
 
     def push_to_sending(
         self,
@@ -114,6 +122,9 @@ class CleanupManager:
         else:
             self._sending_data_q.append(msg_pack)
 
+    def get_last_sending_error(self):
+        return self._last_sending_error
+
     def _signal_exit(self):
         """
         Exit the current process immediately. The signal will be captured
@@ -129,7 +140,7 @@ class CleanupManager:
         # once and avoid dead lock, the lock must be checked before sending
         # signals.
         if self._acquire_shutdown_flag():
-            logger.debug("Signal SIGINT to exit.")
+            logger.warn("Signal SIGINT to exit.")
             os.kill(os.getpid(), signal.SIGINT)
 
     def _process_data_sending_task_return(self, message):
@@ -161,6 +172,7 @@ class CleanupManager:
                 f'upstream_seq_id: {upstream_seq_id}, '
                 f'downstream_seq_id: {downstream_seq_id}.'
             )
+            self._last_sending_error = e
             if isinstance(e, RayError):
                 logger.info(f"Sending error {e.cause} to {dest_party}.")
                 from fed.proxy.barriers import send

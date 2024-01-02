@@ -13,27 +13,17 @@
 # limitations under the License.
 
 import multiprocessing
-import os
-import signal
 import sys
 
 import pytest
-import ray
 
 import fed
 import fed._private.compatible_utils as compatible_utils
 
 
-def signal_handler(sig, frame):
-    if sig == signal.SIGTERM.value:
-        fed.shutdown()
-        ray.shutdown()
-        os._exit(0)
-
-
 @fed.remote
 def f():
-    return 100
+    raise Exception('By design.')
 
 
 @fed.remote
@@ -45,9 +35,7 @@ class My:
         return self._value
 
 
-def run(party):
-    signal.signal(signal.SIGTERM, signal_handler)
-
+def run(party: str, q: multiprocessing.Queue):
     compatible_utils.init_ray(address='local')
     addresses = {
         'alice': '127.0.0.1:11012',
@@ -61,6 +49,9 @@ def run(party):
         "retryableStatusCodes": ["UNAVAILABLE"],
     }
 
+    def failure_handler(error):
+        q.put('failure handler')
+
     fed.init(
         addresses=addresses,
         party=party,
@@ -72,22 +63,25 @@ def run(party):
                 'timeout_ms': 20 * 1000,
             },
         },
-        failure_handler=lambda: os.kill(os.getpid(), signal.SIGTERM),
+        sending_failure_handler=failure_handler,
     )
-
     o = f.party("alice").remote()
     My.party("bob").remote(o)
+
     import time
 
-    # Wait for SIGTERM as failure on sending.
+    # Wait a long time.
+    # If the test takes effect, the main loop here will be broken.
     time.sleep(86400)
 
 
 def test_exit_when_failure_on_sending():
-    p_alice = multiprocessing.Process(target=run, args=('alice',))
+    q = multiprocessing.Queue()
+    p_alice = multiprocessing.Process(target=run, args=('alice', q))
     p_alice.start()
     p_alice.join()
-    assert p_alice.exitcode == 0
+    assert p_alice.exitcode == 1
+    assert q.get() == 'failure handler'
 
 
 if __name__ == "__main__":

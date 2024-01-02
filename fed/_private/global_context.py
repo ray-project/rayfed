@@ -20,11 +20,16 @@ from fed.cleanup import CleanupManager
 
 class GlobalContext:
     def __init__(
-        self, job_name: str, current_party: str, failure_handler: Callable[[], None]
+        self,
+        job_name: str,
+        current_party: str,
+        sending_failure_handler: Callable[[Exception], None],
+        exit_on_sending_failure=False,
     ) -> None:
         self._job_name = job_name
         self._seq_count = 0
-        self._failure_handler = failure_handler
+        self._sending_failure_handler = sending_failure_handler
+        self._exit_on_sending_failure = exit_on_sending_failure
         self._atomic_shutdown_flag_lock = threading.Lock()
         self._atomic_shutdown_flag = True
         self._cleanup_manager = CleanupManager(
@@ -41,13 +46,16 @@ class GlobalContext:
     def get_job_name(self) -> str:
         return self._job_name
 
-    def get_failure_handler(self) -> Callable[[], None]:
-        return self._failure_handler
+    def get_sending_failure_handler(self) -> Callable[[], None]:
+        return self._sending_failure_handler
+
+    def get_exit_on_sending_failure(self) -> bool:
+        return self._exit_on_sending_failure
 
     def acquire_shutdown_flag(self) -> bool:
         """
         Acquiring a lock and set the flag to make sure
-        `fed.shutdown(intended=False)` can be called only once.
+        `fed.shutdown()` can be called only once.
 
         The unintended shutdown, i.e. `fed.shutdown(intended=False)`, needs to
         be executed only once. However, `fed.shutdown` may get called duing
@@ -68,11 +76,15 @@ _global_context = None
 
 
 def init_global_context(
-    current_party: str, job_name: str, failure_handler: Callable[[], None] = None
+    current_party: str,
+    job_name: str,
+    sending_failure_handler: Callable[[Exception], None] = None,
 ) -> None:
     global _global_context
     if _global_context is None:
-        _global_context = GlobalContext(job_name, current_party, failure_handler)
+        _global_context = GlobalContext(
+            job_name, current_party, sending_failure_handler
+        )
 
 
 def get_global_context():
@@ -80,8 +92,8 @@ def get_global_context():
     return _global_context
 
 
-def clear_global_context():
+def clear_global_context(graceful=True):
     global _global_context
     if _global_context is not None:
-        _global_context.get_cleanup_manager().stop()
+        _global_context.get_cleanup_manager().stop(graceful=graceful)
         _global_context = None

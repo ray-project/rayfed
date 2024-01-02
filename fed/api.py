@@ -21,6 +21,7 @@ from typing import Any, Callable, Dict, List, Union
 import cloudpickle
 import ray
 from ray.exceptions import RayError
+import sys
 
 import fed._private.compatible_utils as compatible_utils
 import fed.config as fed_config
@@ -74,7 +75,7 @@ def init(
     receiver_proxy_cls: ReceiverProxy = None,
     receiver_sender_proxy_cls: SenderReceiverProxy = None,
     job_name: str = constants.RAYFED_DEFAULT_JOB_NAME,
-    failure_handler: Callable[[], None] = None,
+    sending_failure_handler: Callable[[Exception], None] = None,
 ):
     """
     Initialize a RayFed client.
@@ -146,6 +147,9 @@ def init(
             default fixed name will be assigned, therefore messages of all anonymous
             jobs will be mixed together, which should only be used in the single job
             scenario or test mode.
+        sending_failure_handler: optional; a callback which will be triggeed if
+            cross-silo message sending failed and exit_on_sending_failure in config is
+            True.
     Examples:
         >>> import fed
         >>> import ray
@@ -164,7 +168,9 @@ def init(
 
     fed_utils.validate_addresses(addresses)
     init_global_context(
-        current_party=party, job_name=job_name, failure_handler=failure_handler
+        current_party=party,
+        job_name=job_name,
+        sending_failure_handler=sending_failure_handler,
     )
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
@@ -281,16 +287,42 @@ def _shutdown(intended=True):
     Shutdown a RayFed client.
 
     Args:
-        intended: (Optional) Whether this is a intended exit. If not
-        a "failure handler" will be triggered.
+        intended: (Optional) Whether this is a intended shutdown. If not
+           a "failure handler" will be triggered and sys.exit will be called then.
     """
-    if get_global_context() is not None:
-        # Job has inited, can be shutdown
-        failure_handler = get_global_context().get_failure_handler()
+
+    if get_global_context() is None:
+        # Do nothing since job has not been inited or is cleaned already.
+        return
+
+    if intended:
+        logger.info('Shutdowning rayfed intendedly...')
+    else:
+        logger.warn('Shutdowning rayfed unintendedly...')
+    global_context = get_global_context()
+    last_sending_error = global_context.get_cleanup_manager().get_last_sending_error()
+    if last_sending_error is not None:
+        logging.error(f'Cross-silo sending error occured. {last_sending_error}')
+
+    if not intended:
+        # Execute failure_handler fisrtly.
+        failure_handler = global_context.get_sending_failure_handler()
+        if failure_handler is not None:
+            logger.info('Executing failure handler...')
+            failure_handler(last_sending_error)
+
+        # Clean context.
         compatible_utils._clear_internal_kv()
-        clear_global_context()
-        if not intended and failure_handler is not None:
-            failure_handler()
+        clear_global_context(graceful=intended)
+        logger.info('Shutdowned rayfed.')
+
+        # Exit with error.
+        logger.critical('Exit now due to the previous error.')
+        sys.exit(1)
+    else:
+        # Clean context.
+        compatible_utils._clear_internal_kv()
+        clear_global_context(graceful=intended)
         logger.info('Shutdowned rayfed.')
 
 
@@ -474,14 +506,11 @@ def get(
         if is_individual_id:
             values = values[0]
         return values
-    except RayError as e:
-        if isinstance(e, FedRemoteError):
-            logger.warning(
-                "Encounter RemoteError happend in other parties"
-                f", prepare to exit, error message: {e.cause}"
-            )
-        if get_global_context().acquire_shutdown_flag():
-            _shutdown(intended=False)
+    except FedRemoteError as e:
+        logger.warning(
+            "Encounter RemoteError happend in other parties"
+            f", error message: {e.cause}"
+        )
         raise e
 
 
