@@ -74,7 +74,7 @@ def init(
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
     receiver_sender_proxy_cls: SenderReceiverProxy = None,
-    job_name: str = constants.RAYFED_DEFAULT_JOB_NAME,
+    job_name: str = None,
     sending_failure_handler: Callable[[Exception], None] = None,
 ):
     """
@@ -165,6 +165,9 @@ def init(
     assert addresses, "Addresses should be provided."
     assert party, "Party should be provided."
     assert party in addresses, f"Party {party} is not in the addresses {addresses}."
+
+    if job_name is None:
+        job_name = constants.RAYFED_DEFAULT_JOB_NAME
 
     fed_utils.validate_addresses(addresses)
     init_global_context(
