@@ -34,7 +34,8 @@ jobs:
             which python
             pip install pytest torch cloudpickle cryptography
             # six is required in ray-2.1.0
-            pip install "protobuf<4.0" six
+            # grpc is required since ray-2.8.0
+            pip install "protobuf<4.0" six grpc
             pip install ray==${{ matrix.ray_version }}
 
     - name: Build and test
