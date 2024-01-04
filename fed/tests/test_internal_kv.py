@@ -12,8 +12,8 @@ import fed._private.compatible_utils as compatible_utils
 def run(party):
     compatible_utils.init_ray("local")
     addresses = {
-        'alice': '127.0.0.1:11012',
-        'bob': '127.0.0.1:11011',
+        'alice': '127.0.0.1:12012',
+        'bob': '127.0.0.1:12011',
     }
     assert compatible_utils.kv is None
     fed.init(addresses=addresses, party=party, job_name="test_job_name")
