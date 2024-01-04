@@ -84,7 +84,7 @@ addresses = {
 
 
 def run(party, job_name):
-    ray.init(address='local')
+    ray.init(address='local', include_dashboard=False)
     fed.init(
         addresses=addresses[job_name],
         party=party,
