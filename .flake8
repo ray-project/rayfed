@@ -40,3 +40,5 @@ ignore =
 avoid-escape = no
 per-file-ignores =
     fed/_private/fed_call_holder.py:E402
+    fed/proxy/barriers.py:F401
+    tests/test_transport_proxy.py:F401

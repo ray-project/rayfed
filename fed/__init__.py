@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from fed.api import (get, init, kill, remote,
-                     shutdown)
-from fed.barriers import recv, send
+from fed.api import get, init, kill, remote, shutdown
+from fed.exceptions import FedRemoteError
 from fed.fed_object import FedObject
+from fed.proxy.barriers import recv, send
 
 __all__ = [
     "get",
@@ -26,4 +26,5 @@ __all__ = [
     "recv",
     "send",
     "FedObject",
+    "FedRemoteError",
 ]

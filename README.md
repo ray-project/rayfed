@@ -1,5 +1,5 @@
 # RayFed
-![docs building](https://readthedocs.org/projects/rayfed/badge/?version=latest) ![test on ray 2.0.0](https://github.com/ray-project/rayfed/actions/workflows/test_on_ray2.0.0.yml/badge.svg) ![test on ray 1.13.0](https://github.com/ray-project/rayfed/actions/workflows/test_on_ray1.13.0.yml/badge.svg)
+![docs building](https://readthedocs.org/projects/rayfed/badge/?version=latest) ![test on many rays](https://github.com/ray-project/rayfed/actions/workflows/unit_tests_on_ray_matrix.yml/badge.svg) ![test on ray 1.13.0](https://github.com/ray-project/rayfed/actions/workflows/test_on_ray1.13.0.yml/badge.svg)
 
 A multiple parties joint, distributed execution engine based on Ray, to help build your own federated learning frameworks in minutes.
 
@@ -35,10 +35,10 @@ The code view in each party is exactly the same, but the execution differs based
 
 
 ## Supported Ray Versions
-| RayFed Versions | ray-1.13.0 | ray-2.0.0 | ray-2.1.0 | ray-2.2.0 | ray-2.3.0 |
-|:---------------:|:--------:|:--------:|:--------:|:--------:|:--------:|
-| 0.1.0           |✅      | ✅      | ✅      | ✅      | ❌      |
-| 0.2.0           |not released|not released|not released|not released|not released|
+| RayFed Versions | ray-1.13.0 | ray-2.0.0 | ray-2.1.0 | ray-2.2.0 | ray-2.3.0 | ray-2.4.0 |
+|:---------------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|
+| 0.1.0           |✅      | ✅      | ✅      | ✅      | ✅      | ✅      |
+| 0.2.0           |not released|not released|not released|not released|not released|not released|
 
 
 ## Installation
@@ -107,11 +107,11 @@ The above codes:
 def main(party):
     ray.init(address='local')
 
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
-    fed.init(cluster=cluster, party=party)
+    fed.init(addresses=addresses, party=party)
 ```
 This first declares a two-party cluster, whose addresses corresponding to '127.0.0.1:11012' in 'alice' and '127.0.0.1:11011' in 'bob'.
 And then, the `fed.init` create a cluster in the specified party.
@@ -145,11 +145,11 @@ def aggregate(val1, val2):
 def main(party):
     ray.init(address='local')
 
-    cluster = {
-        'alice': {'address': '127.0.0.1:11012'},
-        'bob': {'address': '127.0.0.1:11011'},
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
     }
-    fed.init(cluster=cluster, party=party)
+    fed.init(addresses=addresses, party=party)
 
     actor_alice = MyActor.party("alice").remote(1)
     actor_bob = MyActor.party("bob").remote(1)

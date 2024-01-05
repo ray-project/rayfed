@@ -10,8 +10,10 @@ message SendDataRequest {
     bytes data = 1;
     string upstream_seq_id = 2;
     string downstream_seq_id = 3;
+    string job_name = 4;
 };
 
 message SendDataResponse {
-    string result = 1;
+    int32 code = 1;
+    string result = 2;
 };

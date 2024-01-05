@@ -14,15 +14,16 @@
 
 import logging
 
+import fed.config as fed_config
+from fed._private.global_context import get_global_context
+from fed.fed_object import FedObject
+from fed.proxy.barriers import send
+from fed.tree_util import tree_flatten
+from fed.utils import resolve_dependencies
+
 # Set config in the very beginning to avoid being overwritten by other packages.
 logging.basicConfig(level=logging.INFO)
 
-from fed._private.global_context import get_global_context
-from fed.barriers import send
-from fed.fed_object import FedObject
-from fed.utils import resolve_dependencies
-from fed.tree_util import tree_flatten
-import fed.config as fed_config
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,10 @@ class FedCallHolder:
         submit_ray_task_func,
         options={},
     ) -> None:
-        self._party = fed_config.get_cluster_config().current_party
+        # Note(NKcqx): FedCallHolder will only be created in driver process, where
+        # the GlobalContext must has been initialized.
+        job_name = get_global_context().get_job_name()
+        self._party = fed_config.get_cluster_config(job_name).current_party
         self._node_party = node_party
         self._options = options
         self._submit_ray_task_func = submit_ray_task_func
@@ -56,6 +60,9 @@ class FedCallHolder:
         return self
 
     def internal_remote(self, *args, **kwargs):
+        if not self._node_party:
+            raise ValueError("You should specify a party name on the fed actor.")
+
         # Generate a new fed task id for this call.
         fed_task_id = get_global_context().next_seq_id()
         if self._party == self._node_party:

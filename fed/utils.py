@@ -14,17 +14,39 @@
 
 import logging
 import re
+import subprocess
+import sys
 
-import fed
 import ray
 
+import fed
+from fed._private.compatible_utils import _compare_version_strings
 from fed.fed_object import FedObject
 
 logger = logging.getLogger(__name__)
 
 
+def get_package_version(package_name: str) -> str:
+    """
+    This utility function can retrieve the version number
+     of a Python library in string format, such as '4.23.4'.
+    You don't need to worry about the Python version.
+    When using version 3.7 and below, it uses the built-in `pkg_resources`.
+    When using Python 3.8 and above, it uses `importlib.metadata`.
+    """
+    curr_python_version = sys.version.split(" ")[0]
+    if _compare_version_strings(curr_python_version, '3.7.99'):
+        import importlib.metadata
+
+        return importlib.metadata.version(package_name)
+    else:
+        import pkg_resources
+
+        return pkg_resources.get_distribution(package_name).version
+
+
 def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
-    from fed.barriers import recv
+    from fed.proxy.barriers import recv
 
     flattened_args, tree = fed.tree_util.tree_flatten((args, kwargs))
     indexes = []
@@ -37,8 +59,8 @@ def resolve_dependencies(current_party, current_fed_task_id, *args, **kwargs):
                 resolved.append(arg.get_ray_object_ref())
             else:
                 logger.debug(
-                    f'Insert recv_op, arg task id {arg.get_fed_task_id()}, current'
-                    'task id {current_fed_task_id}'
+                    f'Insert recv_op, arg task id {arg.get_fed_task_id()}, current '
+                    f'task id {current_fed_task_id}'
                 )
                 if arg.get_ray_object_ref() is not None:
                     # This code path indicates the ray object is already received in
@@ -80,6 +102,7 @@ def setup_logger(
     date_format,
     log_dir=None,
     party_val=None,
+    job_name=None,
 ):
     class PartyRecordFilter(logging.Filter):
         def __init__(self, party_val=None) -> None:
@@ -89,6 +112,16 @@ def setup_logger(
         def filter(self, record) -> bool:
             if not hasattr(record, "party"):
                 record.party = self._party_val
+            return True
+
+    class JobNameRecordFilter(logging.Filter):
+        def __init__(self, job_name=None) -> None:
+            self._job_name = job_name
+            super().__init__("JobNameRecordFilter")
+
+        def filter(self, record) -> bool:
+            if not hasattr(record, "jobname"):
+                record.jobname = self._job_name
             return True
 
     logger = logging.getLogger()
@@ -102,11 +135,13 @@ def setup_logger(
     logger.setLevel(logging_level)
 
     _formatter = logging.Formatter(fmt=logging_format, datefmt=date_format)
-    _filter = PartyRecordFilter(party_val=party_val)
+    _party_filter = PartyRecordFilter(party_val=party_val)
+    _job_name_fitler = JobNameRecordFilter(job_name=job_name)
 
     _customed_handler = logging.StreamHandler()
     _customed_handler.setFormatter(_formatter)
-    _customed_handler.addFilter(_filter)
+    _customed_handler.addFilter(_party_filter)
+    _customed_handler.addFilter(_job_name_fitler)
 
     logger.addHandler(_customed_handler)
 
@@ -149,13 +184,14 @@ def dict2tuple(dic):
     Convert a dictionary to a two-dimensional tuple, for example:
     {'key': 'value'} => (('key', 'value'), ).
     """
-    if (dic is None or isinstance(dic, tuple)):
+    if dic is None or isinstance(dic, tuple):
         return dic
-    elif (isinstance(dic, dict)):
+    elif isinstance(dic, dict):
         return tuple((k, v) for k, v in dic.items())
     else:
-        logger.warn(f"Unable to convert type {type(dic)} to tuple"
-                    f"skip converting {dic}.")
+        logger.warn(
+            f"Unable to convert type {type(dic)} to tuple" f"skip converting {dic}."
+        )
         return dic
 
 
@@ -182,17 +218,37 @@ def validate_address(address: str) -> None:
     if re.match(link_pattern, address):
         return
 
-    error_msg = ("The address format is invalid. It should be in one of the following formats:\n" # noqa
-                "- `local` for starting a new cluster, or `localhost` for connecting a local cluster.\n" # noqa
-                "- 'ip:port' format, where the IP needs to follow the IP address specifications and the port is a number.\n" # noqa
-                "- 'hostname:port' format, where the hostname is a string and the port is a number.\n" # noqa
-                "- An HTTPS or HTTP link starting with 'https://' or 'http://'.") # noqa
+    error_msg = (
+        "The address format is invalid. It should be in one of the following formats:\n"  # noqa
+        "- `local` for starting a new cluster, or `localhost` for connecting a local cluster.\n"  # noqa
+        "- 'ip:port' format, where the IP needs to follow the IP address specifications and the port is a number.\n"  # noqa
+        "- 'hostname:port' format, where the hostname is a string and the port is a number.\n"  # noqa
+        "- An HTTPS or HTTP link starting with 'https://' or 'http://'."
+    )  # noqa
     raise ValueError(error_msg)
 
 
-def validate_cluster_info(cluster: dict):
+def validate_addresses(addresses: dict):
     """
-    Validate whether the cluster information is in correct forms.
+    Validate whether the addresses is in correct forms.
     """
-    for _, info in cluster.items():
-        validate_address(info['address'])
+    for address in addresses.values():
+        assert (
+            isinstance(address, str) and address
+        ), f'Address should be string but got {address}.'
+        validate_address(address)
+
+
+def start_command(command: str, timeout=60):
+    """
+    A util to start a shell command.
+    """
+    process = subprocess.Popen(
+        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    output, error = process.communicate(timeout=timeout)
+    if len(error) != 0:
+        raise RuntimeError(
+            f'Failed to start command [{command}], the error is:\n {error.decode()}'
+        )
+    return output

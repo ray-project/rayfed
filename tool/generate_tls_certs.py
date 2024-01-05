@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import datetime
+import errno
 import os
 import socket
-import errno
 
 
 def try_make_directory_shared(directory_path):

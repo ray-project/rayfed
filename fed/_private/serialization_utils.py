@@ -13,10 +13,10 @@
 # limitations under the License.
 
 import io
+
 import cloudpickle
 
 import fed.config as fed_config
-
 
 _pickle_whitelist = None
 
@@ -30,6 +30,7 @@ def _restricted_loads(
     buffers=None,
 ):
     from sys import version_info
+
     assert version_info.major == 3
 
     if version_info.minor >= 8:
@@ -41,8 +42,10 @@ def _restricted_loads(
         def find_class(self, module, name):
             if _pickle_whitelist is None or (
                 module in _pickle_whitelist
-                and (_pickle_whitelist[module] is None or name in _pickle_whitelist[
-                    module])
+                and (
+                    _pickle_whitelist[module] is None
+                    or name in _pickle_whitelist[module]
+                )
             ):
                 return super().find_class(module, name)
 
@@ -63,7 +66,10 @@ def _restricted_loads(
 def _apply_loads_function_with_whitelist():
     global _pickle_whitelist
 
-    _pickle_whitelist = fed_config.get_cluster_config().serializing_allowed_list
+    cross_silo_comm_config = fed_config.CrossSiloMessageConfig.from_dict(
+        fed_config.get_job_config().cross_silo_comm_config_dict
+    )
+    _pickle_whitelist = cross_silo_comm_config.serializing_allowed_list
     if _pickle_whitelist is None:
         return
 

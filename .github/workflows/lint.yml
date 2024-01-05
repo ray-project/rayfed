@@ -27,11 +27,10 @@ jobs:
             python3 -m virtualenv -p python3 py3
             . py3/bin/activate
             which python
-            pip install pytest torch cloudpickle cryptography
             pip install ray==2.0.0
-            pip install flake8 # For code style checking
+            pip install black==23.1
 
     - name: Lint
       run: |
            . py3/bin/activate
-           flake8
+           black  -S --check --diff . --exclude='fed/grpc|py3'

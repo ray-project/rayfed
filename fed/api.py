@@ -15,10 +15,13 @@
 import functools
 import inspect
 import logging
-from typing import Any, Dict, List, Union
+import signal
+from typing import Any, Callable, Dict, List, Union
 
 import cloudpickle
 import ray
+from ray.exceptions import RayError
+import sys
 
 import fed._private.compatible_utils as compatible_utils
 import fed.config as fed_config
@@ -26,73 +29,98 @@ import fed.utils as fed_utils
 from fed._private import constants
 from fed._private.fed_actor import FedActorHandle
 from fed._private.fed_call_holder import FedCallHolder
-from fed._private.global_context import get_global_context, clear_global_context
-from fed.barriers import ping_others, recv, send, start_recv_proxy, start_send_proxy
-from fed.cleanup import set_exit_on_failure_sending, wait_sending
+from fed._private.global_context import (
+    clear_global_context,
+    get_global_context,
+    init_global_context,
+)
+from fed.config import CrossSiloMessageConfig
+from fed.exceptions import FedRemoteError
 from fed.fed_object import FedObject
+from fed.proxy.barriers import (
+    _start_receiver_proxy,
+    _start_sender_proxy,
+    _start_sender_receiver_proxy,
+    ping_others,
+    recv,
+    send,
+    set_proxy_actor_name,
+)
+from fed.proxy.base_proxy import ReceiverProxy, SenderProxy, SenderReceiverProxy
 from fed.utils import is_ray_object_refs, setup_logger
 
 logger = logging.getLogger(__name__)
 
+original_sigint = signal.getsignal(signal.SIGINT)
+
+
+def _signal_handler(signum, frame):
+    if signum == signal.SIGINT:
+        signal.signal(signal.SIGINT, original_sigint)
+        logger.warning(
+            "Stop signal received (e.g. via SIGINT/Ctrl+C), "
+            "try to shutdown fed. Press CTRL+C "
+            "(or send SIGINT/SIGKILL/SIGTERM) to skip."
+        )
+        _shutdown(intended=False)
+
 
 def init(
-    cluster: Dict = None,
+    addresses: Dict = None,
     party: str = None,
+    config: Dict = {},
     tls_config: Dict = None,
     logging_level: str = 'info',
-    cross_silo_grpc_retry_policy: Dict = None,
-    cross_silo_send_max_retries: int = None,
-    cross_silo_serializing_allowed_list: Dict = None,
-    cross_silo_send_resource_label: Dict = None,
-    cross_silo_recv_resource_label: Dict = None,
-    exit_on_failure_cross_silo_sending: bool = False,
-    cross_silo_messages_max_size_in_bytes: int = None,
-    cross_silo_timeout_in_seconds: int = 60,
-    enable_waiting_for_other_parties_ready: bool = False,
-    grpc_metadata: Dict = None,
-    **kwargs,
+    sender_proxy_cls: SenderProxy = None,
+    receiver_proxy_cls: ReceiverProxy = None,
+    receiver_sender_proxy_cls: SenderReceiverProxy = None,
+    job_name: str = None,
+    sending_failure_handler: Callable[[Exception], None] = None,
 ):
     """
     Initialize a RayFed client.
 
     Args:
-        cluster: optional; a dict describes the cluster config. E.g.
+        addresses: optional; a dict describes the addresses configurations. E.g.
 
             .. code:: python
                 {
-                    'alice': {
-                        # The address for other parties.
-                        'address': '127.0.0.1:10001',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10001',
-                        # (Optional) The party specific metadata sent with the grpc request
-                        'grpc_metadata': (('token', 'alice-token'),),
-                        'grpc_options': [
-                            ('grpc.default_authority', 'alice'),
-                            ('grpc.max_send_message_length', 50 * 1024 * 1024)
-                        ]
-                    },
-                    'bob': {
-                        # The address for other parties.
-                        'address': '127.0.0.1:10002',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10002',
-                        # (Optional) The party specific metadata sent with the grpc request
-                        'grpc_metadata': (('token', 'bob-token'),),
-                    },
-                    'carol': {
-                        # The address for other parties.
-                        'address': '127.0.0.1:10003',
-                        # (Optional) the listen address, the `address` will be
-                        # used if not provided.
-                        'listen_addr': '0.0.0.0:10003',
-                        # (Optional) The party specific metadata sent with the grpc request
-                        'grpc_metadata': (('token', 'carol-token'),),
-                    },
+                    # The address that can be connected to `alice` by other parties.
+                    'alice': '127.0.0.1:10001',
+                    # The address that can be connected to `bob` by other parties.
+                    'bob': '127.0.0.1:10002',
+                    # The address that can be connected to `carol` by other parties.
+                    'carol': '127.0.0.1:10003',
                 }
         party: optional; self party.
+        config: optional; a dict describes general job configurations. Currently the
+            supported configurations are [`cross_silo_comm`, 'barrier_on_initializing'].
+            * `cross_silo_comm`: optional; a dict describes the cross-silo common
+                configs, the supported configs can be referred to
+                `fed.config.CrossSiloMessageConfig` and
+                `fed.config.GrpcCrossSiloMessageConfig`. Note that, the
+                `cross_silo_comm.messages_max_size_in_bytes` will be overrided
+                if `cross_silo_comm.grpc_channel_options` is provided and contains
+                `grpc.max_send_message_length` or `grpc.max_receive_message_length`.
+            * `barrier_on_initializing`: optional; a bool value indicates whether to
+                wait for all parties to be ready before starting the job. If set
+                to True, the job will be started after all parties are ready,
+                otherwise, the job will be started immediately after the current
+                party is ready.
+
+            Example:
+
+            .. code:: python
+                {
+                    "cross_silo_comm": {
+                        "messages_max_size_in_bytes": 500*1024,
+                        "timeout_in_ms": 1000,
+                        "exit_on_sending_failure": True,
+                        "expose_error_trace": True,
+                        "use_global_proxy": True,
+                    },
+                    "barrier_on_initializing": True,
+                }
         tls_config: optional; a dict describes the tls config. E.g.
             For alice,
 
@@ -111,91 +139,64 @@ def init(
                     "cert": "bob's server cert",
                     "key": "bob's server cert key",
                 }
-
         logging_level: optional; the logging level, could be `debug`, `info`,
             `warning`, `error`, `critical`, not case sensititive.
-        cross_silo_grpc_retry_policy: a dict descibes the retry policy for
-            cross silo rpc call. If None, the following default retry policy
-            will be used. More details please refer to
-            `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_. # noqa
-
-            .. code:: python
-                {
-                    "maxAttempts": 4,
-                    "initialBackoff": "0.1s",
-                    "maxBackoff": "1s",
-                    "backoffMultiplier": 2,
-                    "retryableStatusCodes": [
-                        "UNAVAILABLE"
-                    ]
-                }
-        cross_silo_send_max_retries: the max retries for sending data cross silo.
-        cross_silo_serializing_allowed_list: The package or class list allowed for
-            serializing(deserializating) cross silos. It's used for avoiding pickle
-            deserializing execution attack when crossing solis.
-        cross_silo_send_resource_label: Customized resource label, the SendProxyActor
-            will be scheduled based on the declared resource label. For example,
-            when setting to `{"my_label": 1}`, then the SendProxyActor will be started
-            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
-        cross_silo_recv_resource_label: Customized resource label, the RecverProxyActor
-            will be scheduled based on the declared resource label. For example,
-            when setting to `{"my_label": 1}`, then the RecverProxyActor will be started
-            only on Nodes with `{"resource": {"my_label": $NUM}}` where $NUM >= 1.
-        exit_on_failure_cross_silo_sending: whether exit when failure on
-            cross-silo sending. If True, a SIGTERM will be signaled to self
-            if failed to sending cross-silo data.
-        cross_silo_messages_max_size_in_bytes: The maximum length in bytes of
-            cross-silo messages.
-            If None, the default value of 500 MB is specified.
-        cross_silo_timeout_in_seconds: The timeout in seconds of a cross-silo RPC call.
-            It's 60 by default.
-        enable_waiting_for_other_parties_ready: ping other parties until they
-            are all ready if True.
-        grpc_metadata: optional; The metadata sent with the grpc request. This won't override
-            basic tcp headers, such as `user-agent`, but aggregate them together.
-
+        job_name: optional; the job name of the current job. Note that, the job name
+            must be identical in all parties, otherwise, messages will be ignored
+            because of the job name mismatch. If the job name is not provided, an
+            default fixed name will be assigned, therefore messages of all anonymous
+            jobs will be mixed together, which should only be used in the single job
+            scenario or test mode.
+        sending_failure_handler: optional; a callback which will be triggeed if
+            cross-silo message sending failed and exit_on_sending_failure in config is
+            True.
     Examples:
         >>> import fed
         >>> import ray
         >>> ray.init(address='local')
-        >>> cluster = {
-        >>>    'alice': {'address': '127.0.0.1:10001'},
-        >>>    'bob': {'address': '127.0.0.1:10002'},
-        >>>    'carol': {'address': '127.0.0.1:10003'},
+        >>> addresses = {
+        >>>    'alice': '127.0.0.1:10001',
+        >>>    'bob': '127.0.0.1:10002',
+        >>>    'carol': '127.0.0.1:10003',
         >>> }
         >>> # Start as alice.
-        >>> fed.init(cluster=cluster, self_party='alice')
+        >>> fed.init(addresses=addresses, party='alice')
     """
-    assert cluster, "Cluster should be provided."
+    assert addresses, "Addresses should be provided."
     assert party, "Party should be provided."
-    assert party in cluster, f"Party {party} is not in cluster {cluster}."
+    assert party in addresses, f"Party {party} is not in the addresses {addresses}."
 
-    fed_utils.validate_cluster_info(cluster)
+    if job_name is None:
+        job_name = constants.RAYFED_DEFAULT_JOB_NAME
 
+    fed_utils.validate_addresses(addresses)
+    init_global_context(
+        current_party=party,
+        job_name=job_name,
+        sending_failure_handler=sending_failure_handler,
+    )
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
             'cert' in tls_config and 'key' in tls_config
         ), 'Cert or key are not in tls_config.'
+
     # A Ray private accessing, should be replaced in public API.
-    compatible_utils._init_internal_kv()
+    compatible_utils._init_internal_kv(job_name)
 
     cluster_config = {
-        constants.KEY_OF_CLUSTER_ADDRESSES: cluster,
+        constants.KEY_OF_CLUSTER_ADDRESSES: addresses,
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,
-        constants.KEY_OF_CROSS_SILO_SERIALIZING_ALLOWED_LIST:
-            cross_silo_serializing_allowed_list,
-        constants.KEY_OF_CROSS_SILO_MESSAGES_MAX_SIZE_IN_BYTES:
-            cross_silo_messages_max_size_in_bytes,
-        constants.KEY_OF_CROSS_SILO_TIMEOUT_IN_SECONDS: cross_silo_timeout_in_seconds,
     }
 
+    cross_silo_comm_dict = config.get("cross_silo_comm", {})
     job_config = {
-        constants.KEY_OF_GRPC_METADATA : grpc_metadata,
+        constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: cross_silo_comm_dict,
     }
-    compatible_utils.kv.put(constants.KEY_OF_CLUSTER_CONFIG,
-                            cloudpickle.dumps(cluster_config))
+    compatible_utils.kv.put(
+        constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
+    )
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
@@ -205,69 +206,148 @@ def init(
         logging_level=logging_level,
         logging_format=constants.RAYFED_LOG_FMT,
         date_format=constants.RAYFED_DATE_FMT,
-        party_val=_get_party(),
+        party_val=_get_party(job_name),
+        job_name=job_name,
     )
 
     logger.info(f'Started rayfed with {cluster_config}')
-    set_exit_on_failure_sending(exit_on_failure_cross_silo_sending)
-    recv_actor_config = fed_config.ProxyActorConfig(
-        resource_label=cross_silo_recv_resource_label)
-    # Start recv proxy
-    start_recv_proxy(
-        cluster=cluster,
-        party=party,
-        logging_level=logging_level,
-        tls_config=tls_config,
-        retry_policy=cross_silo_grpc_retry_policy,
-        actor_config=recv_actor_config
+    cross_silo_comm_config = CrossSiloMessageConfig.from_dict(cross_silo_comm_dict)
+    signal.signal(signal.SIGINT, _signal_handler)
+    get_global_context().get_cleanup_manager().start(
+        exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure,
+        expose_error_trace=cross_silo_comm_config.expose_error_trace,
     )
 
-    send_actor_config = fed_config.ProxyActorConfig(
-        resource_label=cross_silo_send_resource_label)
-    start_send_proxy(
-        cluster=cluster,
-        party=party,
-        logging_level=logging_level,
-        tls_config=tls_config,
-        retry_policy=cross_silo_grpc_retry_policy,
-        max_retries=cross_silo_send_max_retries,
-        actor_config=send_actor_config
-    )
+    if receiver_sender_proxy_cls is not None:
+        set_proxy_actor_name(
+            job_name, cross_silo_comm_dict.get("use_global_proxy", True), True
+        )
+        _start_sender_receiver_proxy(
+            addresses=addresses,
+            party=party,
+            logging_level=logging_level,
+            tls_config=tls_config,
+            proxy_cls=receiver_sender_proxy_cls,
+            proxy_config=cross_silo_comm_dict,
+            ready_timeout_second=cross_silo_comm_config.timeout_in_ms / 1000,
+        )
+    else:
+        if receiver_proxy_cls is None:
+            logger.debug(
+                (
+                    "No receiver proxy class specified, "
+                    "use `GrpcRecvProxy` by default."
+                )
+            )
+            from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy
 
-    if enable_waiting_for_other_parties_ready:
+            receiver_proxy_cls = GrpcReceiverProxy
+        set_proxy_actor_name(
+            job_name, cross_silo_comm_dict.get("use_global_proxy", True)
+        )
+        _start_receiver_proxy(
+            addresses=addresses,
+            party=party,
+            logging_level=logging_level,
+            tls_config=tls_config,
+            proxy_cls=receiver_proxy_cls,
+            proxy_config=cross_silo_comm_dict,
+            ready_timeout_second=cross_silo_comm_config.timeout_in_ms / 1000,
+        )
+
+        if sender_proxy_cls is None:
+            logger.debug(
+                "No sender proxy class specified, use `GrpcSenderProxy` by default."
+            )
+            from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
+
+            sender_proxy_cls = GrpcSenderProxy
+
+        _start_sender_proxy(
+            addresses=addresses,
+            party=party,
+            logging_level=logging_level,
+            tls_config=tls_config,
+            proxy_cls=sender_proxy_cls,
+            proxy_config=cross_silo_comm_dict,
+            ready_timeout_second=cross_silo_comm_config.timeout_in_ms / 1000,
+        )
+
+    if config.get("barrier_on_initializing", False):
         # TODO(zhouaihui): can be removed after we have a better retry strategy.
-        ping_others(cluster=cluster, self_party=party, max_retries=3600)
+        ping_others(addresses=addresses, self_party=party, max_retries=3600)
 
 
 def shutdown():
     """
     Shutdown a RayFed client.
     """
-    wait_sending()
-    compatible_utils._clear_internal_kv()
-    clear_global_context()
-    logger.info('Shutdowned rayfed.')
+    _shutdown(True)
 
 
-def _get_cluster():
+def _shutdown(intended=True):
     """
-    Get the RayFed cluster configration.
+    Shutdown a RayFed client.
+
+    Args:
+        intended: (Optional) Whether this is a intended shutdown. If not
+           a "failure handler" will be triggered and sys.exit will be called then.
     """
-    return fed_config.get_cluster_config().cluster_addresses
+
+    if get_global_context() is None:
+        # Do nothing since job has not been inited or is cleaned already.
+        return
+
+    if intended:
+        logger.info('Shutdowning rayfed intendedly...')
+    else:
+        logger.warn('Shutdowning rayfed unintendedly...')
+    global_context = get_global_context()
+    last_sending_error = global_context.get_cleanup_manager().get_last_sending_error()
+    if last_sending_error is not None:
+        logging.error(f'Cross-silo sending error occured. {last_sending_error}')
+
+    if not intended:
+        # Execute failure_handler fisrtly.
+        failure_handler = global_context.get_sending_failure_handler()
+        if failure_handler is not None:
+            logger.info('Executing failure handler...')
+            failure_handler(last_sending_error)
+
+        # Clean context.
+        compatible_utils._clear_internal_kv()
+        clear_global_context(graceful=intended)
+        logger.info('Shutdowned rayfed.')
+
+        # Exit with error.
+        logger.critical('Exit now due to the previous error.')
+        sys.exit(1)
+    else:
+        # Clean context.
+        compatible_utils._clear_internal_kv()
+        clear_global_context(graceful=intended)
+        logger.info('Shutdowned rayfed.')
 
 
-def _get_party():
+def _get_addresses(job_name: str = None):
+    """
+    Get the RayFed addresses configration.
+    """
+    return fed_config.get_cluster_config(job_name).cluster_addresses
+
+
+def _get_party(job_name: str = None):
     """
     A private util function to get the current party name.
     """
-    return fed_config.get_cluster_config().current_party
+    return fed_config.get_cluster_config(job_name).current_party
 
 
-def _get_tls():
+def _get_tls(job_name: str = None):
     """
     Get the tls configurations on this party.
     """
-    return fed_config.get_cluster_config().tls_config
+    return fed_config.get_cluster_config(job_name).tls_config
 
 
 class FedRemoteFunction:
@@ -294,9 +374,9 @@ class FedRemoteFunction:
         return self
 
     def remote(self, *args, **kwargs):
-        assert (
-            self._node_party is not None
-        ), "A fed function should be specified within a party to execute."
+        if not self._node_party:
+            raise ValueError("You should specify a party name on the fed function.")
+
         return self._fed_call_holder.internal_remote(*args, **kwargs)
 
     def _execute_impl(self, args, kwargs):
@@ -321,11 +401,12 @@ class FedRemoteClass:
 
     def remote(self, *cls_args, **cls_kwargs):
         fed_class_task_id = get_global_context().next_seq_id()
+        job_name = get_global_context().get_job_name()
         fed_actor_handle = FedActorHandle(
             fed_class_task_id,
-            _get_cluster(),
+            _get_addresses(job_name),
             self._cls,
-            _get_party(),
+            _get_party(job_name),
             self._party,
             self._options,
         )
@@ -374,8 +455,9 @@ def get(
     # A fake fed_task_id for a `fed.get()` operator. This is useful
     # to help contruct the whole DAG within `fed.get`.
     fake_fed_task_id = get_global_context().next_seq_id()
-    cluster = _get_cluster()
-    current_party = _get_party()
+    job_name = get_global_context().get_job_name()
+    addresses = _get_addresses(job_name)
+    current_party = _get_party(job_name)
     is_individual_id = isinstance(fed_objects, FedObject)
     if is_individual_id:
         fed_objects = [fed_objects]
@@ -390,7 +472,7 @@ def get(
             assert ray_object_ref is not None
             ray_refs.append(ray_object_ref)
 
-            for party_name in cluster:
+            for party_name in addresses:
                 if party_name == current_party:
                     continue
                 else:
@@ -422,15 +504,22 @@ def get(
                 fed_object._cache_ray_object_ref(received_ray_object_ref)
             ray_refs.append(received_ray_object_ref)
 
-    values = ray.get(ray_refs)
-    if is_individual_id:
-        values = values[0]
-
-    return values
+    try:
+        values = ray.get(ray_refs)
+        if is_individual_id:
+            values = values[0]
+        return values
+    except FedRemoteError as e:
+        logger.warning(
+            "Encounter RemoteError happend in other parties"
+            f", error message: {e.cause}"
+        )
+        raise e
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):
-    current_party = _get_party()
+    job_name = get_global_context().get_job_name()
+    current_party = _get_party(job_name)
     if actor._node_party == current_party:
         handler = actor._actor_handle
         ray.kill(handler, no_restart=no_restart)
