@@ -171,6 +171,7 @@ def _init_internal_kv(job_name):
     global kv
     if kv is None:
         from ray._private.client_mode_hook import is_client_mode_enabled
+
         kv = ClientModeInternalKv() if is_client_mode_enabled else InternalKv(job_name)
         kv.initialize()
 
