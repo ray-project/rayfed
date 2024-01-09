@@ -81,7 +81,8 @@ def init(
     Initialize a RayFed client.
 
     Args:
-        addresses: optional; a dict describes the addresses configurations. E.g.
+        addresses:
+            optional; a dict describes the addresses configurations. E.g.
             .. code:: python
 
                 {
@@ -92,10 +93,10 @@ def init(
                     # The address that can be connected to `carol` by other parties.
                     'carol': '127.0.0.1:10003',
                 }
-
-        party: optional; self party.
-
-        config: optional; a dict describes general job configurations. Currently the
+        party:
+            optional; self party.
+        config:
+            optional; a dict describes general job configurations. Currently the
             supported configurations are ['cross_silo_comm', 'barrier_on_initializing'].
                 cross_silo_comm
                     optional; a dict describes the cross-silo common
@@ -126,7 +127,8 @@ def init(
                     },
                     "barrier_on_initializing": True,
                 }
-        tls_config: optional; a dict describes the tls config. E.g.
+        tls_config:
+            optional; a dict describes the tls config. E.g.
             For alice,
 
             .. code:: python
@@ -146,17 +148,19 @@ def init(
                     "cert": "bob's server cert",
                     "key": "bob's server cert key",
                 }
-        logging_level: optional; the logging level, could be `debug`, `info`,
-            `warning`, `error`, `critical`, not case sensititive.
-        job_name: optional; the job name of the current job. Note that, the job name
+        logging_level:
+            optional; the logging level, could be `debug`, `info`, `warning`, `error`,
+            `critical`, not case sensititive.
+        job_name:
+            optional; the job name of the current job. Note that, the job name
             must be identical in all parties, otherwise, messages will be ignored
             because of the job name mismatch. If the job name is not provided, an
             default fixed name will be assigned, therefore messages of all anonymous
             jobs will be mixed together, which should only be used in the single job
             scenario or test mode.
-        sending_failure_handler: optional; a callback which will be triggeed if
-            cross-silo message sending failed and exit_on_sending_failure in config is
-            True.
+        sending_failure_handler:
+            optional; a callback which will be triggeed if cross-silo message sending
+            failed and exit_on_sending_failure in config is True.
     Examples:
         >>> import fed
         >>> import ray
