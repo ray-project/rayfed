@@ -83,6 +83,7 @@ def init(
     Args:
         addresses:
             optional; a dict describes the addresses configurations. E.g.
+
             .. code:: python
 
                 {
