@@ -84,6 +84,7 @@ def init(
         addresses: optional; a dict describes the addresses configurations. E.g.
 
             .. code:: python
+
                 {
                     # The address that can be connected to `alice` by other parties.
                     'alice': '127.0.0.1:10001',
@@ -111,6 +112,7 @@ def init(
             Example:
 
             .. code:: python
+
                 {
                     "cross_silo_comm": {
                         "messages_max_size_in_bytes": 500*1024,
@@ -125,6 +127,7 @@ def init(
             For alice,
 
             .. code:: python
+
                 {
                     "ca_cert": "root ca cert of other parties.",
                     "cert": "alice's server cert",
@@ -134,6 +137,7 @@ def init(
             For bob,
 
             .. code:: python
+
                 {
                     "ca_cert": "root ca cert of other parties.",
                     "cert": "bob's server cert",
@@ -419,6 +423,63 @@ class FedRemoteClass:
 
 # This is the decorator `@fed.remote`
 def remote(*args, **kwargs):
+    """Defines a remote function or an actor class.
+
+    This function can be used as a decorator with no arguments
+    to define a remote function or actor as follows:
+
+    .. testcode::
+
+        import fed
+
+        @fed.remote
+        def f(a, b, c):
+            return a + b + c
+
+        object_ref = f.part('alice').remote(1, 2, 3)
+        result = fed.get(object_ref)
+        assert result == (1 + 2 + 3)
+
+        @fed.remote
+        class Foo:
+            def __init__(self, arg):
+                self.x = arg
+
+            def method(self, a):
+                return self.x + a
+
+        actor_handle = Foo.party('alice').remote(123)
+        object_ref = actor_handle.method.remote(321)
+        result = fed.get(object_ref)
+        assert result == (123 + 321)
+
+    Equivalently, use a function call to create a remote function or actor.
+
+    .. testcode::
+
+        def g(a, b, c):
+            return a + b + c
+
+        remote_g = fed.remote(g)
+        object_ref = remote_g.party('alice').remote(1, 2, 3)
+        assert fed.get(object_ref) == (1 + 2 + 3)
+
+        class Bar:
+            def __init__(self, arg):
+                self.x = arg
+
+            def method(self, a):
+                return self.x + a
+
+        RemoteBar = fed.remote(Bar)
+        actor_handle = RemoteBar.party('alice').remote(123)
+        object_ref = actor_handle.method.remote(321)
+        result = fed.get(object_ref)
+        assert result == (123 + 321)
+
+
+    It can also be used with specific keyword arguments just same as ray options.
+    """
     def _make_fed_remote(function_or_class, **options):
         if inspect.isfunction(function_or_class) or fed_utils.is_cython(
             function_or_class
@@ -518,6 +579,13 @@ def get(
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):
+    """Kill an actor forcefully.
+
+    Args:
+        actor: Handle to the actor to kill.
+        no_restart: Whether or not this actor should be restarted if
+            it's a restartable actor.
+    """
     job_name = get_global_context().get_job_name()
     current_party = _get_party(job_name)
     if actor._node_party == current_party:

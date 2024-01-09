@@ -158,6 +158,7 @@ class GrpcCrossSiloMessageConfig(CrossSiloMessageConfig):
             `retry-policy <https://github.com/grpc/proposal/blob/master/A6-client-retries.md#retry-policy>`_. # noqa
 
             .. code:: python
+
                 {
                     "maxAttempts": 4,
                     "initialBackoff": "0.1s",
@@ -167,8 +168,10 @@ class GrpcCrossSiloMessageConfig(CrossSiloMessageConfig):
                         "UNAVAILABLE"
                     ]
                 }
-        grpc_channel_options: A list of tuples to store GRPC channel options,
-            e.g. [
+        grpc_channel_options: A list of tuples to store GRPC channel options, e.g.
+            .. code:: python
+
+                [
                     ('grpc.enable_retries', 1),
                     ('grpc.max_send_message_length', 50 * 1024 * 1024)
                 ]
