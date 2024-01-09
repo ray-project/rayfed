@@ -15,7 +15,7 @@ To use RayFed, first install it using pip:
 Starting RayFed
 ---------------
 
-To start a RayFed application, you can use ``fed.init`` function:
+To start a RayFed application, you can use :py:meth:`fed.init` function:
 
 For example:
 

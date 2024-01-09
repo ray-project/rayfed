@@ -82,7 +82,6 @@ def init(
 
     Args:
         addresses: optional; a dict describes the addresses configurations. E.g.
-
             .. code:: python
 
                 {
@@ -93,23 +92,27 @@ def init(
                     # The address that can be connected to `carol` by other parties.
                     'carol': '127.0.0.1:10003',
                 }
-        party: optional; self party.
-        config: optional; a dict describes general job configurations. Currently the
-            supported configurations are [`cross_silo_comm`, 'barrier_on_initializing'].
-            * `cross_silo_comm`: optional; a dict describes the cross-silo common
-                configs, the supported configs can be referred to
-                `fed.config.CrossSiloMessageConfig` and
-                `fed.config.GrpcCrossSiloMessageConfig`. Note that, the
-                `cross_silo_comm.messages_max_size_in_bytes` will be overrided
-                if `cross_silo_comm.grpc_channel_options` is provided and contains
-                `grpc.max_send_message_length` or `grpc.max_receive_message_length`.
-            * `barrier_on_initializing`: optional; a bool value indicates whether to
-                wait for all parties to be ready before starting the job. If set
-                to True, the job will be started after all parties are ready,
-                otherwise, the job will be started immediately after the current
-                party is ready.
 
-            Example:
+        party: optional; self party.
+
+        config: optional; a dict describes general job configurations. Currently the
+            supported configurations are ['cross_silo_comm', 'barrier_on_initializing'].
+                cross_silo_comm
+                    optional; a dict describes the cross-silo common
+                    configs, the supported configs can be referred to
+                    :py:meth:`fed.config.CrossSiloMessageConfig` and
+                    :py:meth:`fed.config.GrpcCrossSiloMessageConfig`. Note that, the
+                    `cross_silo_comm.messages_max_size_in_bytes` will be overrided
+                    if `cross_silo_comm.grpc_channel_options` is provided and contains
+                    `grpc.max_send_message_length` or `grpc.max_receive_message_length`.
+                barrier_on_initializing
+                    optional; a bool value indicates whether to
+                    wait for all parties to be ready before starting the job. If set
+                    to True, the job will be started after all parties are ready,
+                    otherwise, the job will be started immediately after the current
+                    party is ready.
+
+            E.g.
 
             .. code:: python
 
