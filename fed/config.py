@@ -107,13 +107,13 @@ class CrossSiloMessageConfig:
         timeout_in_ms:
             The timeout in mili-seconds of a cross-silo RPC call. It's 60000 by
             default.
-        http_header: 
+        http_header:
             The HTTP header, e.g. metadata in grpc, sent with the RPC request.
             This won't override basic tcp headers, such as `user-agent`, but concat
             them together.
-        max_concurrency: 
+        max_concurrency:
             the max_concurrency of the sender/receiver proxy actor.
-        use_global_proxy: 
+        use_global_proxy:
             Whether using the global proxy actor or create new proxy actor for current
             job.
     """

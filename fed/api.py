@@ -488,6 +488,7 @@ def remote(*args, **kwargs):
 
     It can also be used with specific keyword arguments just same as ray options.
     """
+
     def _make_fed_remote(function_or_class, **options):
         if inspect.isfunction(function_or_class) or fed_utils.is_cython(
             function_or_class
