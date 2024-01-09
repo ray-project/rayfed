@@ -32,7 +32,7 @@ jobs:
             python3 -m virtualenv -p python3 py3
             . py3/bin/activate
             which python
-            pip install pytest torch cloudpickle cryptography
+            pip install pytest torch cloudpickle cryptography numpy
             # six is required in ray-2.1.0
             # grpc is required since ray-2.8.0
             pip install "protobuf<4.0" six
