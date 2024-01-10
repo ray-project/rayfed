@@ -81,9 +81,11 @@ def init(
     Initialize a RayFed client.
 
     Args:
-        addresses: optional; a dict describes the addresses configurations. E.g.
+        addresses:
+            optional; a dict describes the addresses configurations. E.g.
 
             .. code:: python
+
                 {
                     # The address that can be connected to `alice` by other parties.
                     'alice': '127.0.0.1:10001',
@@ -92,25 +94,30 @@ def init(
                     # The address that can be connected to `carol` by other parties.
                     'carol': '127.0.0.1:10003',
                 }
-        party: optional; self party.
-        config: optional; a dict describes general job configurations. Currently the
-            supported configurations are [`cross_silo_comm`, 'barrier_on_initializing'].
-            * `cross_silo_comm`: optional; a dict describes the cross-silo common
-                configs, the supported configs can be referred to
-                `fed.config.CrossSiloMessageConfig` and
-                `fed.config.GrpcCrossSiloMessageConfig`. Note that, the
-                `cross_silo_comm.messages_max_size_in_bytes` will be overrided
-                if `cross_silo_comm.grpc_channel_options` is provided and contains
-                `grpc.max_send_message_length` or `grpc.max_receive_message_length`.
-            * `barrier_on_initializing`: optional; a bool value indicates whether to
-                wait for all parties to be ready before starting the job. If set
-                to True, the job will be started after all parties are ready,
-                otherwise, the job will be started immediately after the current
-                party is ready.
+        party:
+            optional; self party.
+        config:
+            optional; a dict describes general job configurations. Currently the
+            supported configurations are ['cross_silo_comm', 'barrier_on_initializing'].
+                cross_silo_comm
+                    optional; a dict describes the cross-silo common
+                    configs, the supported configs can be referred to
+                    :py:meth:`fed.config.CrossSiloMessageConfig` and
+                    :py:meth:`fed.config.GrpcCrossSiloMessageConfig`. Note that, the
+                    `cross_silo_comm.messages_max_size_in_bytes` will be overrided
+                    if `cross_silo_comm.grpc_channel_options` is provided and contains
+                    `grpc.max_send_message_length` or `grpc.max_receive_message_length`.
+                barrier_on_initializing
+                    optional; a bool value indicates whether to
+                    wait for all parties to be ready before starting the job. If set
+                    to True, the job will be started after all parties are ready,
+                    otherwise, the job will be started immediately after the current
+                    party is ready.
 
-            Example:
+            E.g.
 
             .. code:: python
+
                 {
                     "cross_silo_comm": {
                         "messages_max_size_in_bytes": 500*1024,
@@ -121,10 +128,12 @@ def init(
                     },
                     "barrier_on_initializing": True,
                 }
-        tls_config: optional; a dict describes the tls config. E.g.
+        tls_config:
+            optional; a dict describes the tls config. E.g.
             For alice,
 
             .. code:: python
+
                 {
                     "ca_cert": "root ca cert of other parties.",
                     "cert": "alice's server cert",
@@ -134,22 +143,25 @@ def init(
             For bob,
 
             .. code:: python
+
                 {
                     "ca_cert": "root ca cert of other parties.",
                     "cert": "bob's server cert",
                     "key": "bob's server cert key",
                 }
-        logging_level: optional; the logging level, could be `debug`, `info`,
-            `warning`, `error`, `critical`, not case sensititive.
-        job_name: optional; the job name of the current job. Note that, the job name
+        logging_level:
+            optional; the logging level, could be `debug`, `info`, `warning`, `error`,
+            `critical`, not case sensititive.
+        job_name:
+            optional; the job name of the current job. Note that, the job name
             must be identical in all parties, otherwise, messages will be ignored
             because of the job name mismatch. If the job name is not provided, an
             default fixed name will be assigned, therefore messages of all anonymous
             jobs will be mixed together, which should only be used in the single job
             scenario or test mode.
-        sending_failure_handler: optional; a callback which will be triggeed if
-            cross-silo message sending failed and exit_on_sending_failure in config is
-            True.
+        sending_failure_handler:
+            optional; a callback which will be triggeed if cross-silo message sending
+            failed and exit_on_sending_failure in config is True.
     Examples:
         >>> import fed
         >>> import ray
@@ -419,6 +431,64 @@ class FedRemoteClass:
 
 # This is the decorator `@fed.remote`
 def remote(*args, **kwargs):
+    """Defines a remote function or an actor class.
+
+    This function can be used as a decorator with no arguments
+    to define a remote function or actor as follows:
+
+    .. testcode::
+
+        import fed
+
+        @fed.remote
+        def f(a, b, c):
+            return a + b + c
+
+        object_ref = f.part('alice').remote(1, 2, 3)
+        result = fed.get(object_ref)
+        assert result == (1 + 2 + 3)
+
+        @fed.remote
+        class Foo:
+            def __init__(self, arg):
+                self.x = arg
+
+            def method(self, a):
+                return self.x + a
+
+        actor_handle = Foo.party('alice').remote(123)
+        object_ref = actor_handle.method.remote(321)
+        result = fed.get(object_ref)
+        assert result == (123 + 321)
+
+    Equivalently, use a function call to create a remote function or actor.
+
+    .. testcode::
+
+        def g(a, b, c):
+            return a + b + c
+
+        remote_g = fed.remote(g)
+        object_ref = remote_g.party('alice').remote(1, 2, 3)
+        assert fed.get(object_ref) == (1 + 2 + 3)
+
+        class Bar:
+            def __init__(self, arg):
+                self.x = arg
+
+            def method(self, a):
+                return self.x + a
+
+        RemoteBar = fed.remote(Bar)
+        actor_handle = RemoteBar.party('alice').remote(123)
+        object_ref = actor_handle.method.remote(321)
+        result = fed.get(object_ref)
+        assert result == (123 + 321)
+
+
+    It can also be used with specific keyword arguments just same as ray options.
+    """
+
     def _make_fed_remote(function_or_class, **options):
         if inspect.isfunction(function_or_class) or fed_utils.is_cython(
             function_or_class
@@ -518,6 +588,13 @@ def get(
 
 
 def kill(actor: FedActorHandle, *, no_restart=True):
+    """Kill an actor forcefully.
+
+    Args:
+        actor: Handle to the actor to kill.
+        no_restart: Whether or not this actor should be restarted if
+            it's a restartable actor.
+    """
     job_name = get_global_context().get_job_name()
     current_party = _get_party(job_name)
     if actor._node_party == current_party:
