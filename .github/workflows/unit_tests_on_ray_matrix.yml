@@ -33,9 +33,9 @@ jobs:
             . py3/bin/activate
             which python
             pip install pytest
-            pip install dev-requirements.txt
+            pip install -r dev-requirements.txt
             pip install ray==${{ matrix.ray_version }}
-            pip install $(grep -ivE "ray" requirements.txt)
+            pip install -r $(grep -ivE "ray" requirements.txt)
 
     - name: Build and test
       run: |
