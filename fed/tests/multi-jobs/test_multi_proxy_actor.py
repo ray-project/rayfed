@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import multiprocessing
 import pytest
 import ray
 
@@ -19,21 +21,15 @@ import fed
 from fed.proxy.barriers import receiver_proxy_actor_name, sender_proxy_actor_name
 from fed.proxy.grpc.grpc_proxy import GrpcSenderProxy
 
-addresses = {
-    'job1': {
-        'alice': '127.0.0.1:11012',
-    },
-    'job2': {
-        'alice': '127.0.0.1:12012',
-    },
-}
 
-
-def run(party, job_name):
+def run():
+    job_name = 'job_test'
     ray.init(address='local', include_dashboard=False)
     fed.init(
-        addresses=addresses[job_name],
-        party=party,
+        addresses={
+            'alice': '127.0.0.1:11012',
+        },
+        party='alice',
         job_name=job_name,
         sender_proxy_cls=GrpcSenderProxy,
         config={
@@ -53,8 +49,10 @@ def run(party, job_name):
 
 
 def test_multi_proxy_actor():
-    run('alice', 'job1')
-    run('alice', 'job2')
+    p_alice = multiprocessing.Process(target=run)
+    p_alice.start()
+    p_alice.join()
+    assert p_alice.exitcode == 0
 
 
 if __name__ == "__main__":

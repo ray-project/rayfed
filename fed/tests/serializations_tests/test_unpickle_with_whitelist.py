@@ -41,10 +41,10 @@ def pass_arg(d):
 
 
 def run(party):
-    compatible_utils.init_ray(address='local')
+    compatible_utils.init_ray(address='local', include_dashboard=False)
     addresses = {
-        'alice': '127.0.0.1:11012',
-        'bob': '127.0.0.1:11011',
+        'alice': '127.0.0.1:11355',
+        'bob': '127.0.0.1:11356',
     }
     allowed_list = {
         "numpy.core.numeric": ["*"],

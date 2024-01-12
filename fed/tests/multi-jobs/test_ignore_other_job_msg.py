@@ -17,6 +17,7 @@ import cloudpickle
 import grpc
 import pytest
 import ray
+import multiprocessing
 
 import fed._private.compatible_utils as compatible_utils
 import fed.utils as fed_utils
@@ -33,7 +34,7 @@ else:
     from fed.grpc.pb3 import fed_pb2_grpc as fed_pb2_grpc
 
 
-def test_ignore_other_job_msg():
+def run():
     # GIVEN
     ray.init(address='local', include_dashboard=False)
     address = '127.0.0.1:15111'
@@ -66,6 +67,13 @@ def test_ignore_other_job_msg():
     assert "JobName mis-match" in response.result
 
     ray.shutdown()
+
+
+def test_ignore_other_job_msg():
+    p_alice = multiprocessing.Process(target=run)
+    p_alice.start()
+    p_alice.join()
+    assert p_alice.exitcode == 0
 
 
 if __name__ == "__main__":
