@@ -11,8 +11,7 @@ export RAY_TLS_SERVER_KEY="/tmp/rayfed/test-certs/server.key"
 export RAY_TLS_CA_CERT="/tmp/rayfed/test-certs/server.crt"
 
 directory="fed/tests"
-command="pytest -vs"
  
-find "$directory" -type f -mindepth 1 -name "test_*" -exec bash -c "eval '$command'" \;
+find "$directory" -type f -name "test_*.py" -exec pytest -vs {} \;
 
 echo "All tests finished."
