@@ -22,7 +22,7 @@ import fed._private.compatible_utils as compatible_utils
 from fed._private.compatible_utils import _compare_version_strings
 from fed.tests.test_utils import ray_client_mode_setup  # noqa
 
-pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(
     _compare_version_strings(ray.__version__, '2.4.0', ),
     reason='Skip client mode when ray > 2.4.0',
 )
