@@ -194,7 +194,11 @@ python test.py bob
 Then you will get `The result in party alice is 5` on the first terminal screen and `The result in party bob is 5` on the second terminal screen.
 
 Figure shows the execution under the hood:
-![ppeH68x.png](https://s1.ax1x.com/2023/03/08/ppeH68x.png)
-
+<div align="center">
+<img src="https://s1.ax1x.com/2023/03/08/ppeH68x.png" alt="Figure" width="500">  
+</div>
 ## Running untrusted codes
 As a general rule: Always execute untrusted codes inside a sandbox (e.g., [nsjail](https://github.com/google/nsjail)).
+
+## Who use us
+<img src="https://raw.githubusercontent.com/secretflow/secretflow/main/docs/_static/logo-light.png" alt="SecretFlow" width="200">  
