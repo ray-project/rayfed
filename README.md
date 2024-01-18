@@ -194,7 +194,16 @@ python test.py bob
 Then you will get `The result in party alice is 5` on the first terminal screen and `The result in party bob is 5` on the second terminal screen.
 
 Figure shows the execution under the hood:
-![ppeH68x.png](https://s1.ax1x.com/2023/03/08/ppeH68x.png)
-
+<div align="center">
+<img src="https://s1.ax1x.com/2023/03/08/ppeH68x.png" alt="Figure" width="500">  
+</div>
 ## Running untrusted codes
 As a general rule: Always execute untrusted codes inside a sandbox (e.g., [nsjail](https://github.com/google/nsjail)).
+
+## Who use us
+<a href="https://github.com/alipay/Antchain-MPC">
+<img src="docs/images/morse-logo.png" alt="Ant Chain Morse" width="240">  
+</a>
+<a href="https://github.com/secretflow/secretflow">
+<img src="docs/images/secretflow-logo.png" alt="SecretFlow" width="240">  
+</a>
