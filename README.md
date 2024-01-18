@@ -201,10 +201,9 @@ Figure shows the execution under the hood:
 As a general rule: Always execute untrusted codes inside a sandbox (e.g., [nsjail](https://github.com/google/nsjail)).
 
 ## Who use us
-[![][morse-logo-image]][morse-url]
-[![][secretflow-logo-image]][secretflow-url]
-
-[morse-logo-image]: docs/images/morse-logo.png
-[secretflow-logo-image]: docs/images/secretflow-logo.png
-[morse-url]: https://github.com/alipay/Antchain-MPC
-[secretflow-url]: https://github.com/secretflow/secretflow
+<a href="https://github.com/alipay/Antchain-MPC">
+<img src="docs/images/morse-logo.png" alt="Ant Chain Morse" width="240">  
+</a>
+<a href="https://github.com/secretflow/secretflow">
+<img src="docs/images/secretflow-logo.png" alt="SecretFlow" width="240">  
+</a>
