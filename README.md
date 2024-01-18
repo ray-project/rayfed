@@ -203,6 +203,10 @@ As a general rule: Always execute untrusted codes inside a sandbox (e.g., [nsjai
 ## Who use us
 [![][morse-logo-image]][morse-url]
 [![][secretflow-logo-image]][secretflow-url]
+[![][morse-logo-image]][morse-url]
+[![][secretflow-logo-image]][secretflow-url]
+[![][morse-logo-image]][morse-url]
+[![][secretflow-logo-image]][secretflow-url]
 
 [morse-logo-image]: docs/images/morse-logo.png
 [secretflow-logo-image]: docs/images/secretflow-logo.png
