@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        ray_version: [2.0.0, 2.1.0, 2.2.0, 2.3.0, 2.4.0]
+        ray_version: [2.4.0, 2.5.1, 2.6.3, 2.7.1, 2.8.1, 2.9.0]
 
     timeout-minutes: 60
     runs-on: ubuntu-latest
@@ -32,10 +32,11 @@ jobs:
             python3 -m virtualenv -p python3 py3
             . py3/bin/activate
             which python
-            pip install pytest torch cloudpickle cryptography
-            # six is required in ray-2.1.0
-            pip install "protobuf<4.0" six
+            pip install pytest
+            pip install -r dev-requirements.txt
             pip install ray==${{ matrix.ray_version }}
+            grep -ivE "ray" requirements.txt > temp_requirement.txt
+            pip install -r temp_requirement.txt
 
     - name: Build and test
       run: |

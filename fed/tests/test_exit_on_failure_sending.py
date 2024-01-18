@@ -38,8 +38,8 @@ class My:
 def run(party: str, q: multiprocessing.Queue):
     compatible_utils.init_ray(address='local')
     addresses = {
-        'alice': '127.0.0.1:11012',
-        'bob': '127.0.0.1:11011',
+        'alice': '127.0.0.1:21321',
+        'bob': '127.0.0.1:21322',
     }
     retry_policy = {
         "maxAttempts": 2,

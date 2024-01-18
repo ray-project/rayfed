@@ -33,7 +33,7 @@ class Aggregator:
 
 
 def main(party):
-    ray.init(address='local')
+    ray.init(address='local', include_dashboard=False)
 
     addresses = {
         'alice': '127.0.0.1:11010',

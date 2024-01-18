@@ -30,6 +30,7 @@ def start_ray_cluster(
         '--head',
         f'--port={ray_port}',
         f'--ray-client-server-port={client_server_port}',
+        f'--include-dashboard=false',
         f'--dashboard-port={dashboard_port}',
     ]
     command_str = ' '.join(command)

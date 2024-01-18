@@ -51,7 +51,7 @@ addresses = {
 
 
 def run(party):
-    ray.init(address='local')
+    ray.init(address='local', include_dashboard=False)
     fed.init(addresses=addresses, party=party)
     print(f"Running the script in party {party}")
 
