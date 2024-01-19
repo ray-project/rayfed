@@ -19,6 +19,8 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
     'sphinx.ext.extlinks',
+    'myst_parser',
+    'nbsphinx',
 ]
 
 intersphinx_mapping = {
