@@ -1,3 +1,3 @@
-# The architecture of RayFed
+# The Architecture of RayFed
 
 TBD

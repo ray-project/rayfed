@@ -1,3 +1,3 @@
-# The principle of RayFed
+# The Principle of RayFed
 
 TBD
