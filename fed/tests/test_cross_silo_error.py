@@ -77,7 +77,7 @@ def run(party):
     ray.shutdown()
 
 
-def cross_silo_normal_task_error():
+def test_cross_silo_normal_task_error():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
@@ -124,7 +124,7 @@ def run2(party):
     ray.shutdown()
 
 
-def cross_silo_actor_task_error():
+def test_cross_silo_actor_task_error():
     p_alice = multiprocessing.Process(target=run2, args=('alice',))
     p_bob = multiprocessing.Process(target=run2, args=('bob',))
     p_alice.start()
@@ -169,7 +169,7 @@ def run3(party):
     ray.shutdown()
 
 
-def cross_silo_not_expose_error_trace():
+def test_cross_silo_not_expose_error_trace():
     p_alice = multiprocessing.Process(target=run3, args=('alice',))
     p_bob = multiprocessing.Process(target=run3, args=('bob',))
     p_alice.start()
