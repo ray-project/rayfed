@@ -294,7 +294,9 @@ def shutdown():
     """
     Shutdown a RayFed client.
     """
-    _shutdown(True)
+    global_context = get_global_context()
+    if global_context is not None and global_context.acquire_shutdown_flag():
+        _shutdown(True)
 
 
 def _shutdown(intended=True):

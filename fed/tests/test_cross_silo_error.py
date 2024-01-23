@@ -77,7 +77,7 @@ def run(party):
     ray.shutdown()
 
 
-def test_cross_silo_normal_task_error():
+def cross_silo_normal_task_error():
     p_alice = multiprocessing.Process(target=run, args=('alice',))
     p_bob = multiprocessing.Process(target=run, args=('bob',))
     p_alice.start()
@@ -124,7 +124,7 @@ def run2(party):
     ray.shutdown()
 
 
-def test_cross_silo_actor_task_error():
+def cross_silo_actor_task_error():
     p_alice = multiprocessing.Process(target=run2, args=('alice',))
     p_bob = multiprocessing.Process(target=run2, args=('bob',))
     p_alice.start()
@@ -169,9 +169,56 @@ def run3(party):
     ray.shutdown()
 
 
-def test_cross_silo_not_expose_error_trace():
+def cross_silo_not_expose_error_trace():
     p_alice = multiprocessing.Process(target=run3, args=('alice',))
     p_bob = multiprocessing.Process(target=run3, args=('bob',))
+    p_alice.start()
+    p_bob.start()
+    p_alice.join()
+    p_bob.join()
+    assert p_alice.exitcode == 0
+    assert p_bob.exitcode == 0
+
+
+@fed.remote
+def foo(e):
+    print(e)
+
+
+def run4(party):
+    compatible_utils.init_ray(address='local')
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
+    }
+
+    fed.init(
+        addresses=addresses,
+        party=party,
+        logging_level='debug',
+        config={
+            'cross_silo_comm': {
+                'timeout_ms': 20 * 1000,
+                'expose_error_trace': False,
+            },
+        },
+    )
+
+    a = error_func.party("alice").remote()
+    o = foo.party('bob').remote(a)
+    if party == 'bob':
+        # Wait a while to receive error from alice.
+        import time
+
+        time.sleep(10)
+    # Alice will shutdown once exactly.
+    fed.shutdown()
+    ray.shutdown()
+
+
+def test_cross_silo_alice_send_error_and_shutdown_once():
+    p_alice = multiprocessing.Process(target=run4, args=('alice',))
+    p_bob = multiprocessing.Process(target=run4, args=('bob',))
     p_alice.start()
     p_bob.start()
     p_alice.join()
