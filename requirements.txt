@@ -3,4 +3,4 @@ ray>=1.13.0
 cloudpickle
 pickle5==0.0.11; python_version < '3.8'
 protobuf
-grpcio<=1.51.3,>=1.32.0
+grpcio>=1.42.0
