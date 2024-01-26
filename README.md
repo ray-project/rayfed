@@ -35,10 +35,10 @@ The code view in each party is exactly the same, but the execution differs based
 
 
 ## Supported Ray Versions
-| RayFed Versions | ray-1.13.0 | ray-2.0.0 | ray-2.1.0 | ray-2.2.0 | ray-2.3.0 | ray-2.4.0 |
-|:---------------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|
-| 0.1.0           |✅      | ✅      | ✅      | ✅      | ✅      | ✅      |
-| 0.2.0           |not released|not released|not released|not released|not released|not released|
+| RayFed Versions | ray-1.13.0 | ray-2.4.0 | ray-2.5.1 | ray-2.6.3 | ray-2.7.1 | ray-2.8.1 | | ray-2.9.0 |
+|:---------------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|:--------:|
+| 0.1.0           |✅      | ✅      | ✅      | ✅      | ✅      | ✅      | ✅      |
+| 0.2.0           |not released|not released|not released|not released|not released|not released|not released|
 
 
 ## Installation
