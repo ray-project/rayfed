@@ -34,8 +34,8 @@ def test_n_to_1_transport():
     sending data to the target receiver proxy, and there also have
     N receivers to `get_data` from receiver proxy at that time.
     """
-    compatible_utils.init_ray(address='local')
-    test_job_name = 'test_n_to_1_transport'
+    compatible_utils.init_ray(address="local")
+    test_job_name = "test_n_to_1_transport"
     cert_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "/tmp/rayfed/test-certs/"
     )
@@ -44,13 +44,13 @@ def test_n_to_1_transport():
         "cert": os.path.join(cert_dir, "server.crt"),
         "key": os.path.join(cert_dir, "server.key"),
     }
-    party = 'test_party'
+    party = "test_party"
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: tls_config,
     }
-    global_context.init_global_context(party, test_job_name)
+    global_context.init_global_context(party, test_job_name, False, False)
     global_context.get_global_context().get_cleanup_manager().start()
     compatible_utils._init_internal_kv(test_job_name)
     compatible_utils.kv.put(
@@ -59,11 +59,11 @@ def test_n_to_1_transport():
 
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:65422"
-    addresses = {'test_party': SERVER_ADDRESS}
+    addresses = {"test_party": SERVER_ADDRESS}
     _start_receiver_proxy(
         addresses,
         party,
-        logging_level='info',
+        logging_level="info",
         tls_config=tls_config,
         proxy_cls=GrpcReceiverProxy,
         proxy_config={},
@@ -71,7 +71,7 @@ def test_n_to_1_transport():
     _start_sender_proxy(
         addresses,
         party,
-        logging_level='info',
+        logging_level="info",
         tls_config=tls_config,
         proxy_cls=GrpcSenderProxy,
         proxy_config={},

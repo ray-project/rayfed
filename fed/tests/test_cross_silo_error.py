@@ -14,13 +14,13 @@
 
 import multiprocessing
 import sys
-from unittest.mock import Mock
 
 import pytest
 import ray
 
 import fed
 import fed._private.compatible_utils as compatible_utils
+from fed._private.global_context import get_global_context
 from fed.exceptions import FedRemoteError
 
 
@@ -32,6 +32,11 @@ class MyError(Exception):
 @fed.remote
 def error_func():
     raise MyError("Test normal task Error")
+
+
+@fed.remote
+def normal_func(a):
+    return a
 
 
 @fed.remote
@@ -225,6 +230,93 @@ def test_cross_silo_alice_send_error_and_shutdown_once():
     p_bob.join()
     assert p_alice.exitcode == 0
     assert p_bob.exitcode == 0
+
+
+def run5(party: str):
+    compatible_utils.init_ray(address='local')
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
+    }
+
+    fed.init(
+        addresses=addresses,
+        party=party,
+        logging_level='debug',
+        config={
+            'cross_silo_comm': {
+                'timeout_ms': 20 * 1000,
+                'expose_error_trace': False,
+                'continue_waiting_for_data_sending_on_error': True,
+            },
+        },
+    )
+
+    assert get_global_context().get_continue_waiting_for_data_sending_on_error()
+
+    fed.shutdown()
+    ray.shutdown()
+
+
+def test_continue_waiting_for_data_sending_on_error():
+    p_alice = multiprocessing.Process(target=run5, args=('alice',))
+    p_alice.start()
+    p_alice.join()
+    assert p_alice.exitcode == 0
+
+
+def run6(party: str):
+    compatible_utils.init_ray(address='local')
+    addresses = {
+        'alice': '127.0.0.1:11012',
+        'bob': '127.0.0.1:11011',
+    }
+
+    fed.init(
+        addresses=addresses,
+        party=party,
+        logging_level='debug',
+        config={
+            'cross_silo_comm': {
+                'timeout_ms': 20 * 1000,
+                'expose_error_trace': False,
+                'exit_on_sending_failure': True,
+            },
+        },
+    )
+
+    try:
+        # Alice ran into an error and broadcast error to bob. And exit then.
+        a = error_func.party('alice').remote()
+        b = normal_func.party('bob').remote(a)
+
+        # Wait a while to sure alice finish sending error and exit.
+        import time
+
+        time.sleep(10)
+
+        # Alice did not execute the following codes.
+        data = normal_func.party('alice').remote(1)
+        c = normal_func.party('bob').remote(data)
+        # Bob was going to send c to alice but alice won't send `data` to bob since alice exited already.
+        normal_func.party('alice').remote(c)
+
+        # Bob got the error.
+        fed.get(b)
+    finally:
+        fed.shutdown()
+        ray.shutdown()
+
+
+def test_no_wait_for_data_sending_on_error():
+    p_alice = multiprocessing.Process(target=run6, args=('alice',))
+    p_bob = multiprocessing.Process(target=run6, args=('bob',))
+    p_alice.start()
+    p_bob.start()
+    p_alice.join()
+    p_bob.join()
+    assert p_alice.exitcode == 1
+    assert p_bob.exitcode == 1
 
 
 if __name__ == "__main__":

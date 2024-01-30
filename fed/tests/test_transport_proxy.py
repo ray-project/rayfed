@@ -31,7 +31,7 @@ from fed.proxy.barriers import (
 from fed.proxy.grpc.grpc_proxy import GrpcReceiverProxy, GrpcSenderProxy
 
 if compatible_utils._compare_version_strings(
-    fed_utils.get_package_version('protobuf'), '4.0.0'
+    fed_utils.get_package_version("protobuf"), "4.0.0"
 ):
     from fed.grpc.pb4 import fed_pb2 as fed_pb2
     from fed.grpc.pb4 import fed_pb2_grpc as fed_pb2_grpc
@@ -45,10 +45,10 @@ def test_n_to_1_transport():
     sending data to the target receiver proxy, and there also have
     N receivers to `get_data` from receiver proxy at that time.
     """
-    compatible_utils.init_ray(address='local')
-    test_job_name = 'test_n_to_1_transport'
-    party = 'test_party'
-    global_context.init_global_context(party, test_job_name)
+    compatible_utils.init_ray(address="local")
+    test_job_name = "test_n_to_1_transport"
+    party = "test_party"
+    global_context.init_global_context(party, test_job_name, False, False)
     global_context.get_global_context().get_cleanup_manager().start()
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
@@ -63,18 +63,18 @@ def test_n_to_1_transport():
     NUM_DATA = 10
     SERVER_ADDRESS = "127.0.0.1:12344"
 
-    addresses = {'test_party': SERVER_ADDRESS}
+    addresses = {"test_party": SERVER_ADDRESS}
     _start_receiver_proxy(
         addresses,
         party,
-        logging_level='info',
+        logging_level="info",
         proxy_cls=GrpcReceiverProxy,
         proxy_config={},
     )
     _start_sender_proxy(
         addresses,
         party,
-        logging_level='info',
+        logging_level="info",
         proxy_cls=GrpcSenderProxy,
         proxy_config={},
     )
@@ -137,7 +137,7 @@ async def _test_run_grpc_server(
         ),
         server,
     )
-    server.add_insecure_port(f'[::]:{port}')
+    server.add_insecure_port(f"[::]:{port}")
     await server.start()
     await server.wait_for_termination()
 
@@ -158,7 +158,7 @@ class TestReceiverProxyActor:
 
     async def run_grpc_server(self):
         return await _test_run_grpc_server(
-            self._listen_addr[self._listen_addr.index(':') + 1 :],
+            self._listen_addr[self._listen_addr.index(":") + 1 :],
             None,
             None,
             self._party,
@@ -193,20 +193,20 @@ def _test_start_receiver_proxy(
 
 
 def test_send_grpc_with_meta():
-    compatible_utils.init_ray(address='local')
+    compatible_utils.init_ray(address="local")
     cluster_config = {
         constants.KEY_OF_CLUSTER_ADDRESSES: "",
         constants.KEY_OF_CURRENT_PARTY_NAME: "",
         constants.KEY_OF_TLS_CONFIG: "",
     }
     metadata = {"key": "value"}
-    config = {'http_header': metadata}
+    config = {"http_header": metadata}
     job_config = {
         constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: config,
     }
-    test_job_name = 'test_send_grpc_with_meta'
-    party_name = 'test_party'
-    global_context.init_global_context(party_name, test_job_name)
+    test_job_name = "test_send_grpc_with_meta"
+    party_name = "test_party"
+    global_context.init_global_context(party_name, test_job_name, False, False)
     compatible_utils._init_internal_kv(test_job_name)
     compatible_utils.kv.put(
         constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
@@ -226,7 +226,7 @@ def test_send_grpc_with_meta():
     _start_sender_proxy(
         addresses,
         party_name,
-        logging_level='info',
+        logging_level="info",
         proxy_cls=GrpcSenderProxy,
         proxy_config=config,
     )

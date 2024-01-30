@@ -26,7 +26,7 @@ STOP_SYMBOL = False
 
 
 class MessageQueueManager:
-    def __init__(self, msg_handler, failure_handler=None, thread_name=''):
+    def __init__(self, msg_handler, failure_handler=None, thread_name=""):
         assert callable(msg_handler), "msg_handler must be a callable function"
         # `deque()` is thread safe on `popleft` and `append` operations.
         # See https://docs.python.org/3/library/collections.html#deque-objects
@@ -73,16 +73,13 @@ class MessageQueueManager:
         else:
             self.append(STOP_SYMBOL)
 
-    def stop(self, immediately=False):
+    def stop(self, wait_for_sending=True):
         """
         Stop the message queue.
 
         Args:
-            immediately (bool): A flag indicating whether to stop the queue
-                immediately or not. Default is True.
-                If True: insert the STOP_SYMBOL at the begin of the queue.
-                If False: insert the STOP_SYMBOL at the end of the queue, which means
-                stop the for loop until all messages in queue are all sent.
+            wait_for_sending (bool): A flag indicating whether joining the thread to wait for
+                the loop stop. If True, do not join. Defaults to True.
         """
         if threading.current_thread() == self._thread:
             logger.error(
@@ -97,9 +94,10 @@ class MessageQueueManager:
         # Therefore, currently, not support forcelly kill thread
         if self.is_started():
             logger.debug(f"Killing thread[{self._thread_name}].")
-            self._notify_to_exit(immediately=immediately)
-            self._thread.join()
-            logger.info(f"The message polling thread[{self._thread_name}] was exited.")
+            self._notify_to_exit(immediately=not wait_for_sending)
+            if wait_for_sending:
+                self._thread.join()
+                logger.info(f"The message polling thread[{self._thread_name}] was exited.")
 
     def is_started(self):
         return self._thread is not None and self._thread.is_alive()

@@ -45,7 +45,7 @@ class CleanupManager:
     def __init__(self, current_party, acquire_shutdown_flag) -> None:
         self._sending_data_q = MessageQueueManager(
             lambda msg: self._process_data_sending_task_return(msg),
-            thread_name='DataSendingQueueThread',
+            thread_name="DataSendingQueueThread",
         )
 
         self._sending_error_q = MessageQueueManager(
@@ -64,32 +64,16 @@ class CleanupManager:
         self._expose_error_trace = expose_error_trace
 
         self._sending_data_q.start()
-        logger.debug('Start check sending thread.')
+        logger.debug("Start check sending thread.")
         self._sending_error_q.start()
-        logger.debug('Start check error sending thread.')
+        logger.debug("Start check error sending thread.")
 
-        def _main_thread_monitor():
-            main_thread = threading.main_thread()
-            main_thread.join()
-            logging.debug('Stoping sending queue ...')
-            self.stop(graceful=True)
-
-        self._monitor_thread = threading.Thread(target=_main_thread_monitor)
-        self._monitor_thread.start()
-        logger.info('Start check sending monitor thread.')
-
-    def stop(self, graceful=True):
+    def stop(self, wait_for_sending=False):
         # NOTE(NKcqx): MUST firstly stop the data queue, because it
         # may still throw errors during the termination which need to
         # be sent to the error queue.
-        if graceful:
-            self._sending_data_q.stop(immediately=False)
-            self._sending_error_q.stop(immediately=False)
-        else:
-            # Stop data queue immediately, but stop error queue not immediately always
-            # to sure that error can be sent to peers.
-            self._sending_data_q.stop(immediately=True)
-            self._sending_error_q.stop(immediately=False)
+        self._sending_data_q.stop(wait_for_sending=wait_for_sending)
+        self._sending_error_q.stop(wait_for_sending=wait_for_sending)
 
     def push_to_sending(
         self,
@@ -168,9 +152,9 @@ class CleanupManager:
             res = ray.get(obj_ref)
         except Exception as e:
             logger.warn(
-                f'Failed to send {obj_ref} to {dest_party}, error: {e},'
-                f'upstream_seq_id: {upstream_seq_id}, '
-                f'downstream_seq_id: {downstream_seq_id}.'
+                f"Failed to send {obj_ref} to {dest_party}, error: {e},"
+                f"upstream_seq_id: {upstream_seq_id}, "
+                f"downstream_seq_id: {downstream_seq_id}."
             )
             self._last_sending_error = e
             if isinstance(e, RayError):

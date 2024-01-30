@@ -16,12 +16,11 @@ import functools
 import inspect
 import logging
 import signal
+import sys
 from typing import Any, Callable, Dict, List, Union
 
 import cloudpickle
 import ray
-from ray.exceptions import RayError
-import sys
 
 import fed._private.compatible_utils as compatible_utils
 import fed.config as fed_config
@@ -70,7 +69,7 @@ def init(
     party: str = None,
     config: Dict = {},
     tls_config: Dict = None,
-    logging_level: str = 'info',
+    logging_level: str = "info",
     sender_proxy_cls: SenderProxy = None,
     receiver_proxy_cls: ReceiverProxy = None,
     receiver_sender_proxy_cls: SenderReceiverProxy = None,
@@ -125,6 +124,7 @@ def init(
                         "exit_on_sending_failure": True,
                         "expose_error_trace": True,
                         "use_global_proxy": True,
+                        "continue_waiting_for_data_sending_on_error": False,
                     },
                     "barrier_on_initializing": True,
                 }
@@ -182,16 +182,23 @@ def init(
         job_name = constants.RAYFED_DEFAULT_JOB_NAME
 
     fed_utils.validate_addresses(addresses)
+
+    cross_silo_comm_dict = config.get("cross_silo_comm", {})
+    cross_silo_comm_config = CrossSiloMessageConfig.from_dict(cross_silo_comm_dict)
+
     init_global_context(
         current_party=party,
         job_name=job_name,
+        exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure,
+        continue_waiting_for_data_sending_on_error=cross_silo_comm_config.continue_waiting_for_data_sending_on_error,
         sending_failure_handler=sending_failure_handler,
     )
+
     tls_config = {} if tls_config is None else tls_config
     if tls_config:
         assert (
-            'cert' in tls_config and 'key' in tls_config
-        ), 'Cert or key are not in tls_config.'
+            "cert" in tls_config and "key" in tls_config
+        ), "Cert or key are not in tls_config."
 
     # A Ray private accessing, should be replaced in public API.
     compatible_utils._init_internal_kv(job_name)
@@ -201,15 +208,15 @@ def init(
         constants.KEY_OF_CURRENT_PARTY_NAME: party,
         constants.KEY_OF_TLS_CONFIG: tls_config,
     }
-
-    cross_silo_comm_dict = config.get("cross_silo_comm", {})
-    job_config = {
-        constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: cross_silo_comm_dict,
-    }
     compatible_utils.kv.put(
         constants.KEY_OF_CLUSTER_CONFIG, cloudpickle.dumps(cluster_config)
     )
+
+    job_config = {
+        constants.KEY_OF_CROSS_SILO_COMM_CONFIG_DICT: cross_silo_comm_dict,
+    }
     compatible_utils.kv.put(constants.KEY_OF_JOB_CONFIG, cloudpickle.dumps(job_config))
+
     # Set logger.
     # Note(NKcqx): This should be called after internal_kv has party value, i.e.
     # after `ray.init` and
@@ -222,8 +229,7 @@ def init(
         job_name=job_name,
     )
 
-    logger.info(f'Started rayfed with {cluster_config}')
-    cross_silo_comm_config = CrossSiloMessageConfig.from_dict(cross_silo_comm_dict)
+    logger.info(f"Started rayfed with {cluster_config}")
     signal.signal(signal.SIGINT, _signal_handler)
     get_global_context().get_cleanup_manager().start(
         exit_on_sending_failure=cross_silo_comm_config.exit_on_sending_failure,
@@ -305,7 +311,7 @@ def _shutdown(intended=True):
 
     Args:
         intended: (Optional) Whether this is a intended shutdown. If not
-           a "failure handler" will be triggered and sys.exit will be called then.
+           a "failure handler" will be triggered and do not wait data sending.
     """
 
     if get_global_context() is None:
@@ -313,34 +319,45 @@ def _shutdown(intended=True):
         return
 
     if intended:
-        logger.info('Shutdowning rayfed intendedly...')
+        logger.info("Shutdowning rayfed intendedly...")
     else:
-        logger.warn('Shutdowning rayfed unintendedly...')
+        logger.warn("Shutdowning rayfed unintendedly...")
     global_context = get_global_context()
     last_sending_error = global_context.get_cleanup_manager().get_last_sending_error()
+    last_received_error = global_context.get_last_recevied_error()
     if last_sending_error is not None:
-        logging.error(f'Cross-silo sending error occured. {last_sending_error}')
+        logging.error(f"Cross-silo sending error occured. {last_sending_error}")
+
+    wait_for_sending = True
+    if (
+        last_sending_error is not None or last_received_error is not None
+    ) and not global_context.get_continue_waiting_for_data_sending_on_error():
+        wait_for_sending = False
+    logging.info(f'{"Wait" if wait_for_sending else "No wait"} for data sending.')
 
     if not intended:
         # Execute failure_handler fisrtly.
         failure_handler = global_context.get_sending_failure_handler()
         if failure_handler is not None:
-            logger.info('Executing failure handler...')
+            logger.info(f"Executing failure handler {failure_handler} ...")
             failure_handler(last_sending_error)
+
+        exit_on_sending_failure = global_context.get_exit_on_sending_failure()
 
         # Clean context.
         compatible_utils._clear_internal_kv()
-        clear_global_context(graceful=intended)
-        logger.info('Shutdowned rayfed.')
+        clear_global_context(wait_for_sending=wait_for_sending)
+        logger.info("Shutdowned rayfed.")
 
-        # Exit with error.
-        logger.critical('Exit now due to the previous error.')
-        sys.exit(1)
+        if exit_on_sending_failure:
+            # Exit with error.
+            logger.critical("Exit now due to the previous error.")
+            sys.exit(1)
     else:
         # Clean context.
         compatible_utils._clear_internal_kv()
-        clear_global_context(graceful=intended)
-        logger.info('Shutdowned rayfed.')
+        clear_global_context(wait_for_sending=wait_for_sending)
+        logger.info("Shutdowned rayfed.")
 
 
 def _get_addresses(job_name: str = None):
@@ -586,6 +603,8 @@ def get(
             "Encounter RemoteError happend in other parties"
             f", error message: {e.cause}"
         )
+        if get_global_context() is not None:
+            get_global_context().set_last_recevied_error(e)
         raise e
 
 
