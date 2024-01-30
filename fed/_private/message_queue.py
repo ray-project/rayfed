@@ -97,7 +97,9 @@ class MessageQueueManager:
             self._notify_to_exit(immediately=not wait_for_sending)
             if wait_for_sending:
                 self._thread.join()
-                logger.info(f"The message polling thread[{self._thread_name}] was exited.")
+                logger.info(
+                    f"The message polling thread[{self._thread_name}] was exited."
+                )
 
     def is_started(self):
         return self._thread is not None and self._thread.is_alive()
