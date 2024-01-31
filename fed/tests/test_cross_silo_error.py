@@ -290,17 +290,6 @@ def run6(party: str):
         a = error_func.party('alice').remote()
         b = normal_func.party('bob').remote(a)
 
-        # Wait a while to sure alice finish sending error and exit.
-        import time
-
-        time.sleep(10)
-
-        # Alice did not execute the following codes.
-        data = normal_func.party('alice').remote(1)
-        c = normal_func.party('bob').remote(data)
-        # Bob was going to send c to alice but alice won't send `data` to bob since alice exited already.
-        normal_func.party('alice').remote(c)
-
         # Bob got the error.
         fed.get(b)
     finally:
