@@ -101,6 +101,10 @@ class CrossSiloMessageConfig:
         exit_on_sending_failure:
             whether exit when failure on cross-silo sending. If True, a SIGINT will be
             signaled to self if failed to sending cross-silo data and exit then.
+        continue_waiting_for_data_sending_on_error:
+            Whether to continue waiting for data sending if an error occurs, including
+            data-sending errors and receiving errors from the peer. If True, wait until
+            all data has been sent.
         messages_max_size_in_bytes:
             The maximum length in bytes of cross-silo messages. If None, the default
             value of 500 MB is specified.
@@ -122,6 +126,7 @@ class CrossSiloMessageConfig:
     timeout_in_ms: int = 60000
     messages_max_size_in_bytes: int = None
     exit_on_sending_failure: Optional[bool] = False
+    continue_waiting_for_data_sending_on_error: Optional[bool] = False
     serializing_allowed_list: Optional[Dict[str, str]] = None
     send_resource_label: Optional[Dict[str, str]] = None
     recv_resource_label: Optional[Dict[str, str]] = None

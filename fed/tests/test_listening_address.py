@@ -29,13 +29,13 @@ def _run(party):
     # NOTE(NKcqx): Firstly try to bind IPv6 because the grpc server will do so.
     # Otherwise this UT will fail because socket bind $occupied_port
     # on IPv4 address while grpc server listened on the Ipv6 address.
-    try:
-        s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        # Pre-occuping the port using local address
-        s.bind(("::1", occupied_port))
-    except OSError:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("127.0.0.1", occupied_port))
+    s_ipv6 = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    s_ipv6.bind(("::1", occupied_port))
+    s_ipv4 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s_ipv4.bind(("127.0.0.1", occupied_port))
+    import time
+
+    time.sleep(5)
 
     addresses = {'alice': f'127.0.0.1:{occupied_port}'}
 
@@ -46,10 +46,8 @@ def _run(party):
             party=party,
         )
 
-    import time
-
-    time.sleep(5)
-    s.close()
+    s_ipv6.close()
+    s_ipv4.close()
     fed.shutdown()
     ray.shutdown()
 
