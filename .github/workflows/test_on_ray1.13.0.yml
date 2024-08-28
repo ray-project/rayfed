@@ -27,6 +27,8 @@ jobs:
             python3 -m virtualenv -p python3 py3
             . py3/bin/activate
             which python
+            # Revert setuptools for compatibility with ray dashboard.
+            pip install setuptools==69.5.1
             pip install pytest torch cloudpickle cryptography
             pip install ray==1.13.0
 
