@@ -14,8 +14,8 @@ jobs:
         ray_version: [2.4.0, 2.5.1, 2.6.3, 2.7.1, 2.8.1, 2.9.0]
 
     timeout-minutes: 60
-    runs-on: ubuntu-latest
-    container: docker.io/library/ubuntu:latest
+    runs-on: ubuntu-22.04
+    container: docker.io/library/ubuntu:22.04
 
     steps:
     - uses: actions/checkout@v2
@@ -23,7 +23,7 @@ jobs:
     - name: Install basic dependencies
       run:  |
             apt-get update
-            apt-get install -yq wget gcc g++ python3.9 zlib1g-dev zip libuv1.dev
+            apt-get install -yq wget gcc g++ python3.10 zlib1g-dev zip libuv1.dev
             apt-get install -yq pip
 
     - name: Install python dependencies
