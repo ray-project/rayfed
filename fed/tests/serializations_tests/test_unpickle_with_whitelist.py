@@ -47,7 +47,7 @@ def run(party):
         'bob': '127.0.0.1:11356',
     }
     allowed_list = {
-        "numpy.core.numeric": ["*"],
+        "numpy._core.numeric": ["*"],
         "numpy": ["dtype"],
     }
     fed.init(
