@@ -13,8 +13,8 @@ jobs:
           protobuf_ver: ["3.19", "3.20", "4.23"]
 
     timeout-minutes: 60
-    runs-on: ubuntu-latest
-    container: docker.io/library/ubuntu:latest
+    runs-on: ubuntu-22.04
+    container: docker.io/library/ubuntu:22.04
 
     steps:
     - uses: actions/checkout@v2
@@ -22,7 +22,7 @@ jobs:
     - name: Install basic dependencies
       run:  |
             apt-get update
-            apt-get install -yq wget gcc g++ python3.9 zlib1g-dev zip libuv1.dev
+            apt-get install -yq wget gcc g++ python3.10 zlib1g-dev zip libuv1.dev
             apt-get install -yq pip
 
     - name: Install python dependencies
@@ -31,6 +31,8 @@ jobs:
             python3 -m virtualenv -p python3 py3
             . py3/bin/activate
             which python
+            # Revert setuptools for compatibility with ray dashboard.
+            pip install setuptools==69.5.1
             pip install pytest torch cloudpickle cryptography numpy
             pip install protobuf==${{ matrix.protobuf_ver }}
             pip install ray==2.4.0
