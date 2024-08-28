@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        ray_version: [2.4.0, 2.5.1, 2.6.3, 2.7.1, 2.8.1, 2.9.0]
+        ray_version: [2.31.0, 2.32.0, 2.33.0, 2.34.0, 2.35.0]
 
     timeout-minutes: 60
     runs-on: ubuntu-22.04
